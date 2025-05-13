@@ -285,44 +285,21 @@ const Dashboard: React.FC = () => {
       );
     }
     
-    // Apply category filter - now supporting multi-selection
+    // Apply category filter
     if (filterValues.category) {
-      if (Array.isArray(filterValues.category) && filterValues.category.length > 0) {
-        filtered = filtered.filter(product => 
-          filterValues.category.includes(product.category)
-      );
-      } else if (typeof filterValues.category === 'string' && filterValues.category !== '') {
-        // Backward compatibility for single selection
-        filtered = filtered.filter(product => product.category === filterValues.category);
-      }
+      filtered = filtered.filter(product => product.category === filterValues.category);
     }
     
-    // Apply manufacturer filter - now supporting multi-selection
+    // Apply manufacturer filter
     if (filterValues.manufacturer) {
-      if (Array.isArray(filterValues.manufacturer) && filterValues.manufacturer.length > 0) {
-        filtered = filtered.filter(product => 
-          filterValues.manufacturer.includes(product.manufacturer)
-        );
-      } else if (typeof filterValues.manufacturer === 'string' && filterValues.manufacturer !== '') {
-        // Backward compatibility for single selection
-        filtered = filtered.filter(product => product.manufacturer === filterValues.manufacturer);
-      }
+      filtered = filtered.filter(product => product.manufacturer === filterValues.manufacturer);
     }
     
-    // Apply supplier filter - now supporting multi-selection
+    // Apply supplier filter
     if (filterValues.supplier) {
-      if (Array.isArray(filterValues.supplier) && filterValues.supplier.length > 0) {
-        filtered = filtered.filter(product => 
-          product.bestPrices.some(price => 
-            filterValues.supplier.includes(price.supplier)
-          )
-        );
-      } else if (typeof filterValues.supplier === 'string' && filterValues.supplier !== '') {
-        // Backward compatibility for single selection
-        filtered = filtered.filter(product => 
-          product.bestPrices.some(price => price.supplier === filterValues.supplier)
-        );
-      }
+      filtered = filtered.filter(product => 
+        product.bestPrices.some(price => price.supplier === filterValues.supplier)
+      );
     }
     
     // Apply in-stock filter
@@ -330,24 +307,9 @@ const Dashboard: React.FC = () => {
       filtered = filtered.filter(product => product.inStock);
     }
     
-    // Apply VAT rate filter - now supporting multi-selection
+    // Apply VAT rate filter
     if (filterValues.vatRate) {
-      if (Array.isArray(filterValues.vatRate) && filterValues.vatRate.length > 0) {
-        const vatRateArray = filterValues.vatRate;
-        filtered = filtered.filter(product => {
-          // Convert product vat to string for comparison
-          const productVatStr = product.vat.toString();
-          
-          // Check if any of the selected VAT rates match
-          return vatRateArray.some(rate => {
-            const rateStr = rate.toString();
-            return productVatStr === rateStr;
-          });
-        });
-      } else if ((typeof filterValues.vatRate === 'string' || typeof filterValues.vatRate === 'number') && filterValues.vatRate.toString() !== '') {
-        // Backward compatibility for single selection
-        filtered = filtered.filter(product => product.vat.toString() === filterValues.vatRate.toString());
-      }
+      filtered = filtered.filter(product => product.vat.toString() === filterValues.vatRate.toString());
     }
     
     // Apply price range filter
@@ -414,7 +376,7 @@ const Dashboard: React.FC = () => {
         return compareA.localeCompare(compareB) * factor;
       } else if (typeof compareA === 'number' && typeof compareB === 'number') {
         return (compareA - compareB) * factor;
-    }
+      }
       return 0;
     });
   };
@@ -647,35 +609,13 @@ const Dashboard: React.FC = () => {
             Welcome back! Here's what's happening with your pharmacy business today.
           </Typography>
         </Box>
-
       </Box>
-
+  
       <Grid container spacing={3}>
+        {/* Rimuoviamo le Stat Cards */}
+        
         {/* Product Catalog */}
         <Grid size={{ xs: 12 }}>
-          {/* Filters Card - Separated from the table */}
-          <Card sx={{ mb: 2 }}>
-            <CardHeader 
-              title="Product Filters" 
-              titleTypographyProps={{ variant: 'h6' }}
-          />
-            <Divider />
-            <Box sx={{ p: 2 }}>
-              <ProductFilter
-                values={filterValues}
-                onChange={handleFilterChange}
-                onApplyFilters={handleApplyFilters}
-                categories={categories.map(cat => ({ value: cat, label: cat }))}
-                manufacturers={manufacturers.map(mfr => ({ value: mfr, label: mfr }))}
-                suppliers={suppliers}
-                vatRates={vatRates}
-                maxPrice={100}
-                minPrice={0}
-          />
-            </Box>
-          </Card>
-
-          {/* Table Card - Separate from filters */}
           <Card>
             <CardHeader 
               title="Product Catalog" 
@@ -714,6 +654,21 @@ const Dashboard: React.FC = () => {
             />
             <Divider />
             <CardContent sx={{ p: 0 }}>
+              {/* Filtri */}
+              <Box sx={{ p: 2 }}>
+                <ProductFilter
+                  values={filterValues}
+                  onChange={handleFilterChange}
+                  onApplyFilters={handleApplyFilters}
+                  categories={categories.map(cat => ({ value: cat, label: cat }))}
+                  manufacturers={manufacturers.map(mfr => ({ value: mfr, label: mfr }))}
+                  suppliers={suppliers}
+                  vatRates={vatRates}
+                  maxPrice={100}
+                  minPrice={0}
+                />
+              </Box>
+              
               {loading ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
                   <CircularProgress />
@@ -755,7 +710,16 @@ const Dashboard: React.FC = () => {
                       }
                     }}
                   >
-                    <Table aria-label="product catalog table" stickyHeader size="small">
+                    <Table 
+                      aria-label="product catalog table" 
+                      stickyHeader 
+                      size="small"
+                      sx={{
+                        borderCollapse: 'separate',
+                        borderSpacing: 0,
+                        isolation: 'isolate'
+                      }}
+                    >
                       <TableHead>
                         <TableRow sx={{ 
                           '& th': { 
@@ -763,16 +727,17 @@ const Dashboard: React.FC = () => {
                             bgcolor: '#f5f5f5', 
                             position: 'sticky',
                             top: 0,
-                            zIndex: 3
+                            zIndex: 2
                           } 
                         }}>
+                          {/* Colonne fisse con z-index molto alto */}
                           <TableCell padding="checkbox" sx={{ 
                             position: 'sticky', 
                             left: 0, 
                             top: 0,
                             bgcolor: '#f5f5f5', 
                             minWidth: 50,
-                            zIndex: 5,
+                            zIndex: 100, /* Z-index molto alto per evitare sovrapposizioni */
                             borderRight: '1px solid rgba(224, 224, 224, 0.4)'
                           }}>
                             <Checkbox
@@ -788,7 +753,7 @@ const Dashboard: React.FC = () => {
                             top: 0,
                             bgcolor: '#f5f5f5', 
                             minWidth: 40, 
-                            zIndex: 5,
+                            zIndex: 100, /* Z-index molto alto per evitare sovrapposizioni */
                             borderRight: '1px solid rgba(224, 224, 224, 0.4)'
                           }}>#</TableCell>
                           <SortableColumnHeader
@@ -801,7 +766,7 @@ const Dashboard: React.FC = () => {
                             leftPosition={90}
                             minWidth={160}
                             backgroundColor="#f5f5f5"
-                            zIndex={5}
+                            zIndex={100} /* Z-index molto alto per evitare sovrapposizioni */
                           />
                           <SortableColumnHeader
                             id="name"
@@ -813,7 +778,7 @@ const Dashboard: React.FC = () => {
                             leftPosition={250}
                             minWidth={200}
                             backgroundColor="#f5f5f5"
-                            zIndex={5}
+                            zIndex={100} /* Z-index molto alto per evitare sovrapposizioni */
                           />
                           <SortableColumnHeader
                             id="publicPrice"
@@ -825,7 +790,7 @@ const Dashboard: React.FC = () => {
                             leftPosition={450}
                             minWidth={100}
                             backgroundColor="#f5f5f5"
-                            zIndex={5}
+                            zIndex={100} /* Z-index molto alto per evitare sovrapposizioni */
                           />
                           <TableCell sx={{ 
                             position: 'sticky', 
@@ -833,7 +798,7 @@ const Dashboard: React.FC = () => {
                             top: 0,
                             bgcolor: '#f5f5f5', 
                             minWidth: 120, 
-                            zIndex: 5,
+                            zIndex: 100, /* Z-index molto alto per evitare sovrapposizioni */
                             borderRight: '1px solid rgba(224, 224, 224, 0.4)'
                           }}>
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -851,7 +816,7 @@ const Dashboard: React.FC = () => {
                             top: 0,
                             bgcolor: '#f5f5f5', 
                             minWidth: 110, 
-                            zIndex: 5,
+                            zIndex: 100, /* Z-index molto alto per evitare sovrapposizioni */
                             borderRight: '1px solid rgba(224, 224, 224, 0.4)'
                           }}>
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -864,140 +829,156 @@ const Dashboard: React.FC = () => {
                             </Box>
                           </TableCell>
                             
-                          {/* Target Price column */}
-                          <TableCell
-                            sx={{ 
-                              position: 'sticky', 
-                              left: 770, 
-                              top: 0,
-                              bgcolor: '#f5f5f5', 
-                              minWidth: 120, 
-                              zIndex: 5,
-                              borderRight: '1px solid rgba(224, 224, 224, 0.4)'
-                            }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              Target Price
-                              <Tooltip title="Set your desired target price. This helps identify if current supplier prices match your expectations.">
-                                <IconButton size="small" sx={{ padding: '2px' }}>
-                                  <InfoIcon fontSize="small" sx={{ fontSize: '1rem' }} />
-                                </IconButton>
-                              </Tooltip>
-                            </Box>
-                          </TableCell>
-                            
-                          {/* Scrollable columns */}
-                          <SortableColumnHeader
-                            id="bestPrice"
-                            label="Best Price"
-                            activeSort={sortBy}
-                            activeDirection={sortDirection}
-                            onSort={handleSort}
-                            backgroundColor="#e8f5e9"
-                            minWidth={120}
-                          />
-                          <TableCell sx={{ bgcolor: '#e3f2fd', minWidth: 120 }}>2nd Best</TableCell>
-                          <TableCell sx={{ bgcolor: '#f3e5f5', minWidth: 120 }}>3rd Best</TableCell>
-                          <TableCell sx={{ minWidth: 120 }}>Other prices</TableCell>
-                            
-                          {/* Dynamic additional price columns in header */}
-                          {filteredProducts.some(p => p.showAllPrices && p.bestPrices.length > 3) && 
-                            Array.from({ length: Math.max(...filteredProducts
-                              .filter(p => p.showAllPrices)
-                              .map(p => p.bestPrices.length > 3 ? p.bestPrices.length - 3 : 0)) }, (_, i) => (
-                              <TableCell key={i} sx={{ bgcolor: '#f8f8f8', minWidth: 120 }}>
-                                Price {i + 4}
-                              </TableCell>
-                            ))
-                          }
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                        {filteredProducts.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={12} align="center" sx={{ py: 6 }}>
-                              <Typography variant="h6" color="text.secondary">
-                                No products found
-                              </Typography>
-                              <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 500, mx: 'auto', mt: 1 }}>
-                                Try adjusting your search or filter criteria to find products.
-                              </Typography>
+                            {/* Target Price column - ultima colonna fissa */}
+                            <TableCell
+                              sx={{ 
+                                position: 'sticky', 
+                                left: 770, 
+                                top: 0,
+                                bgcolor: '#f5f5f5', 
+                                minWidth: 120, 
+                                zIndex: 100, /* Z-index molto alto per evitare sovrapposizioni */
+                                borderRight: '1px solid rgba(224, 224, 224, 0.4)',
+                                // Aggiungiamo un'ombra per evidenziare la separazione
+                                '&::after': {
+                                  content: '""',
+                                  position: 'absolute',
+                                  right: 0,
+                                  top: 0,
+                                  height: '100%',
+                                  width: 6,
+                                  boxShadow: '4px 0 4px rgba(0,0,0,0.1)',
+                                  pointerEvents: 'none'
+                                }
+                              }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                Target Price
+                                <Tooltip title="Set your desired target price. This helps identify if current supplier prices match your expectations.">
+                                  <IconButton size="small" sx={{ padding: '2px' }}>
+                                    <InfoIcon fontSize="small" sx={{ fontSize: '1rem' }} />
+                                  </IconButton>
+                                </Tooltip>
+                              </Box>
                             </TableCell>
+                              
+                            {/* Colonne scrollabili con z-index fisso più basso */}
+                            <SortableColumnHeader
+                              id="bestPrice"
+                              label="Best Price"
+                              activeSort={sortBy}
+                              activeDirection={sortDirection}
+                              onSort={handleSort}
+                              backgroundColor="#e8f5e9"
+                              minWidth={120}
+                              isSticky={false}
+                              zIndex={2}
+                              sx={{ position: 'static' }}
+                            />
+                            <TableCell sx={{ bgcolor: '#e3f2fd', minWidth: 120, position: 'static' }}>2nd Best</TableCell>
+                            <TableCell sx={{ bgcolor: '#f3e5f5', minWidth: 120, position: 'static' }}>3rd Best</TableCell>
+                            <TableCell sx={{ minWidth: 120, position: 'static' }}>Other prices</TableCell>
+                              
+                            {/* Dynamic additional price columns in header - sempre con z-index più basso */}
+                            {filteredProducts.some(p => p.showAllPrices && p.bestPrices.length > 3) && 
+                              Array.from({ length: Math.max(...filteredProducts
+                                .filter(p => p.showAllPrices)
+                                .map(p => p.bestPrices.length > 3 ? p.bestPrices.length - 3 : 0)) }, (_, i) => (
+                                <TableCell key={i} sx={{ bgcolor: '#f8f8f8', minWidth: 120, position: 'static' }}>
+                                  Price {i + 4}
+                                </TableCell>
+                              ))
+                            }
                           </TableRow>
-                        ) : (
-                          filteredProducts
-                            .slice(usingMockData ? page * rowsPerPage : 0, usingMockData ? page * rowsPerPage + rowsPerPage : rowsPerPage)
-                            .map((product, index) => {
-                              const isItemSelected = isSelected(product.id);
-                              return (
-                                <ProductRow
-                                  key={product.id}
-                                  product={product}
-                                  index={index}
-                                  isSelected={isItemSelected}
-                                  page={page}
-                                  rowsPerPage={rowsPerPage}
-                                  onSelectClick={handleSelectClick}
-                                  onQuantityChange={handleQuantityChange}
-                                  onTargetPriceChange={handleTargetPriceChange}
-                                  onToggleAllPrices={handleToggleAllPrices}
-                                  usingMockData={usingMockData}
-                                />
-                              );
-                            })
-                        )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                        </TableHead>
+                        <TableBody>
+                              {filteredProducts.length === 0 ? (
+                                <TableRow>
+                                  <TableCell colSpan={12} align="center" sx={{ py: 6 }}>
+                                    <Typography variant="h6" color="text.secondary">
+                                      No products found
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 500, mx: 'auto', mt: 1 }}>
+                                      Try adjusting your search or filter criteria to find products.
+                                    </Typography>
+                                  </TableCell>
+                                </TableRow>
+                              ) : (
+                                filteredProducts
+                                  .slice(usingMockData ? page * rowsPerPage : 0, usingMockData ? page * rowsPerPage + rowsPerPage : rowsPerPage)
+                                  .map((product, index) => {
+                                    const isItemSelected = isSelected(product.id);
+                                    return (
+                                            <ProductRow
+                                        key={product.id}
+                                              product={product}
+                                              index={index}
+                                              isSelected={isItemSelected}
+                                              page={page}
+                                              rowsPerPage={rowsPerPage}
+                                              onSelectClick={handleSelectClick}
+                                              onQuantityChange={handleQuantityChange}
+                                              onTargetPriceChange={handleTargetPriceChange}
+                                              onToggleAllPrices={handleToggleAllPrices}
+                                              usingMockData={usingMockData}
+                                            />
+                                    );
+                                  })
+                              )}
+                        </TableBody>
+                      </Table>
+                  </TableContainer>
+                      
+                      <Box sx={{ borderTop: '1px solid #eee' }}>
+                        <TablePagination
+                          rowsPerPageOptions={[10, 25, 50, 100]}
+                          component="div"
+                          count={usingMockData ? filteredProducts.length : totalCount}
+                          rowsPerPage={rowsPerPage}
+                          page={page}
+                          onPageChange={handleChangePage}
+                          onRowsPerPageChange={handleChangeRowsPerPage}
+                        />
+                      </Box>
+                    </>
+                  )}
                   
-                  <Box sx={{ borderTop: '1px solid #eee' }}>
-                    <TablePagination
-                      rowsPerPageOptions={[10, 25, 50, 100]}
-                      component="div"
-                      count={usingMockData ? filteredProducts.length : totalCount}
-                      rowsPerPage={rowsPerPage}
-                      page={page}
-                      onPageChange={handleChangePage}
-                      onRowsPerPageChange={handleChangeRowsPerPage}
-                    />
+                  <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #eee', bgcolor: '#f9f9f9' }}>
+                    <Typography variant="body2">
+                      Selected Products: {selected.length} products ({getTotalQuantity()} items)
+                    </Typography>
+                    <Typography variant="body2" color="primary" sx={{ fontWeight: 'bold' }}>
+                      Total Amount: €{totalAmount.toFixed(2)}
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Button 
+                        variant="outlined" 
+                        startIcon={<BookmarkIcon />}
+                        disabled={selected.length === 0}
+                        onClick={() => showToast('List saved for later', 'success')}
+                      >
+                        Save for Later
+                      </Button>
+                      <Button 
+                        variant="outlined" 
+                        startIcon={<SaveIcon />}
+                        disabled={selected.length === 0}
+                        onClick={() => showToast('Draft saved successfully', 'success')}
+                      >
+                        Save as Draft
+                      </Button>
+                      <Button 
+                        variant="contained" 
+                        color="primary" 
+                        startIcon={<CheckIcon />}
+                        disabled={selected.length === 0}
+                        onClick={handleCreateOda}
+                      >
+                        Create ODA
+                      </Button>
+                    </Box>
                   </Box>
                 </>
               )}
-              
-              <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #eee', bgcolor: '#f9f9f9' }}>
-                <Typography variant="body2">
-                  Selected Products: {selected.length} products ({getTotalQuantity()} items)
-                </Typography>
-                <Typography variant="body2" color="primary" sx={{ fontWeight: 'bold' }}>
-                  Total Amount: €{totalAmount.toFixed(2)}
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <Button 
-                    variant="outlined" 
-                    startIcon={<BookmarkIcon />}
-                    disabled={selected.length === 0}
-                    onClick={() => showToast('List saved for later', 'success')}
-                  >
-                    Save for Later
-                  </Button>
-                  <Button 
-                    variant="outlined" 
-                    startIcon={<SaveIcon />}
-                    disabled={selected.length === 0}
-                    onClick={() => showToast('Draft saved successfully', 'success')}
-                  >
-                    Save as Draft
-                  </Button>
-                  <Button 
-                    variant="contained" 
-                    color="primary" 
-                    startIcon={<CheckIcon />}
-                    disabled={selected.length === 0}
-                    onClick={handleCreateOda}
-                  >
-                    Create ODA
-                  </Button>
-                </Box>
-              </Box>
             </CardContent>
           </Card>
         </Grid>

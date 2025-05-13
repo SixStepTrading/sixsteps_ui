@@ -16,7 +16,13 @@ import {
   Tooltip,
   Badge,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  Select,
+  MenuItem,
+  OutlinedInput,
+  ListItemText,
+  FormControl,
+  InputLabel
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import TuneIcon from '@mui/icons-material/Tune';
@@ -30,15 +36,15 @@ import { FilterOption } from './FilterField';
 
 export interface ProductFilterValues {
   searchTerm?: string;
-  category?: string;
-  manufacturer?: string;
-  supplier?: string;
+  category?: string | string[];
+  manufacturer?: string | string[];
+  supplier?: string | string[];
   priceRange?: [number, number];
   inStockOnly?: boolean;
   availability?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
-  vatRate?: string | number;
+  vatRate?: string | number | (string | number)[];
   minQuantity?: number;
   expiryDateRange?: [Date | null, Date | null];
   discountFilter?: string;
@@ -55,6 +61,157 @@ interface ProductFilterProps {
   maxPrice?: number;
   minPrice?: number;
 }
+
+interface MultiSelectProps {
+  id: string;
+  label: string;
+  value: string[] | (string | number)[];
+  onChange: (value: string[] | (string | number)[]) => void;
+  options: FilterOption[];
+  placeholder?: string;
+  compact?: boolean;
+}
+
+const MultiSelect: React.FC<MultiSelectProps> = ({
+  id,
+  label,
+  value = [],
+  onChange,
+  options,
+  placeholder = 'All',
+  compact = false
+}) => {
+  const handleClear = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onChange([]);
+  };
+
+  const valueArray = Array.isArray(value) ? value : [];
+
+  return (
+    <Box sx={{ width: '100%' }}>
+      {compact ? (
+        <Typography variant="subtitle2" sx={{ mb: 0.5, fontWeight: 500, fontSize: '0.75rem' }}>
+          {label}
+        </Typography>
+      ) : null}
+      
+      <FormControl 
+        fullWidth 
+        size="small" 
+        variant="outlined"
+        sx={{ 
+          '& .MuiInputBase-root': { 
+            height: compact ? 32 : 40,
+            fontSize: compact ? '0.8rem' : '0.875rem'
+          },
+          '& .MuiInputLabel-root': {
+            fontSize: compact ? '0.8rem' : '0.875rem',
+            transform: compact ? undefined : 'translate(14px, 10px) scale(1)'
+          },
+          '& .MuiInputLabel-shrink': {
+            transform: 'translate(14px, -9px) scale(0.75)',
+            backgroundColor: 'white',
+            padding: '0 4px',
+            marginLeft: '-4px',
+            '&:before': {
+              content: '""',
+              position: 'absolute',
+              left: 0,
+              top: '40%',
+              width: '100%',
+              height: '1px',
+              backgroundColor: 'white',
+              zIndex: -1
+            }
+          },
+          '& .MuiOutlinedInput-notchedOutline': {
+            borderColor: '#dddddd'
+          },
+          '&:hover .MuiOutlinedInput-notchedOutline': {
+            borderColor: '#aaaaaa'
+          }
+        }}
+      >
+        {!compact && (
+          <InputLabel id={`${id}-label`}>
+            {label}
+          </InputLabel>
+        )}
+        
+        <Select
+          labelId={`${id}-label`}
+          id={id}
+          multiple
+          value={valueArray}
+          onChange={(e) => onChange(e.target.value as string[])}
+          input={<OutlinedInput label={compact ? undefined : label} />}
+          renderValue={(selected) => {
+            const selectedArray = selected as (string | number)[];
+            if (selectedArray.length === 0) {
+              return placeholder;
+            }
+            if (selectedArray.length === 1) {
+              const selectedOption = options.find(
+                (option) => option.value === selectedArray[0]
+              );
+              return selectedOption ? selectedOption.label : selectedArray[0].toString();
+            }
+            return `${selectedArray.length} selected`;
+          }}
+          endAdornment={
+            valueArray.length > 0 ? (
+              <InputAdornment position="end">
+                <IconButton
+                  size="small"
+                  onClick={handleClear}
+                  sx={{ p: '2px', mr: 0.5 }}
+                  edge="end"
+                >
+                  <CloseIcon fontSize="small" sx={{ fontSize: '0.9rem' }} />
+                </IconButton>
+              </InputAdornment>
+            ) : null
+          }
+          MenuProps={{
+            PaperProps: {
+              sx: {
+                maxHeight: 300,
+                mt: 0.5
+              }
+            }
+          }}
+          sx={{
+            '& .MuiSelect-select': {
+              paddingTop: compact ? 0.5 : undefined,
+              paddingBottom: compact ? 0.5 : undefined,
+              paddingLeft: 1.5,
+              textOverflow: 'ellipsis',
+              overflow: 'hidden',
+              whiteSpace: 'nowrap'
+            }
+          }}
+        >
+          {options.map((option) => (
+            <MenuItem key={option.value} value={option.value}>
+              <Checkbox 
+                checked={valueArray.indexOf(option.value.toString()) > -1} 
+                size="small"
+              />
+              <ListItemText 
+                primary={
+                  <Typography sx={{ fontSize: compact ? '0.8rem' : '0.875rem' }}>
+                    {option.label}
+                  </Typography>
+                } 
+              />
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+    </Box>
+  );
+};
 
 const ProductFilter: React.FC<ProductFilterProps> = ({
   values,
@@ -81,19 +238,18 @@ const ProductFilter: React.FC<ProductFilterProps> = ({
   const handleResetFilters = () => {
     onChange({
       searchTerm: '',
-      category: '',
-      manufacturer: '',
-      supplier: '',
+      category: [],
+      manufacturer: [],
+      supplier: [],
       priceRange: [minPrice, maxPrice],
       inStockOnly: false,
       availability: '',
-      vatRate: '',
+      vatRate: [],
       minQuantity: 0,
       discountFilter: ''
     });
   };
 
-  // Calcola quanti filtri sono attivi
   const activeFiltersCount = useMemo(() => {
     let count = 0;
     if (values.searchTerm) count++;
@@ -109,10 +265,7 @@ const ProductFilter: React.FC<ProductFilterProps> = ({
     return count;
   }, [values, minPrice, maxPrice]);
 
-  // Genera le chips per i filtri attivi
   const renderActiveFilters = () => {
-    if (activeFiltersCount === 0) return null;
-    
     const chips = [];
     
     if (values.searchTerm) {
@@ -128,39 +281,111 @@ const ProductFilter: React.FC<ProductFilterProps> = ({
     }
     
     if (values.category) {
-      const categoryLabel = categories.find(c => c.value === values.category)?.label || values.category;
-      chips.push(
-        <Chip
-          key="category"
-          label={`Category: ${categoryLabel}`}
-          size="small"
-          onDelete={() => handleFilterChange('category', '')}
-        />
-      );
+      if (Array.isArray(values.category) && values.category.length > 0) {
+        if (values.category.length === 1) {
+          const categoryValue = values.category[0]!;
+          const categoryLabel = categories.find(c => c.value === categoryValue)?.label || categoryValue;
+          chips.push(
+            <Chip
+              key="category"
+              label={`Category: ${categoryLabel}`}
+              size="small"
+              onDelete={() => handleFilterChange('category', [])}
+            />
+          );
+        } else {
+          chips.push(
+            <Chip
+              key="category"
+              label={`Categories: ${values.category.length} selected`}
+              size="small"
+              onDelete={() => handleFilterChange('category', [])}
+            />
+          );
+        }
+      } else if (typeof values.category === 'string' && values.category !== '') {
+        const categoryLabel = categories.find(c => c.value === values.category)?.label || values.category;
+        chips.push(
+          <Chip
+            key="category"
+            label={`Category: ${categoryLabel}`}
+            size="small"
+            onDelete={() => handleFilterChange('category', '')}
+          />
+        );
+      }
     }
     
     if (values.manufacturer) {
-      const manufacturerLabel = manufacturers.find(m => m.value === values.manufacturer)?.label || values.manufacturer;
-      chips.push(
-        <Chip
-          key="manufacturer"
-          label={`Manufacturer: ${manufacturerLabel}`}
-          size="small"
-          onDelete={() => handleFilterChange('manufacturer', '')}
-        />
-      );
+      if (Array.isArray(values.manufacturer) && values.manufacturer.length > 0) {
+        if (values.manufacturer.length === 1) {
+          const manufacturerValue = values.manufacturer[0]!;
+          const manufacturerLabel = manufacturers.find(m => m.value === manufacturerValue)?.label || manufacturerValue;
+          chips.push(
+            <Chip
+              key="manufacturer"
+              label={`Manufacturer: ${manufacturerLabel}`}
+              size="small"
+              onDelete={() => handleFilterChange('manufacturer', [])}
+            />
+          );
+        } else {
+          chips.push(
+            <Chip
+              key="manufacturer"
+              label={`Manufacturers: ${values.manufacturer.length} selected`}
+              size="small"
+              onDelete={() => handleFilterChange('manufacturer', [])}
+            />
+          );
+        }
+      } else if (typeof values.manufacturer === 'string' && values.manufacturer !== '') {
+        const manufacturerLabel = manufacturers.find(m => m.value === values.manufacturer)?.label || values.manufacturer;
+        chips.push(
+          <Chip
+            key="manufacturer"
+            label={`Manufacturer: ${manufacturerLabel}`}
+            size="small"
+            onDelete={() => handleFilterChange('manufacturer', '')}
+          />
+        );
+      }
     }
     
     if (values.supplier) {
-      const supplierLabel = suppliers.find(s => s.value === values.supplier)?.label || values.supplier;
-      chips.push(
-        <Chip
-          key="supplier"
-          label={`Supplier: ${supplierLabel}`}
-          size="small"
-          onDelete={() => handleFilterChange('supplier', '')}
-        />
-      );
+      if (Array.isArray(values.supplier) && values.supplier.length > 0) {
+        if (values.supplier.length === 1) {
+          const supplierValue = values.supplier[0]!;
+          const supplierLabel = suppliers.find(s => s.value === supplierValue)?.label || supplierValue;
+          chips.push(
+            <Chip
+              key="supplier"
+              label={`Supplier: ${supplierLabel}`}
+              size="small"
+              onDelete={() => handleFilterChange('supplier', [])}
+            />
+          );
+        } else {
+          chips.push(
+            <Chip
+              key="supplier"
+              label={`Suppliers: ${values.supplier.length} selected`}
+              size="small"
+              onDelete={() => handleFilterChange('supplier', [])}
+            />
+          );
+        }
+      } else if (typeof values.supplier === 'string' && values.supplier !== '') {
+        const supplierLabel = suppliers.find(s => s.value === values.supplier)?.label || values.supplier;
+        chips.push(
+          <Chip
+            key="supplier"
+            label={`Supplier: ${supplierLabel}`}
+            size="small"
+            onDelete={() => handleFilterChange('supplier', '')}
+          />
+        );
+      }
     }
     
     if (values.priceRange && (values.priceRange[0] > minPrice || values.priceRange[1] < maxPrice)) {
@@ -204,15 +429,41 @@ const ProductFilter: React.FC<ProductFilterProps> = ({
     }
     
     if (values.vatRate) {
-      const vatLabel = vatRates.find(v => v.value === values.vatRate)?.label || `${values.vatRate}%`;
-      chips.push(
-        <Chip
-          key="vatRate"
-          label={`VAT Rate: ${vatLabel}`}
-          size="small"
-          onDelete={() => handleFilterChange('vatRate', '')}
-        />
-      );
+      if (Array.isArray(values.vatRate)) {
+        if (values.vatRate.length > 0) {
+          if (values.vatRate.length === 1) {
+            const vatValue = values.vatRate[0];
+            const vatLabel = vatRates.find(v => v.value === vatValue)?.label || `${vatValue}%`;
+            chips.push(
+              <Chip
+                key="vatRate"
+                label={`VAT Rate: ${vatLabel}`}
+                size="small"
+                onDelete={() => handleFilterChange('vatRate', [])}
+              />
+            );
+          } else {
+            chips.push(
+              <Chip
+                key="vatRate"
+                label={`VAT Rates: ${values.vatRate.length} selected`}
+                size="small"
+                onDelete={() => handleFilterChange('vatRate', [])}
+              />
+            );
+          }
+        }
+      } else {
+        const vatLabel = vatRates.find(v => v.value === values.vatRate)?.label || `${values.vatRate}%`;
+        chips.push(
+          <Chip
+            key="vatRate"
+            label={`VAT Rate: ${vatLabel}`}
+            size="small"
+            onDelete={() => handleFilterChange('vatRate', '')}
+          />
+        );
+      }
     }
     
     if (values.minQuantity && values.minQuantity > 0) {
@@ -289,7 +540,6 @@ const ProductFilter: React.FC<ProductFilterProps> = ({
 
   return (
     <Paper elevation={0} sx={{ borderRadius: 2, border: '1px solid #e0e0e0', overflow: 'hidden' }}>
-      {/* Header con totale e info filtri */}
       <Box sx={{ 
         display: 'flex', 
         alignItems: 'center', 
@@ -353,10 +603,8 @@ const ProductFilter: React.FC<ProductFilterProps> = ({
         </Stack>
       </Box>
       
-      {/* Filtri primari sempre visibili */}
       <Box sx={{ p: 2 }}>
         <Stack spacing={2}>
-          {/* Barra di ricerca */}
           <Paper
             variant="outlined"
             sx={{
@@ -399,56 +647,49 @@ const ProductFilter: React.FC<ProductFilterProps> = ({
             />
           </Paper>
           
-          {/* Filtri principali */}
           <Stack 
             direction={{ xs: 'column', sm: 'row' }} 
             spacing={1.5}
             divider={<Divider orientation={isMobile ? "horizontal" : "vertical"} flexItem />}
           >
-            <FilterSelect
+            <MultiSelect
               id="category"
               label="Category"
-              value={values.category || ''}
-              onChange={(value: string | number) => handleFilterChange('category', value)}
+              value={Array.isArray(values.category) ? values.category : (values.category ? [values.category] : [])}
+              onChange={(value) => handleFilterChange('category', value)}
               options={categories}
               placeholder="All Categories"
-              allowClear
               compact
             />
             
-            <FilterSelect
+            <MultiSelect
               id="manufacturer"
               label="Manufacturer"
-              value={values.manufacturer || ''}
-              onChange={(value: string | number) => handleFilterChange('manufacturer', value)}
+              value={Array.isArray(values.manufacturer) ? values.manufacturer : (values.manufacturer ? [values.manufacturer] : [])}
+              onChange={(value) => handleFilterChange('manufacturer', value)}
               options={manufacturers}
               placeholder="All Manufacturers"
-              allowClear
               compact
             />
             
-            <FilterSelect
+            <MultiSelect
               id="supplier"
               label="Supplier"
-              value={values.supplier || ''}
-              onChange={(value: string | number) => handleFilterChange('supplier', value)}
+              value={Array.isArray(values.supplier) ? values.supplier : (values.supplier ? [values.supplier] : [])}
+              onChange={(value) => handleFilterChange('supplier', value)}
               options={suppliers}
               placeholder="All Suppliers"
-              allowClear
               compact
             />
           </Stack>
           
-          {/* Chips per filtri attivi */}
           {renderActiveFilters()}
         </Stack>
       </Box>
       
-      {/* Filtri avanzati - collapsible */}
       <Collapse in={showAdvanced}>
         <Box sx={{ p: 2, pt: 0, borderTop: '1px solid #eaeaea', bgcolor: 'background.default' }}>
           <Stack spacing={2}>
-            {/* Price Range */}
             <Box>
               <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 500 }}>
                 Price Range (€)
@@ -463,47 +704,20 @@ const ProductFilter: React.FC<ProductFilterProps> = ({
                   valueLabelFormat={(value) => `€${value}`}
                 />
               </Box>
-              <Stack direction="row" spacing={1} alignItems="center">
-                <Box sx={{ 
-                  border: '1px solid #e0e0e0', 
-                  borderRadius: 1, 
-                  px: 1, 
-                  py: 0.5, 
-                  display: 'flex',
-                  alignItems: 'center'
-                }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>€</Typography>
-                  <InputBase
-                    value={values.priceRange?.[0] || minPrice}
-                    onChange={(e) => handleFilterChange('priceRange', [
-                      Number(e.target.value) || minPrice, 
-                      values.priceRange?.[1] || maxPrice
-                    ])}
-                    sx={{ fontSize: '0.875rem', width: 60 }}
-                    inputProps={{ min: minPrice, type: 'number' }}
-                  />
-                </Box>
-                <Typography variant="body2" color="text.secondary">—</Typography>
-                <Box sx={{ 
-                  border: '1px solid #e0e0e0', 
-                  borderRadius: 1, 
-                  px: 1, 
-                  py: 0.5, 
-                  display: 'flex',
-                  alignItems: 'center'
-                }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>€</Typography>
-                  <InputBase
-                    value={values.priceRange?.[1] || maxPrice}
-                    onChange={(e) => handleFilterChange('priceRange', [
-                      values.priceRange?.[0] || minPrice, 
-                      Number(e.target.value) || maxPrice
-                    ])}
-                    sx={{ fontSize: '0.875rem', width: 60 }}
-                    inputProps={{ min: minPrice, type: 'number' }}
-                  />
-                </Box>
-              </Stack>
+              
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'space-between',
+                mt: 1,
+                px: 1
+              }}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                  €{values.priceRange ? values.priceRange[0] : minPrice}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                  €{values.priceRange ? values.priceRange[1] : maxPrice}
+                </Typography>
+              </Box>
             </Box>
             
             <Stack 
@@ -539,14 +753,13 @@ const ProductFilter: React.FC<ProductFilterProps> = ({
               </Box>
               
               <Box sx={{ flex: 1 }}>
-                <FilterSelect
+                <MultiSelect
                   id="vatRate"
                   label="VAT Rate"
-                  value={values.vatRate || ''}
-                  onChange={(value: string | number) => handleFilterChange('vatRate', value)}
+                  value={Array.isArray(values.vatRate) ? values.vatRate : (values.vatRate ? [values.vatRate] : [])}
+                  onChange={(value) => handleFilterChange('vatRate', value)}
                   options={vatRates}
                   placeholder="All VAT Rates"
-                  allowClear
                   compact
                 />
               </Box>
