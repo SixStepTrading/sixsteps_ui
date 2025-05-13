@@ -699,16 +699,6 @@ const Dashboard: React.FC = () => {
                   >
                     Refresh
                   </Button>
-                  <Button 
-                    size="small" 
-                    variant="contained" 
-                    color="primary" 
-                    startIcon={<AddIcon />}
-                    onClick={handleCreateOda}
-                    disabled={selected.length === 0}
-                  >
-                    Create ODA
-                  </Button>
               </Box>
               }
             />
