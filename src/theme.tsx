@@ -37,27 +37,27 @@ const theme = createTheme({
     fontFamily: "'Roboto', 'Helvetica', 'Arial', sans-serif",
     h1: {
       fontWeight: 500,
-      fontSize: '2rem',
+      fontSize: '1.8rem',
     },
     h2: {
       fontWeight: 500,
-      fontSize: '1.75rem',
+      fontSize: '1.6rem',
     },
     h3: {
       fontWeight: 500,
-      fontSize: '1.5rem',
+      fontSize: '1.4rem',
     },
     h4: {
       fontWeight: 500,
-      fontSize: '1.25rem',
+      fontSize: '1.2rem',
     },
     h5: {
       fontWeight: 500,
-      fontSize: '1.1rem',
+      fontSize: '1rem',
     },
     h6: {
       fontWeight: 500,
-      fontSize: '1rem',
+      fontSize: '0.9rem',
     },
   },
   components: {
@@ -65,17 +65,23 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           textTransform: 'none',
-          borderRadius: 8,
+          borderRadius: 6,
+          padding: '6px 12px',
+          fontSize: '0.85rem',
         },
         contained: {
           boxShadow: 'none',
+        },
+        sizeSmall: {
+          padding: '4px 8px',
+          fontSize: '0.8rem',
         },
       },
     },
     MuiCard: {
       styleOverrides: {
         root: {
-          borderRadius: 12,
+          borderRadius: 8,
           boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.05)',
         },
       },
@@ -83,7 +89,82 @@ const theme = createTheme({
     MuiPaper: {
       styleOverrides: {
         root: {
-          borderRadius: 12,
+          borderRadius: 8,
+        },
+      },
+    },
+    MuiTableCell: {
+      styleOverrides: {
+        root: {
+          padding: '8px 10px',
+          fontSize: '0.85rem',
+        },
+        head: {
+          fontWeight: 'bold',
+          fontSize: '0.85rem',
+        },
+      },
+    },
+    MuiTableRow: {
+      styleOverrides: {
+        root: {
+          height: 42,
+        },
+      },
+    },
+    MuiToolbar: {
+      styleOverrides: {
+        root: {
+          minHeight: '48px !important',
+          '@media (min-width: 600px)': {
+            minHeight: '48px !important',
+          },
+        },
+      },
+    },
+    MuiCardHeader: {
+      styleOverrides: {
+        root: {
+          padding: '12px 16px',
+        },
+        title: {
+          fontSize: '1rem',
+        },
+      },
+    },
+    MuiCardContent: {
+      styleOverrides: {
+        root: {
+          padding: '12px 16px',
+          '&:last-child': {
+            paddingBottom: '12px',
+          },
+        },
+      },
+    },
+    MuiTextField: {
+      styleOverrides: {
+        root: {
+          '& .MuiInputBase-root': {
+            fontSize: '0.85rem',
+          },
+          '& .MuiInputLabel-root': {
+            fontSize: '0.85rem',
+          },
+        },
+      },
+    },
+    MuiFormControl: {
+      styleOverrides: {
+        root: {
+          minHeight: '48px',
+        },
+      },
+    },
+    MuiInputBase: {
+      styleOverrides: {
+        root: {
+          fontSize: '0.85rem',
         },
       },
     },

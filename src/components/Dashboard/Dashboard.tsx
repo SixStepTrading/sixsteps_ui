@@ -28,12 +28,7 @@ import {
   Alert,
   Snackbar,
   Tooltip,
-  Collapse,
-  Paper,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions
+  Paper
 } from '@mui/material';
 import { 
   ShoppingCart, 
@@ -59,12 +54,18 @@ import StatCard from '../common/StatCard';
 import { useToast } from '../../contexts/ToastContext';
 import { Product } from '../../data/mockProducts';
 import { fetchProducts, getFallbackProducts } from '../../utils/api';
+import { ProductRow } from '../common/reusable';
+import { calculateAveragePrice } from '../common/utils';
+import SortableColumnHeader from '../common/reusable/SortableColumnHeader';
+import ProductFilter from '../common/reusable/ProductFilter';
+import { SortDirection } from '../common/reusable/SortableColumnHeader';
 
 // Interface for product with quantity
 interface ProductWithQuantity extends Product {
   quantity: number;
   averagePrice: number | null;
   showAllPrices: boolean; // Track if we're showing all prices for this product
+  targetPrice: number | null; // Target price impostabile dall'utente
 }
 
 const Dashboard: React.FC = () => {
@@ -78,6 +79,10 @@ const Dashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [priceDetailsOpen, setPriceDetailsOpen] = useState<string | null>(null);
+  
+  // State for sorting
+  const [sortBy, setSortBy] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
   
   // Calcola quante righe mostrare per pagina in base all'altezza della tabella
   const calculateRowsPerPage = (tableHeight: number): number => {
@@ -104,20 +109,44 @@ const Dashboard: React.FC = () => {
   const [totalAmount, setTotalAmount] = useState(0);
   const [usingMockData, setUsingMockData] = useState(false);
   
-  // State for filters
-  const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('');
-  const [manufacturerFilter, setManufacturerFilter] = useState<string>('');
-  const [inStockOnly, setInStockOnly] = useState(false);
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 100]);
-  const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  // State for ProductFilter component
+  const [filterValues, setFilterValues] = useState({
+    searchTerm: '',
+    category: '',
+    manufacturer: '',
+    supplier: '',
+    priceRange: [0, 100] as [number, number],
+    inStockOnly: false,
+    vatRate: '',
+  });
   
   // Available filter options derived from product data
   const [categories, setCategories] = useState<string[]>([]);
   const [manufacturers, setManufacturers] = useState<string[]>([]);
+  const [suppliers, setSuppliers] = useState<{ value: string; label: string }[]>([]);
+  const [vatRates, setVatRates] = useState<{ value: string | number; label: string }[]>([]);
 
   // Funzione per gestire l'apertura/chiusura della visualizzazione di tutti i prezzi
   const handleToggleAllPrices = (productId: string) => {
+    // Find product and toggle showAllPrices property
+    setProducts(prevProducts => 
+      prevProducts.map(product => 
+        product.id === productId 
+          ? { ...product, showAllPrices: !product.showAllPrices } 
+          : product
+      )
+    );
+    
+    // Also update in filtered products
+    setFilteredProducts(prevFiltered => 
+      prevFiltered.map(product => 
+        product.id === productId 
+          ? { ...product, showAllPrices: !product.showAllPrices } 
+          : product
+      )
+    );
+    
+    // Keep track of which product details are open
     setPriceDetailsOpen(priceDetailsOpen === productId ? null : productId);
   };
 
@@ -129,12 +158,14 @@ const Dashboard: React.FC = () => {
     try {
       // Build filter object for API request
       const filters = {
-        searchTerm: useServerFiltering ? searchTerm : undefined,
-        category: useServerFiltering ? categoryFilter : undefined,
-        manufacturer: useServerFiltering ? manufacturerFilter : undefined,
-        inStockOnly: useServerFiltering ? inStockOnly : undefined,
-        minPrice: useServerFiltering && priceRange[0] > 0 ? priceRange[0] : undefined,
-        maxPrice: useServerFiltering && priceRange[1] < 100 ? priceRange[1] : undefined
+        searchTerm: useServerFiltering ? filterValues.searchTerm : undefined,
+        category: useServerFiltering ? filterValues.category : undefined,
+        manufacturer: useServerFiltering ? filterValues.manufacturer : undefined,
+        supplier: useServerFiltering ? filterValues.supplier : undefined,
+        inStockOnly: useServerFiltering ? filterValues.inStockOnly : undefined,
+        minPrice: useServerFiltering && filterValues.priceRange[0] > 0 ? filterValues.priceRange[0] : undefined,
+        maxPrice: useServerFiltering && filterValues.priceRange[1] < 100 ? filterValues.priceRange[1] : undefined,
+        vatRate: useServerFiltering ? filterValues.vatRate : undefined,
       };
       
       // Calculate page number for API (1-indexed vs 0-indexed)
@@ -148,13 +179,28 @@ const Dashboard: React.FC = () => {
         ...product,
         quantity: 0,
         averagePrice: null,
-        showAllPrices: false
+        showAllPrices: false,
+        targetPrice: null
       }));
       
       setProducts(productsWithQuantity);
       setTotalCount(result.totalCount);
-      setCategories(result.categories);
-      setManufacturers(result.manufacturers);
+      setCategories(result.categories || []);
+      setManufacturers(result.manufacturers || []);
+      
+      // Extract unique suppliers and VAT rates from products
+      const uniqueSuppliers = new Set<string>();
+      const uniqueVatRates = new Set<number>();
+      
+      result.products.forEach(product => {
+        uniqueVatRates.add(product.vat);
+        product.bestPrices.forEach(price => {
+          uniqueSuppliers.add(price.supplier);
+        });
+      });
+      
+      setSuppliers(Array.from(uniqueSuppliers).map(supplier => ({ value: supplier, label: supplier })));
+      setVatRates(Array.from(uniqueVatRates).map(vat => ({ value: vat, label: `${vat}%` })));
       
       // If using server filtering, filtered products = products returned
       if (useServerFiltering) {
@@ -178,19 +224,35 @@ const Dashboard: React.FC = () => {
           ...product,
           quantity: 0,
           averagePrice: null,
-          showAllPrices: false
+          showAllPrices: false,
+          targetPrice: null
         }));
         
         setProducts(productsWithQuantity);
         setFilteredProducts(productsWithQuantity);
         setTotalCount(fallbackData.totalCount);
-        setCategories(fallbackData.categories);
-        setManufacturers(fallbackData.manufacturers);
+        setCategories(fallbackData.categories || []);
+        setManufacturers(fallbackData.manufacturers || []);
+        
+        // Extract unique suppliers and VAT rates from products
+        const uniqueSuppliers = new Set<string>();
+        const uniqueVatRates = new Set<number>();
+        
+        fallbackData.products.forEach(product => {
+          uniqueVatRates.add(product.vat);
+          product.bestPrices.forEach(price => {
+            uniqueSuppliers.add(price.supplier);
+          });
+        });
+        
+        setSuppliers(Array.from(uniqueSuppliers).map(supplier => ({ value: supplier, label: supplier })));
+        setVatRates(Array.from(uniqueVatRates).map(vat => ({ value: vat, label: `${vat}%` })));
+        
         setUsingMockData(true);
         
         // If using mock data, we need to apply client-side filtering
-        if (searchTerm || categoryFilter || manufacturerFilter || inStockOnly || 
-            priceRange[0] > 0 || priceRange[1] < 100) {
+        if (filterValues.searchTerm || filterValues.category || filterValues.manufacturer || 
+            filterValues.inStockOnly || filterValues.priceRange[0] > 0 || filterValues.priceRange[1] < 100) {
           applyClientFilters(productsWithQuantity);
         }
       } catch (fallbackErr) {
@@ -200,7 +262,7 @@ const Dashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, categoryFilter, manufacturerFilter, inStockOnly, priceRange, page, rowsPerPage]);
+  }, [filterValues, page, rowsPerPage]);
   
   // Initial load of products
   useEffect(() => {
@@ -209,91 +271,141 @@ const Dashboard: React.FC = () => {
   
   // Apply client-side filters to products
   const applyClientFilters = useCallback((productsList: ProductWithQuantity[]) => {
-    // Build active filters list for UI
-    const newActiveFilters: string[] = [];
-    if (categoryFilter) newActiveFilters.push(`Category: ${categoryFilter}`);
-    if (manufacturerFilter) newActiveFilters.push(`Manufacturer: ${manufacturerFilter}`);
-    if (inStockOnly) newActiveFilters.push('In Stock Only');
-    if (priceRange[0] > 0 || priceRange[1] < 100) {
-      newActiveFilters.push(`Price: €${priceRange[0]} - €${priceRange[1]}`);
-    }
-    setActiveFilters(newActiveFilters);
-    
     // Filter products
     let filtered = [...productsList];
 
     // Apply search filter
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
+    if (filterValues.searchTerm) {
+      const term = filterValues.searchTerm.toLowerCase();
       filtered = filtered.filter(product => 
         product.name.toLowerCase().includes(term) || 
         product.ean.includes(term) || 
         product.minsan.includes(term) ||
-        product.manufacturer.toLowerCase().includes(term) ||
-        product.description.toLowerCase().includes(term)
+        product.manufacturer.toLowerCase().includes(term)
       );
     }
     
     // Apply category filter
-    if (categoryFilter) {
-      filtered = filtered.filter(product => product.category === categoryFilter);
+    if (filterValues.category) {
+      filtered = filtered.filter(product => product.category === filterValues.category);
     }
     
     // Apply manufacturer filter
-    if (manufacturerFilter) {
-      filtered = filtered.filter(product => product.manufacturer === manufacturerFilter);
+    if (filterValues.manufacturer) {
+      filtered = filtered.filter(product => product.manufacturer === filterValues.manufacturer);
+    }
+    
+    // Apply supplier filter
+    if (filterValues.supplier) {
+      filtered = filtered.filter(product => 
+        product.bestPrices.some(price => price.supplier === filterValues.supplier)
+      );
     }
     
     // Apply in-stock filter
-    if (inStockOnly) {
+    if (filterValues.inStockOnly) {
       filtered = filtered.filter(product => product.inStock);
     }
     
+    // Apply VAT rate filter
+    if (filterValues.vatRate) {
+      filtered = filtered.filter(product => product.vat.toString() === filterValues.vatRate.toString());
+    }
+    
     // Apply price range filter
-    filtered = filtered.filter(product => 
-      product.publicPrice >= priceRange[0] && product.publicPrice <= priceRange[1]
-    );
+    filtered = filtered.filter(product => {
+      const lowestPrice = product.bestPrices.length > 0 ? product.bestPrices[0].price : 0;
+      return lowestPrice >= filterValues.priceRange[0] && lowestPrice <= filterValues.priceRange[1];
+    });
+    
+    // Apply sorting if needed
+    if (sortBy && sortDirection) {
+      filtered = applySorting(filtered, sortBy, sortDirection);
+    }
     
     setFilteredProducts(filtered);
-  }, [searchTerm, categoryFilter, manufacturerFilter, inStockOnly, priceRange]);
+  }, [filterValues, sortBy, sortDirection]);
   
-  // Function to calculate average price based on required quantity and available supplier stocks
-  const calculateAveragePrice = (product: ProductWithQuantity, quantity: number): number | null => {
-    if (quantity <= 0) return null;
+  // Function to handle sorting
+  const applySorting = (products: ProductWithQuantity[], sortBy: string, direction: SortDirection) => {
+    if (!direction) return products;
     
-    // Sort prices from lowest to highest (they should already be sorted, but just to be sure)
-    const sortedPrices = [...product.bestPrices].sort((a, b) => a.price - b.price);
-    if (sortedPrices.length === 0) return product.publicPrice;
-    
-    let remainingQuantity = quantity;
-    let totalCost = 0;
-    
-    // Try to fulfill the required quantity starting from the best price
-    for (const pricePoint of sortedPrices) {
-      if (remainingQuantity <= 0) break;
+    return [...products].sort((a, b) => {
+      let compareA: string | number;
+      let compareB: string | number;
       
-      const quantityFromThisSupplier = Math.min(remainingQuantity, pricePoint.stock);
-      totalCost += quantityFromThisSupplier * pricePoint.price;
-      remainingQuantity -= quantityFromThisSupplier;
-    }
+      // Determine what to sort by
+      switch (sortBy) {
+        case 'name':
+          compareA = a.name.toLowerCase();
+          compareB = b.name.toLowerCase();
+          break;
+        case 'manufacturer':
+          compareA = a.manufacturer.toLowerCase();
+          compareB = b.manufacturer.toLowerCase();
+          break;
+        case 'category':
+          compareA = a.category.toLowerCase();
+          compareB = b.category.toLowerCase();
+          break;
+        case 'publicPrice':
+          compareA = a.publicPrice;
+          compareB = b.publicPrice;
+          break;
+        case 'bestPrice':
+          compareA = a.bestPrices.length > 0 ? a.bestPrices[0].price : Infinity;
+          compareB = b.bestPrices.length > 0 ? b.bestPrices[0].price : Infinity;
+          break;
+        case 'stock':
+          compareA = a.bestPrices.reduce((sum, price) => sum + price.stock, 0);
+          compareB = b.bestPrices.reduce((sum, price) => sum + price.stock, 0);
+          break;
+        case 'code':
+          compareA = a.ean;
+          compareB = b.ean;
+          break;
+        default:
+          return 0;
+      }
+      
+      // Direction of sort
+      const factor = direction === 'asc' ? 1 : -1;
+      
+      // Compare values
+      if (typeof compareA === 'string' && typeof compareB === 'string') {
+        return compareA.localeCompare(compareB) * factor;
+      } else if (typeof compareA === 'number' && typeof compareB === 'number') {
+        return (compareA - compareB) * factor;
+      }
+      return 0;
+    });
+  };
+  
+  // Handle sorting column click
+  const handleSort = (column: string, direction: SortDirection) => {
+    setSortBy(column);
+    setSortDirection(direction);
     
-    // If we still have remaining quantity, use public price
-    if (remainingQuantity > 0) {
-      totalCost += remainingQuantity * product.publicPrice;
+    // Re-apply sorting to filtered products
+    if (direction) {
+      const sorted = applySorting(filteredProducts, column, direction);
+      setFilteredProducts(sorted);
     }
-    
-    // Calculate average price
-    return totalCost / quantity;
   };
   
   // Handle quantity change for a product
   const handleQuantityChange = (id: string, quantity: number) => {
-    // Update the quantity in products state
+    // Update quantity
     const updatedProducts = products.map(product => {
       if (product.id === id) {
-        const averagePrice = calculateAveragePrice(product, quantity);
-        return { 
-          ...product, 
+        // Calculate average price if quantity > 0
+        let averagePrice = null;
+        if (quantity > 0) {
+          averagePrice = calculateAveragePrice(product.bestPrices, quantity, product.publicPrice);
+        }
+        
+        return {
+          ...product,
           quantity,
           averagePrice
         };
@@ -306,9 +418,14 @@ const Dashboard: React.FC = () => {
     // Also update filtered products
     const updatedFilteredProducts = filteredProducts.map(product => {
       if (product.id === id) {
-        const averagePrice = calculateAveragePrice(product, quantity);
-        return { 
-          ...product, 
+        // Calculate average price if quantity > 0
+        let averagePrice = null;
+        if (quantity > 0) {
+          averagePrice = calculateAveragePrice(product.bestPrices, quantity, product.publicPrice);
+        }
+        
+        return {
+          ...product,
           quantity,
           averagePrice
         };
@@ -318,76 +435,67 @@ const Dashboard: React.FC = () => {
     
     setFilteredProducts(updatedFilteredProducts);
     
-    // If the product is selected, auto-select it
-    if (quantity > 0 && !selected.includes(id)) {
-      setSelected([...selected, id]);
-    } else if (quantity === 0 && selected.includes(id)) {
-      setSelected(selected.filter(itemId => itemId !== id));
+    // If quantity is set to 0, unselect the product
+    if (quantity === 0) {
+      setSelected(prev => prev.filter(selectedId => selectedId !== id));
     }
   };
   
-  // Debounced filter application for search input
+  // React to filter changes with debounce
   const debouncedApplyFilters = useCallback(
     debounce(() => loadProducts(true), 500),
     [loadProducts]
   );
   
-  // Apply filters whenever filter criteria change
+  // Re-filter when filters change
   useEffect(() => {
     if (products.length > 0) {
-      if (usingMockData) {
-        // For mock data, use client-side filtering
-        applyClientFilters(products);
-      } else {
-        // For real API data, reload from server with filters
+      // If using real API, let the server filter data
+      if (!usingMockData) {
         debouncedApplyFilters();
+      } else {
+        applyClientFilters(products);
       }
     }
-  }, [products, searchTerm, categoryFilter, manufacturerFilter, inStockOnly, priceRange, usingMockData, applyClientFilters, debouncedApplyFilters]);
+  }, [products, filterValues, usingMockData, applyClientFilters, debouncedApplyFilters]);
   
   // Calculate total amount whenever selection changes or product quantities change
   useEffect(() => {
-    if (selected.length > 0) {
-      const selectedProducts = filteredProducts.filter(p => selected.includes(p.id));
-      const total = selectedProducts.reduce((sum, product) => {
-        if (product.quantity <= 0) return sum;
-        
-        if (product.averagePrice !== null) {
-          return sum + (product.averagePrice * product.quantity);
-        } else {
-          // Use best price (first in the bestPrices array which is already sorted)
-          const unitPrice = product.bestPrices.length > 0 ? product.bestPrices[0].price : product.publicPrice;
-          return sum + (unitPrice * product.quantity);
-        }
-      }, 0);
-      setTotalAmount(total);
-    } else {
-      setTotalAmount(0);
-    }
+    const selectedProducts = filteredProducts.filter(p => selected.includes(p.id));
+    const total = selectedProducts.reduce((sum, product) => {
+      if (product.quantity > 0 && product.averagePrice !== null) {
+        return sum + (product.quantity * product.averagePrice);
+      }
+      return sum;
+    }, 0);
+    
+    setTotalAmount(total);
   }, [selected, filteredProducts]);
   
-  // Handle pagination changes
+  // Pagination handlers
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
+    
+    // For real API data, reload products with new page
     if (!usingMockData) {
-      // For real API data, reload products with new page
       loadProducts(true);
     }
   };
-
+  
   const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
+    
+    // For real API data, reload products with new page size
     if (!usingMockData) {
-      // For real API data, reload products with new page size
       loadProducts(true);
     }
   };
   
-  // Handle selection
+  // Select/deselect handlers
   const handleSelectAllClick = (event: React.ChangeEvent<HTMLInputElement>) => {
+    // Only select products with quantity > 0
     if (event.target.checked) {
-      // Only select products with quantity > 0
       const newSelected = filteredProducts
         .filter(product => product.quantity > 0)
         .map(product => product.id);
@@ -396,149 +504,92 @@ const Dashboard: React.FC = () => {
     }
     setSelected([]);
   };
-
+  
   const handleSelectClick = (event: React.MouseEvent<unknown>, id: string) => {
     const product = filteredProducts.find(p => p.id === id);
+    
+    // Only allow selection if quantity > 0
     if (!product || product.quantity <= 0) {
-      showToast('Please enter a quantity before selecting this product', 'warning');
       return;
     }
     
     const selectedIndex = selected.indexOf(id);
     let newSelected: string[] = [];
-
+    
     if (selectedIndex === -1) {
+      // Add to selection
       newSelected = [...selected, id];
     } else {
-      newSelected = selected.filter(itemId => itemId !== id);
+      // Remove from selection
+      newSelected = selected.filter(selectedId => selectedId !== id);
     }
-
+    
     setSelected(newSelected);
   };
-
+  
   const isSelected = (id: string) => selected.indexOf(id) !== -1;
   
-  // Handle filter changes
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(event.target.value);
+  // Handle filter changes from ProductFilter component
+  const handleFilterChange = (newValues: any) => {
+    setFilterValues(newValues);
   };
   
-  const handleCategoryChange = (event: SelectChangeEvent) => {
-    setCategoryFilter(event.target.value);
+  // Apply filters when the Apply button is clicked
+  const handleApplyFilters = () => {
+    loadProducts(true);
   };
   
-  const handleManufacturerChange = (event: SelectChangeEvent) => {
-    setManufacturerFilter(event.target.value);
-  };
-  
-  const handleFilterClear = (filterToRemove: string) => {
-    if (filterToRemove.startsWith('Category:')) {
-      setCategoryFilter('');
-    } else if (filterToRemove.startsWith('Manufacturer:')) {
-      setManufacturerFilter('');
-    } else if (filterToRemove === 'In Stock Only') {
-      setInStockOnly(false);
-    } else if (filterToRemove.startsWith('Price:')) {
-      setPriceRange([0, 100]);
-    }
-  };
-  
-  const handleClearAllFilters = () => {
-    setSearchTerm('');
-    setCategoryFilter('');
-    setManufacturerFilter('');
-    setInStockOnly(false);
-    setPriceRange([0, 100]);
-  };
-  
+  // Create ODA
   const handleCreateOda = () => {
+    // Only include products with quantity > 0
     const productsWithQuantity = selected.filter(id => {
       const product = filteredProducts.find(p => p.id === id);
       return product && product.quantity > 0;
     });
     
     if (productsWithQuantity.length === 0) {
-      showToast('Please select at least one product with quantity', 'warning');
+      showToast('No products selected or quantities specified', 'error');
       return;
     }
     
     const totalQuantity = filteredProducts
       .filter(p => selected.includes(p.id))
       .reduce((sum, p) => sum + p.quantity, 0);
-    
+      
     showToast(`ODA created with ${productsWithQuantity.length} products (${totalQuantity} items) totaling €${totalAmount.toFixed(2)}`, 'success');
+    
+    // Clear selection and reset quantities
+    setSelected([]);
+    handleCloseError();
+    loadProducts(true);
   };
-
+  
   const handleCloseError = () => {
     setError(null);
   };
-
+  
   const handleRefresh = () => {
     loadProducts(true);
   };
-
+  
   // Get the total quantity of selected products
   const getTotalQuantity = () => {
     return filteredProducts
       .filter(p => selected.includes(p.id))
       .reduce((sum, p) => sum + p.quantity, 0);
   };
-
-  // Render price details dialog
-  const renderPriceDetailsDialog = () => {
-    if (!priceDetailsOpen) return null;
+  
+  // Handle target price change
+  const handleTargetPriceChange = (id: string, newValue: string) => {
+    const targetPrice = newValue === '' ? null : parseFloat(newValue);
     
-    const product = filteredProducts.find(p => p.id === priceDetailsOpen);
-    if (!product) return null;
+    setProducts(prev => prev.map(product => 
+      product.id === id ? { ...product, targetPrice } : product
+    ));
     
-    return (
-      <Dialog 
-        open={!!priceDetailsOpen} 
-        onClose={() => setPriceDetailsOpen(null)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>
-          Additional Price Details - {product.name}
-        </DialogTitle>
-        <DialogContent>
-          <TableContainer component={Paper}>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Supplier</TableCell>
-                  <TableCell align="right">Price</TableCell>
-                  <TableCell align="right">Stock</TableCell>
-                  <TableCell align="right">Savings vs. Public Price</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {product.bestPrices.map((priceInfo, index) => (
-                  <TableRow 
-                    key={index}
-                    sx={{ 
-                      bgcolor: 
-                        index === 0 ? '#e8f5e9' : 
-                        index === 1 ? '#e3f2fd' : 
-                        index === 2 ? '#f3e5f5' : 
-                        'inherit'
-                    }}
-                  >
-                    <TableCell>{priceInfo.supplier}</TableCell>
-                    <TableCell align="right">€{priceInfo.price.toFixed(2)}</TableCell>
-                    <TableCell align="right">{priceInfo.stock}</TableCell>
-                    <TableCell align="right">-€{(product.publicPrice - priceInfo.price).toFixed(2)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setPriceDetailsOpen(null)}>Close</Button>
-        </DialogActions>
-      </Dialog>
-    );
+    setFilteredProducts(prev => prev.map(product => 
+      product.id === id ? { ...product, targetPrice } : product
+    ));
   };
 
   return (
@@ -550,8 +601,6 @@ const Dashboard: React.FC = () => {
           </Alert>
         </Snackbar>
       )}
-      
-      {renderPriceDetailsDialog()}
       
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
@@ -650,91 +699,20 @@ const Dashboard: React.FC = () => {
             />
             <Divider />
             <CardContent sx={{ p: 0 }}>
-              <Box sx={{ mb: 2, p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
-                  <TextField
-                    placeholder="Search by name, code, EAN or manufacturer..."
-                              size="small" 
-                    value={searchTerm}
-                    onChange={handleSearchChange}
-                    InputProps={{
-                      startAdornment: <SearchIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />,
-                      endAdornment: searchTerm ? (
-                        <IconButton size="small" onClick={() => setSearchTerm('')}>
-                          <ClearIcon fontSize="small" />
-                            </IconButton>
-                      ) : null,
-                    }}
-                    sx={{ width: 300 }}
-                  />
-                  <FormControl size="small" sx={{ minWidth: 200 }}>
-                    <InputLabel>All Categories</InputLabel>
-                    <Select 
-                      label="All Categories"
-                      value={categoryFilter}
-                      onChange={handleCategoryChange}
-                    >
-                      <MenuItem value="">All Categories</MenuItem>
-                      {categories.map(category => (
-                        <MenuItem key={category} value={category}>{category}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <FormControl size="small" sx={{ minWidth: 200 }}>
-                    <InputLabel>All Manufacturers</InputLabel>
-                    <Select
-                      label="All Manufacturers"
-                      value={manufacturerFilter}
-                      onChange={handleManufacturerChange}
-                    >
-                      <MenuItem value="">All Manufacturers</MenuItem>
-                      {manufacturers.map(manufacturer => (
-                        <MenuItem key={manufacturer} value={manufacturer}>{manufacturer}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <FormControl size="small">
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Checkbox 
-                        checked={inStockOnly} 
-                        onChange={(e) => setInStockOnly(e.target.checked)}
-                      />
-                      <Typography variant="body2">In Stock Only</Typography>
-                    </Box>
-                  </FormControl>
-                </Box>
-                <Button 
-                  variant="contained" 
-                  sx={{ bgcolor: '#3f51b5' }}
-                  startIcon={<FilterListIcon />}
-                  onClick={() => loadProducts(true)}
-                  disabled={loading}
-                >
-                  Apply Filters
-                </Button>
+              {/* Replacing the filter UI with ProductFilter component */}
+              <Box sx={{ p: 2 }}>
+                <ProductFilter
+                  values={filterValues}
+                  onChange={handleFilterChange}
+                  onApplyFilters={handleApplyFilters}
+                  categories={categories.map(cat => ({ value: cat, label: cat }))}
+                  manufacturers={manufacturers.map(mfr => ({ value: mfr, label: mfr }))}
+                  suppliers={suppliers}
+                  vatRates={vatRates}
+                  maxPrice={100}
+                  minPrice={0}
+                />
               </Box>
-              
-              {activeFilters.length > 0 && (
-                <Box sx={{ p: 1, bgcolor: '#f5f5f5', display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
-                  {activeFilters.map((filter) => (
-                    <Chip 
-                      key={filter}
-                      label={filter} 
-                      variant="outlined" 
-                      onDelete={() => handleFilterClear(filter)} 
-                      sx={{ m: 0.5 }} 
-                    />
-                  ))}
-                  <Box sx={{ flexGrow: 1 }}></Box>
-                  <Button 
-                    size="small" 
-                    color="primary"
-                    onClick={handleClearAllFilters}
-                  >
-                    Clear All Filters
-                  </Button>
-                </Box>
-              )}
               
               {loading ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
@@ -748,6 +726,8 @@ const Dashboard: React.FC = () => {
                       height: 600, 
                       maxHeight: 600, 
                       overflow: 'auto',
+                      position: 'relative',
+                      width: '100%',
                       '& .MuiTableCell-root': {
                         whiteSpace: 'nowrap',
                         padding: '6px 16px',
@@ -762,27 +742,57 @@ const Dashboard: React.FC = () => {
                       '& .MuiCheckbox-root': {
                         padding: '3px'
                       },
-                      position: 'relative',
-                      width: '100%'
+                      // Stile per bloccare le ombre che possono apparire durante lo scrolling
+                      '&::-webkit-scrollbar': {
+                        width: '10px',
+                        height: '10px'
+                      },
+                      '&::-webkit-scrollbar-thumb': {
+                        backgroundColor: 'rgba(0,0,0,0.2)',
+                        borderRadius: '10px'
+                      },
+                      '&::-webkit-scrollbar-track': {
+                        backgroundColor: 'rgba(0,0,0,0.05)'
+                      }
                     }}
                   >
+                    {/* Dynamic wrapper div for horizontal scrolling */}
+                    <Box sx={{
+                      width: '100%',
+                      position: 'relative',
+                      overflow: 'auto',
+                      maxHeight: 'calc(100vh - 300px)', // Aggiungo un'altezza massima per garantire lo scroll
+                      '& .fixed-column': {
+                        position: 'sticky',
+                        backgroundColor: 'white',
+                        zIndex: 2,
+                        left: (theme) => theme.spacing(0)
+                      },
+                      '& .MuiTableHead-root': {
+                        position: 'sticky',
+                        top: 0,
+                        zIndex: 5,
+                      }
+                    }}>
                     <Table aria-label="product catalog table" stickyHeader size="small">
                       <TableHead>
                         <TableRow sx={{ 
                           '& th': { 
                             fontWeight: 'bold', 
-                            bgcolor: '#f9f9f9', 
+                            bgcolor: '#f5f5f5', 
                             position: 'sticky',
-                            top: 0
+                            top: 0,
+                            zIndex: 5
                           } 
                         }}>
                           <TableCell padding="checkbox" sx={{ 
                             position: 'sticky', 
                             left: 0, 
                             top: 0,
-                            bgcolor: '#f9f9f9', 
+                            bgcolor: '#f5f5f5', 
                             minWidth: 50,
-                            zIndex: 3
+                            zIndex: 10,
+                            borderRight: '1px solid rgba(224, 224, 224, 0.4)'
                           }}>
                             <Checkbox
                               indeterminate={selected.length > 0 && selected.length < filteredProducts.filter(p => p.quantity > 0).length}
@@ -795,49 +805,55 @@ const Dashboard: React.FC = () => {
                             position: 'sticky', 
                             left: 50, 
                             top: 0,
-                            bgcolor: '#f9f9f9', 
+                            bgcolor: '#f5f5f5', 
                             minWidth: 40, 
-                            zIndex: 2
+                            zIndex: 10,
+                            borderRight: '1px solid rgba(224, 224, 224, 0.4)'
                           }}>#</TableCell>
+                          <SortableColumnHeader
+                            id="code"
+                            label="Codici Prodotto"
+                            activeSort={sortBy}
+                            activeDirection={sortDirection}
+                            onSort={handleSort}
+                            isSticky={true}
+                            leftPosition={90}
+                            minWidth={160}
+                            backgroundColor="#f5f5f5"
+                            zIndex={10}
+                          />
+                          <SortableColumnHeader
+                            id="name"
+                            label="Product Name"
+                            activeSort={sortBy}
+                            activeDirection={sortDirection}
+                            onSort={handleSort}
+                            isSticky={true}
+                            leftPosition={250}
+                            minWidth={200}
+                            backgroundColor="#f5f5f5"
+                            zIndex={10}
+                          />
+                          <SortableColumnHeader
+                            id="publicPrice"
+                            label="Public Price"
+                            activeSort={sortBy}
+                            activeDirection={sortDirection}
+                            onSort={handleSort}
+                            isSticky={true}
+                            leftPosition={450}
+                            minWidth={100}
+                            backgroundColor="#f5f5f5"
+                            zIndex={10}
+                          />
                           <TableCell sx={{ 
                             position: 'sticky', 
-                            left: 90, 
+                            left: 550, 
                             top: 0,
-                            bgcolor: '#f9f9f9', 
+                            bgcolor: '#f5f5f5', 
                             minWidth: 120, 
-                            zIndex: 2
-                          }}>EAN</TableCell>
-                          <TableCell sx={{ 
-                            position: 'sticky', 
-                            left: 210, 
-                            top: 0,
-                            bgcolor: '#f9f9f9', 
-                            minWidth: 100, 
-                            zIndex: 2
-                          }}>Minsan</TableCell>
-                          <TableCell sx={{ 
-                            position: 'sticky', 
-                            left: 310, 
-                            top: 0,
-                            bgcolor: '#f9f9f9', 
-                            minWidth: 200, 
-                            zIndex: 2
-                          }}>Product Name</TableCell>
-                          <TableCell sx={{ 
-                            position: 'sticky', 
-                            left: 510, 
-                            top: 0,
-                            bgcolor: '#f9f9f9', 
-                            minWidth: 100, 
-                            zIndex: 2
-                          }}>Public Price</TableCell>
-                          <TableCell sx={{ 
-                            position: 'sticky', 
-                            left: 610, 
-                            top: 0,
-                            bgcolor: '#f9f9f9', 
-                            minWidth: 90, 
-                            zIndex: 2
+                            zIndex: 10,
+                            borderRight: '1px solid rgba(224, 224, 224, 0.4)'
                           }}>
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                               Quantity
@@ -850,11 +866,12 @@ const Dashboard: React.FC = () => {
                           </TableCell>
                           <TableCell sx={{ 
                             position: 'sticky', 
-                            left: 700, 
+                            left: 670, 
                             top: 0,
-                            bgcolor: '#f9f9f9', 
+                            bgcolor: '#f5f5f5', 
                             minWidth: 110, 
-                            zIndex: 2
+                            zIndex: 10,
+                            borderRight: '1px solid rgba(224, 224, 224, 0.4)'
                           }}>
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                               Avg. Price
@@ -865,10 +882,52 @@ const Dashboard: React.FC = () => {
                               </Tooltip>
                             </Box>
                           </TableCell>
-                          <TableCell sx={{ bgcolor: '#e8f5e9', minWidth: 120 }}>Best Price</TableCell>
-                          <TableCell sx={{ bgcolor: '#e3f2fd', minWidth: 120 }}>2nd Best</TableCell>
-                          <TableCell sx={{ bgcolor: '#f3e5f5', minWidth: 120 }}>3rd Best</TableCell>
-                          <TableCell sx={{ minWidth: 120 }}>Other prices</TableCell>
+                            
+                            {/* Target Price column */}
+                            <TableCell
+                              sx={{ 
+                                position: 'sticky', 
+                                left: 770, 
+                                top: 0,
+                                bgcolor: '#f5f5f5', 
+                                minWidth: 120, 
+                                zIndex: 10,
+                                borderRight: '1px solid rgba(224, 224, 224, 0.4)'
+                              }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                Target Price
+                                <Tooltip title="Set your desired target price. This helps identify if current supplier prices match your expectations.">
+                                  <IconButton size="small" sx={{ padding: '2px' }}>
+                                    <InfoIcon fontSize="small" sx={{ fontSize: '1rem' }} />
+                                  </IconButton>
+                                </Tooltip>
+                              </Box>
+                            </TableCell>
+                            
+                            {/* Scrollable columns */}
+                            <SortableColumnHeader
+                              id="bestPrice"
+                              label="Best Price"
+                              activeSort={sortBy}
+                              activeDirection={sortDirection}
+                              onSort={handleSort}
+                              backgroundColor="#e8f5e9"
+                              minWidth={120}
+                            />
+                            <TableCell sx={{ bgcolor: '#e3f2fd', minWidth: 120, zIndex: 1, position: 'static' }}>2nd Best</TableCell>
+                            <TableCell sx={{ bgcolor: '#f3e5f5', minWidth: 120, zIndex: 1, position: 'static' }}>3rd Best</TableCell>
+                            <TableCell sx={{ minWidth: 120, zIndex: 1, position: 'static' }}>Other prices</TableCell>
+                            
+                            {/* Dynamic additional price columns in header */}
+                            {filteredProducts.some(p => p.showAllPrices && p.bestPrices.length > 3) && 
+                              Array.from({ length: Math.max(...filteredProducts
+                                .filter(p => p.showAllPrices)
+                                .map(p => p.bestPrices.length > 3 ? p.bestPrices.length - 3 : 0)) }, (_, i) => (
+                                <TableCell key={i} sx={{ bgcolor: '#f8f8f8', minWidth: 120, zIndex: 1, position: 'static' }}>
+                                  Price {i + 4}
+                                </TableCell>
+                              ))
+                            }
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -888,239 +947,26 @@ const Dashboard: React.FC = () => {
                             .slice(usingMockData ? page * rowsPerPage : 0, usingMockData ? page * rowsPerPage + rowsPerPage : rowsPerPage)
                             .map((product, index) => {
                               const isItemSelected = isSelected(product.id);
-                              const isExpanded = priceDetailsOpen === product.id;
-                              
                               return (
-                                <TableRow 
-                                  hover
-                                  onClick={(event) => {
-                                    // Click handling only for selection checkbox
-                                    if ((event.target as HTMLElement).closest('button') === null &&
-                                        !(event.target as HTMLElement).closest('input[type="number"]')) {
-                                      handleSelectClick(event, product.id);
-                                    }
-                                  }}
-                                  role="checkbox"
-                                  aria-checked={isItemSelected}
-                                  tabIndex={-1}
+                                      <ProductRow
                                   key={product.id}
-                                  selected={isItemSelected}
-                                  sx={{ height: 'auto' }}
-                                >
-                                  <TableCell 
-                                    padding="checkbox" 
-                                    sx={{ 
-                                      position: 'sticky', 
-                                      left: 0, 
-                                      bgcolor: isItemSelected ? 'rgba(25, 118, 210, 0.08)' : 'white', 
-                                      zIndex: 1
-                                    }}
-                                  >
-                                    <Checkbox checked={isItemSelected} size="small" />
-                                  </TableCell>
-                                  <TableCell 
-                                    sx={{ 
-                                      position: 'sticky', 
-                                      left: 50, 
-                                      bgcolor: isItemSelected ? 'rgba(25, 118, 210, 0.08)' : 'white', 
-                                      zIndex: 1 
-                                    }}
-                                  >
-                                    {usingMockData ? page * rowsPerPage + index + 1 : index + 1}
-                                  </TableCell>
-                                  <TableCell
-                                    sx={{ 
-                                      position: 'sticky', 
-                                      left: 90, 
-                                      bgcolor: isItemSelected ? 'rgba(25, 118, 210, 0.08)' : 'white', 
-                                      zIndex: 1 
-                                    }}
-                                  >
-                                    {product.ean}
-                                  </TableCell>
-                                  <TableCell
-                                    sx={{ 
-                                      position: 'sticky', 
-                                      left: 210, 
-                                      bgcolor: isItemSelected ? 'rgba(25, 118, 210, 0.08)' : 'white', 
-                                      zIndex: 1 
-                                    }}
-                                  >
-                                    {product.minsan}
-                                  </TableCell>
-                                  <TableCell
-                                    sx={{ 
-                                      position: 'sticky', 
-                                      left: 310, 
-                                      bgcolor: isItemSelected ? 'rgba(25, 118, 210, 0.08)' : 'white', 
-                                      zIndex: 1 
-                                    }}
-                                  >
-                                    <Box>
-                                      <Typography variant="body2" sx={{ fontWeight: 'medium', fontSize: '0.875rem' }}>
-                                        {product.name}
-                                      </Typography>
-                                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                                        {product.manufacturer} • {product.inStock ? 'In Stock' : 'Out of Stock'}
-                                      </Typography>
-                                    </Box>
-                                  </TableCell>
-                                  <TableCell
-                            sx={{ 
-                                      position: 'sticky', 
-                                      left: 510, 
-                                      bgcolor: isItemSelected ? 'rgba(25, 118, 210, 0.08)' : 'white', 
-                                      zIndex: 1 
-                                    }}
-                                  >
-                                    <Typography variant="body2" sx={{ fontWeight: 'medium', fontSize: '0.875rem' }}>
-                                      €{product.publicPrice.toFixed(2)}
-                                    </Typography>
-                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                                      VAT {product.vat}%
-                                    </Typography>
-                        </TableCell>
-                                  
-                                  {/* Quantity input column */}
-                                  <TableCell
-                                    sx={{ 
-                                      position: 'sticky', 
-                                      left: 610, 
-                                      bgcolor: isItemSelected ? 'rgba(25, 118, 210, 0.08)' : 'white', 
-                                      zIndex: 1 
-                                    }}
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    <TextField
-                                      type="number"
-                            size="small" 
-                                      InputProps={{ 
-                                        inputProps: { min: 0, step: 1 },
-                                        sx: { height: '30px', fontSize: '0.875rem' }
-                                      }}
-                                      value={product.quantity || ''}
-                                      onChange={(e) => {
-                                        const value = parseInt(e.target.value);
-                                        handleQuantityChange(product.id, isNaN(value) ? 0 : value);
-                                      }}
-                                      sx={{ width: 70 }}
-                                      onClick={(e) => e.stopPropagation()}
-                          />
-                        </TableCell>
-                                  
-                                  {/* Average price column */}
-                                  <TableCell
-                                    sx={{ 
-                                      position: 'sticky', 
-                                      left: 700, 
-                                      bgcolor: isItemSelected ? 'rgba(25, 118, 210, 0.08)' : 'white', 
-                                      zIndex: 1 
-                                    }}
-                                  >
-                                    {product.quantity > 0 && product.averagePrice !== null ? (
-                                      <Box>
-                                        <Typography variant="body2" sx={{ fontWeight: 'medium', fontSize: '0.875rem' }}>
-                                          €{product.averagePrice.toFixed(2)}
-                                        </Typography>
-                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                                          Total: €{(product.averagePrice * product.quantity).toFixed(2)}
-                                        </Typography>
-                                      </Box>
-                                    ) : (
-                                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
-                                        --
-                                      </Typography>
-                                    )}
-                                  </TableCell>
-                                  
-                                  {/* Best price 1 */}
-                                  {product.bestPrices.length > 0 ? (
-                                    <TableCell sx={{ bgcolor: '#e8f5e9' }}>
-                                      <Typography variant="body2" sx={{ fontWeight: 'medium', fontSize: '0.875rem' }}>
-                                        €{product.bestPrices[0].price.toFixed(2)}
-                                      </Typography>
-                                      <Typography variant="caption" color="error" sx={{ fontSize: '0.75rem' }}>
-                                        -€{(product.publicPrice - product.bestPrices[0].price).toFixed(2)}
-                                      </Typography>
-                                      <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                                        Stock: {product.bestPrices[0].stock}
-                                      </Typography>
-                                    </TableCell>
-                                  ) : (
-                                    <TableCell sx={{ bgcolor: '#e8f5e9' }}>
-                                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
-                                        No supplier
-                                      </Typography>
-                                    </TableCell>
-                                  )}
-                                  
-                                  {/* Best price 2 */}
-                                  {product.bestPrices.length > 1 ? (
-                                    <TableCell sx={{ bgcolor: '#e3f2fd' }}>
-                                      <Typography variant="body2" sx={{ fontWeight: 'medium', fontSize: '0.875rem' }}>
-                                        €{product.bestPrices[1].price.toFixed(2)}
-                                      </Typography>
-                                      <Typography variant="caption" color="error" sx={{ fontSize: '0.75rem' }}>
-                                        -€{(product.publicPrice - product.bestPrices[1].price).toFixed(2)}
-                                      </Typography>
-                                      <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                                        Stock: {product.bestPrices[1].stock}
-                                      </Typography>
-                                    </TableCell>
-                                  ) : (
-                                    <TableCell sx={{ bgcolor: '#e3f2fd' }}>
-                                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
-                                        No supplier
-                                      </Typography>
-                                    </TableCell>
-                                  )}
-                                  
-                                  {/* Best price 3 */}
-                                  {product.bestPrices.length > 2 ? (
-                                    <TableCell sx={{ bgcolor: '#f3e5f5' }}>
-                                      <Typography variant="body2" sx={{ fontWeight: 'medium', fontSize: '0.875rem' }}>
-                                        €{product.bestPrices[2].price.toFixed(2)}
-                                      </Typography>
-                                      <Typography variant="caption" color="error" sx={{ fontSize: '0.75rem' }}>
-                                        -€{(product.publicPrice - product.bestPrices[2].price).toFixed(2)}
-                                      </Typography>
-                                      <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                                        Stock: {product.bestPrices[2].stock}
-                                      </Typography>
-                                    </TableCell>
-                                  ) : (
-                                    <TableCell sx={{ bgcolor: '#f3e5f5' }}>
-                                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
-                                        No supplier
-                                      </Typography>
-                                    </TableCell>
-                                  )}
-                                  
-                                  {/* Other prices */}
-                                  <TableCell onClick={(e) => e.stopPropagation()}>
-                                    {product.bestPrices.length > 3 ? (
-                          <Button 
-                                        variant="text"
-                                        color="primary"
-                            size="small" 
-                                        startIcon={<KeyboardArrowRightIcon />}
-                                        onClick={() => handleToggleAllPrices(product.id)}
-                                        sx={{ fontSize: '0.8rem', padding: '4px 8px' }}
-                          >
-                                        Show {product.bestPrices.length - 3} more
-                          </Button>
-                                    ) : (
-                                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
-                                        None
-                                      </Typography>
-                                    )}
-                        </TableCell>
-                      </TableRow>
+                                        product={product}
+                                        index={index}
+                                        isSelected={isItemSelected}
+                                        page={page}
+                                        rowsPerPage={rowsPerPage}
+                                        onSelectClick={handleSelectClick}
+                                        onQuantityChange={handleQuantityChange}
+                                        onTargetPriceChange={handleTargetPriceChange}
+                                        onToggleAllPrices={handleToggleAllPrices}
+                                        usingMockData={usingMockData}
+                                      />
                               );
                             })
                         )}
                   </TableBody>
                 </Table>
+                    </Box>
               </TableContainer>
                   
                   <Box sx={{ borderTop: '1px solid #eee' }}>

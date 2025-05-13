@@ -16,7 +16,9 @@ import {
   InputBase,
   Divider,
   Container,
-  ListItemButton
+  ListItemButton,
+  Tooltip,
+  Paper
 } from '@mui/material';
 import { styled, useTheme } from '@mui/material/styles';
 import {
@@ -27,11 +29,16 @@ import {
   Notifications as NotificationsIcon,
   Search as SearchIcon,
   Medication as MedicationIcon,
-  ExitToApp as LogoutIcon
+  ExitToApp as LogoutIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
+  MenuOpen as MenuOpenIcon
 } from '@mui/icons-material';
 import { Link, useLocation } from 'react-router-dom';
 
-const drawerWidth = 240;
+// Smaller drawer width
+const drawerWidth = 220;
+const miniDrawerWidth = 60;
 
 const Search = styled('div')(({ theme }) => ({
   position: 'relative',
@@ -78,9 +85,14 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const location = useLocation();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isDrawerCollapsed, setIsDrawerCollapsed] = useState(false);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
+  };
+
+  const handleDrawerCollapse = () => {
+    setIsDrawerCollapsed(!isDrawerCollapsed);
   };
 
   const menuItems = [
@@ -91,62 +103,100 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   const drawer = (
     <div>
-      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Typography variant="h6" sx={{ fontWeight: 'bold', color: theme.palette.primary.main }}>
-          FarmaBooster
-        </Typography>
+      <Box sx={{ 
+        p: 2, 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: isDrawerCollapsed ? 'center' : 'space-between' 
+      }}>
+        {!isDrawerCollapsed && (
+          <Typography variant="h6" sx={{ fontWeight: 'bold', color: theme.palette.primary.main, fontSize: '1rem' }}>
+            FarmaBooster
+          </Typography>
+        )}
+        <Tooltip title={isDrawerCollapsed ? "Expand menu" : "Collapse menu"}>
+          <IconButton 
+            onClick={handleDrawerCollapse}
+            size="small"
+            sx={{ 
+              border: '1px solid rgba(25, 118, 210, 0.2)',
+              backgroundColor: 'rgba(25, 118, 210, 0.04)',
+              '&:hover': {
+                backgroundColor: 'rgba(25, 118, 210, 0.08)',
+              }
+            }}
+          >
+            {isDrawerCollapsed ? <ChevronRightIcon fontSize="small" /> : <ChevronLeftIcon fontSize="small" />}
+          </IconButton>
+        </Tooltip>
       </Box>
       <Divider />
       <List>
         {menuItems.map((item) => (
-          <ListItemButton 
-            key={item.text} 
-            component={Link} 
-            to={item.path}
-            selected={location.pathname === item.path}
-            sx={{
-              py: 1,
-              '&.Mui-selected': {
-                backgroundColor: 'rgba(25, 118, 210, 0.08)',
-                borderRight: `3px solid ${theme.palette.primary.main}`,
-                '&:hover': {
-                  backgroundColor: 'rgba(25, 118, 210, 0.12)',
+          <Tooltip title={isDrawerCollapsed ? item.text : ""} placement="right" arrow>
+            <ListItemButton 
+              key={item.text} 
+              component={Link} 
+              to={item.path}
+              selected={location.pathname === item.path}
+              sx={{
+                py: 0.75,
+                minHeight: 40,
+                justifyContent: isDrawerCollapsed ? 'center' : 'flex-start',
+                '&.Mui-selected': {
+                  backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                  borderRight: `3px solid ${theme.palette.primary.main}`,
+                  '&:hover': {
+                    backgroundColor: 'rgba(25, 118, 210, 0.12)',
+                  },
                 },
-              },
-              '&:hover': {
-                backgroundColor: 'rgba(0, 0, 0, 0.04)',
-              },
-            }}
-          >
-            <ListItemIcon 
-              sx={{ 
-                color: location.pathname === item.path ? theme.palette.primary.main : 'inherit',
-                minWidth: 40
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                },
               }}
             >
-              {item.icon}
-            </ListItemIcon>
-            <ListItemText 
-              primary={item.text} 
-              primaryTypographyProps={{
-                fontSize: '0.9rem',
-                fontWeight: location.pathname === item.path ? 'medium' : 'normal'
-              }}
-            />
-          </ListItemButton>
+              <ListItemIcon 
+                sx={{ 
+                  color: location.pathname === item.path ? theme.palette.primary.main : 'inherit',
+                  minWidth: isDrawerCollapsed ? 0 : 35,
+                  mr: isDrawerCollapsed ? 0 : 1,
+                  justifyContent: 'center'
+                }}
+              >
+                {item.icon}
+              </ListItemIcon>
+              {!isDrawerCollapsed && (
+                <ListItemText 
+                  primary={item.text} 
+                  primaryTypographyProps={{
+                    fontSize: '0.85rem',
+                    fontWeight: location.pathname === item.path ? 'medium' : 'normal'
+                  }}
+                />
+              )}
+            </ListItemButton>
+          </Tooltip>
         ))}
       </List>
       <Box sx={{ position: 'absolute', bottom: 0, width: '100%' }}>
         <Divider />
-        <ListItemButton sx={{ py: 1 }}>
-          <ListItemIcon sx={{ minWidth: 40 }}>
-            <LogoutIcon />
-          </ListItemIcon>
-          <ListItemText 
-            primary="Logout" 
-            primaryTypographyProps={{ fontSize: '0.9rem' }}
-          />
-        </ListItemButton>
+        <Tooltip title={isDrawerCollapsed ? "Logout" : ""} placement="right" arrow>
+          <ListItemButton sx={{ py: 0.75, minHeight: 40, justifyContent: isDrawerCollapsed ? 'center' : 'flex-start' }}>
+            <ListItemIcon sx={{ 
+              minWidth: isDrawerCollapsed ? 0 : 35,
+              mr: isDrawerCollapsed ? 0 : 1,
+              justifyContent: 'center' 
+            }}>
+              <LogoutIcon />
+            </ListItemIcon>
+            {!isDrawerCollapsed && (
+              <ListItemText 
+                primary="Logout" 
+                primaryTypographyProps={{ fontSize: '0.85rem' }}
+              />
+            )}
+          </ListItemButton>
+        </Tooltip>
       </Box>
     </div>
   );
@@ -162,7 +212,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.05)'
         }}
       >
-        <Toolbar>
+        <Toolbar sx={{ minHeight: { xs: 56, sm: 56 } }}>
           <IconButton
             color="inherit"
             aria-label="open drawer"
@@ -172,7 +222,23 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ display: { xs: 'none', sm: 'block' } }}>
+          <Tooltip title={isDrawerCollapsed ? "Expand sidebar" : "Collapse sidebar"}>
+            <IconButton
+              color="inherit"
+              aria-label={isDrawerCollapsed ? "expand sidebar" : "collapse sidebar"}
+              edge="start"
+              onClick={handleDrawerCollapse}
+              sx={{ 
+                mr: 2, 
+                display: { xs: 'none', sm: 'flex' },
+                border: '1px solid rgba(0, 0, 0, 0.08)'
+              }}
+              size="small"
+            >
+              <MenuOpenIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Typography variant="h6" noWrap component="div" sx={{ display: { xs: 'none', sm: 'block' }, fontSize: '1rem' }}>
             {menuItems.find(item => item.path === location.pathname)?.text || 'Dashboard'}
           </Typography>
           <Search>
@@ -186,16 +252,16 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           </Search>
           <Box sx={{ flexGrow: 1 }} />
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <IconButton size="large" color="inherit">
+            <IconButton size="small" color="inherit">
               <Badge badgeContent={4} color="error">
-                <NotificationsIcon />
+                <NotificationsIcon fontSize="small" />
               </Badge>
             </IconButton>
             <Box sx={{ display: 'flex', alignItems: 'center', ml: 2 }}>
-              <Avatar sx={{ width: 32, height: 32, bgcolor: theme.palette.primary.main }}>A</Avatar>
+              <Avatar sx={{ width: 28, height: 28, bgcolor: theme.palette.primary.main }}>A</Avatar>
               <Box sx={{ ml: 1, display: { xs: 'none', md: 'block' } }}>
-                <Typography variant="body2" sx={{ fontWeight: 'medium' }}>Admin Panel</Typography>
-                <Typography variant="caption" color="text.secondary">Administrator</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 'medium', fontSize: '0.8rem' }}>Admin Panel</Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>Administrator</Typography>
               </Box>
             </Box>
           </Box>
@@ -203,7 +269,16 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       </AppBar>
       <Box
         component="nav"
-        sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
+        sx={{ 
+          width: { 
+            sm: isDrawerCollapsed ? miniDrawerWidth : drawerWidth 
+          }, 
+          flexShrink: { sm: 0 },
+          transition: theme.transitions.create('width', {
+            easing: theme.transitions.easing.sharp,
+            duration: theme.transitions.duration.enteringScreen,
+          }),
+        }}
       >
         <Drawer
           variant="temporary"
@@ -214,7 +289,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           }}
           sx={{
             display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+            '& .MuiDrawer-paper': { 
+              boxSizing: 'border-box', 
+              width: drawerWidth 
+            },
           }}
         >
           {drawer}
@@ -225,9 +303,14 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             display: { xs: 'none', sm: 'block' },
             '& .MuiDrawer-paper': { 
               boxSizing: 'border-box', 
-              width: drawerWidth,
+              width: isDrawerCollapsed ? miniDrawerWidth : drawerWidth,
               borderRight: '1px solid rgba(0, 0, 0, 0.08)',
-              boxShadow: 'none'
+              boxShadow: 'none',
+              transition: theme.transitions.create('width', {
+                easing: theme.transitions.easing.sharp,
+                duration: theme.transitions.duration.enteringScreen,
+              }),
+              overflowX: 'hidden'
             },
           }}
           open
@@ -239,14 +322,20 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         component="main"
         sx={{ 
           flexGrow: 1, 
-          p: 3, 
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
+          p: 2, 
+          width: { 
+            sm: `calc(100% - ${isDrawerCollapsed ? miniDrawerWidth : drawerWidth}px)` 
+          },
           backgroundColor: '#f5f5f5',
-          minHeight: '100vh'
+          minHeight: '100vh',
+          transition: theme.transitions.create(['width', 'margin'], {
+            easing: theme.transitions.easing.sharp,
+            duration: theme.transitions.duration.enteringScreen,
+          }),
         }}
       >
-        <Toolbar />
-        <Container maxWidth="xl" sx={{ mt: 2 }}>
+        <Toolbar sx={{ minHeight: { xs: 56, sm: 56 } }} />
+        <Container maxWidth="xl" sx={{ mt: 1, px: { xs: 1, sm: 2 } }}>
           {children}
         </Container>
       </Box>
