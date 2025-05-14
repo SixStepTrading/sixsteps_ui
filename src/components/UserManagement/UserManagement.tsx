@@ -112,7 +112,7 @@ const UserManagement: React.FC = () => {
     {
       id: 1,
       name: 'Marco Rossi',
-      email: 'm.rossi@farmabooster.com',
+      email: 'm.rossi@sixsteps.com',
       role: 'Admin',
       status: 'Active',
       lastActivity: 'May 9, 2023 - 10:45',
@@ -121,7 +121,7 @@ const UserManagement: React.FC = () => {
     {
       id: 2,
       name: 'Laura Bianchi',
-      email: 'l.bianchi@farmabooster.com',
+      email: 'l.bianchi@sixsteps.com',
       role: 'Pharmacist',
       status: 'Active',
       lastActivity: 'May 8, 2023 - 15:30',
@@ -130,7 +130,7 @@ const UserManagement: React.FC = () => {
     {
       id: 3,
       name: 'Giuseppe Verdi',
-      email: 'g.verdi@farmabooster.com',
+      email: 'g.verdi@sixsteps.com',
       role: 'Manager',
       status: 'Active',
       lastActivity: 'May 9, 2023 - 09:15',
@@ -139,7 +139,7 @@ const UserManagement: React.FC = () => {
     {
       id: 4,
       name: 'Anna Ferrari',
-      email: 'a.ferrari@farmabooster.com',
+      email: 'a.ferrari@sixsteps.com',
       role: 'Supplier',
       status: 'Inactive',
       lastActivity: 'May 5, 2023 - 14:20',
@@ -148,7 +148,7 @@ const UserManagement: React.FC = () => {
     {
       id: 5,
       name: 'Roberto Ricci',
-      email: 'r.ricci@farmabooster.com',
+      email: 'r.ricci@sixsteps.com',
       role: 'Operator',
       status: 'Active',
       lastActivity: 'May 9, 2023 - 11:45',

@@ -3,592 +3,474 @@ import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Button,
-  Card,
-  CardContent,
-  CardHeader,
-  Divider,
-  Grid,
   Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Chip,
-  IconButton,
-  TextField,
-  MenuItem,
-  InputAdornment,
-  Stack,
-  Tabs,
-  Tab,
-  Paper,
-  Select,
-  FormControl,
-  InputLabel,
+  Container,
 } from '@mui/material';
 import {
-  Search as SearchIcon,
-  FilterList as FilterListIcon,
   Add as AddIcon,
-  Visibility as VisibilityIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  CloudDownload as CloudDownloadIcon,
-  Print as PrintIcon,
-  Send as SendIcon,
 } from '@mui/icons-material';
-import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { useToast } from '../../contexts/ToastContext';
-import { getDraftOrders, deleteDraftOrder, DraftOrder } from '../../utils/draftOrderService';
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
+// Import our custom components
+import OrderCard, { OrderData } from '../common/molecules/OrderCard';
+import OrderFilterControls from '../common/molecules/OrderFilterControls';
+import OrderTabs from '../common/molecules/OrderTabs';
+import OrderPagination from '../common/molecules/OrderPagination';
+import OrderDetailsModal, { OrderDetailData, OrderProductDetail } from '../common/molecules/OrderDetailsModal';
 
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
+// Dati dei prodotti che simulano quelli della dashboard
+const DASHBOARD_PRODUCTS = [
+  {
+    id: 'P001',
+    code: 'ALVG-001',
+    name: 'ALVITA GINOCCHIERA',
+    price: 22.50
+  },
+  {
+    id: 'P002',
+    code: 'BIOD-002',
+    name: 'BIODERMA ATODERM',
+    price: 15.80
+  },
+  {
+    id: 'P003',
+    code: 'ZERO-003',
+    name: 'ZERODOL GEL',
+    price: 12.40
+  },
+  {
+    id: 'P004',
+    code: 'ENTG-004',
+    name: 'ENTEROGERMINA 2MLD',
+    price: 9.90
+  },
+  {
+    id: 'P005',
+    code: 'OMEG-005',
+    name: 'OMEGA 3 PLUS',
+    price: 18.70
+  },
+  {
+    id: 'P006',
+    code: 'VITC-006',
+    name: 'VITAMINA C 1000MG',
+    price: 11.25
+  }
+];
 
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`orders-tabpanel-${index}`}
-      aria-labelledby={`orders-tab-${index}`}
-      {...other}
-    >
-      {value === index && (
-        <Box sx={{ py: 3 }}>
-          {children}
-        </Box>
-      )}
-    </div>
-  );
-}
+// Dati dettagliati per ciascun ordine (prodotti ordinati)
+const ORDER_DETAILS: Record<string, OrderProductDetail[]> = {
+  'ODA-2587': [
+    { id: 'P001', code: 'ALVG-001', name: 'ALVITA GINOCCHIERA', quantity: 10, unitPrice: 22.50, totalPrice: 225.00 },
+    { id: 'P002', code: 'BIOD-002', name: 'BIODERMA ATODERM', quantity: 15, unitPrice: 15.80, totalPrice: 237.00 },
+    { id: 'P004', code: 'ENTG-004', name: 'ENTEROGERMINA 2MLD', quantity: 25, unitPrice: 9.90, totalPrice: 247.50 },
+    { id: 'P006', code: 'VITC-006', name: 'VITAMINA C 1000MG', quantity: 45, unitPrice: 11.90, totalPrice: 535.50 }
+  ],
+  'ODA-2586': [
+    { id: 'P003', code: 'ZERO-003', name: 'ZERODOL GEL', quantity: 20, unitPrice: 12.40, totalPrice: 248.00 },
+    { id: 'P005', code: 'OMEG-005', name: 'OMEGA 3 PLUS', quantity: 32, unitPrice: 18.70, totalPrice: 598.40 }
+  ],
+  'ODA-2585': [
+    { id: 'P001', code: 'ALVG-001', name: 'ALVITA GINOCCHIERA', quantity: 15, unitPrice: 22.50, totalPrice: 337.50 },
+    { id: 'P002', code: 'BIOD-002', name: 'BIODERMA ATODERM', quantity: 25, unitPrice: 15.80, totalPrice: 395.00 },
+    { id: 'P003', code: 'ZERO-003', name: 'ZERODOL GEL', quantity: 30, unitPrice: 12.40, totalPrice: 372.00 },
+    { id: 'P004', code: 'ENTG-004', name: 'ENTEROGERMINA 2MLD', quantity: 40, unitPrice: 9.90, totalPrice: 396.00 },
+    { id: 'P005', code: 'OMEG-005', name: 'OMEGA 3 PLUS', quantity: 12, unitPrice: 18.70, totalPrice: 224.40 },
+    { id: 'P006', code: 'VITC-006', name: 'VITAMINA C 1000MG', quantity: 15, unitPrice: 11.25, totalPrice: 168.75 }
+  ],
+  'ODA-2584-DRAFT': [
+    { id: 'P001', code: 'ALVG-001', name: 'ALVITA GINOCCHIERA', quantity: 5, unitPrice: 22.50, totalPrice: 112.50 },
+    { id: 'P003', code: 'ZERO-003', name: 'ZERODOL GEL', quantity: 10, unitPrice: 12.40, totalPrice: 124.00 },
+    { id: 'P006', code: 'VITC-006', name: 'VITAMINA C 1000MG', quantity: 7.50, unitPrice: 11.25, totalPrice: 84.38 }
+  ],
+  'ODA-2583-DRAFT': []
+};
 
-function a11yProps(index: number) {
-  return {
-    id: `orders-tab-${index}`,
-    'aria-controls': `orders-tabpanel-${index}`,
-  };
-}
+// Informazioni aggiuntive per gli ordini
+const ORDER_ADDITIONAL_INFO: Record<string, {
+  deliveryAddress?: string;
+  deliveryDate?: string;
+  paymentMethod?: string;
+  notes?: string;
+}> = {
+  'ODA-2587': {
+    deliveryAddress: 'Pharmacy Main Branch, Via Roma 123, Milano',
+    deliveryDate: 'May 15, 2025',
+    paymentMethod: 'Bank Transfer',
+  },
+  'ODA-2586': {
+    deliveryAddress: 'Pharmacy Main Branch, Via Roma 123, Milano',
+    paymentMethod: 'Credit Card',
+  },
+  'ODA-2585': {
+    deliveryAddress: 'Pharmacy Main Branch, Via Roma 123, Milano',
+    deliveryDate: 'May 20, 2025',
+    paymentMethod: 'Bank Transfer',
+    notes: 'Deliver during business hours (9AM-6PM). Call before delivery.'
+  },
+  'ODA-2584-DRAFT': {
+    deliveryAddress: 'Pharmacy Main Branch, Via Roma 123, Milano',
+    paymentMethod: 'Credit Card',
+  },
+  'ODA-2583-DRAFT': {}
+};
+
+// Mock data for demonstration
+const MOCK_ORDERS: OrderData[] = [
+  {
+    id: 'ODA-2587',
+    createdOn: 'May 8, 2025',
+    totalProducts: 28,
+    items: 95,
+    amount: 1245.80,
+    status: 'Approved',
+    deliveryStatus: 'Delivered',
+    deliveryDate: 'May 15, 2025'
+  },
+  {
+    id: 'ODA-2586',
+    createdOn: 'May 7, 2025',
+    totalProducts: 15,
+    items: 52,
+    amount: 845.50,
+    status: 'Pending Approval',
+    estimatedDelivery: 'Awaiting approval'
+  },
+  {
+    id: 'ODA-2585',
+    createdOn: 'May 6, 2025',
+    totalProducts: 42,
+    items: 137,
+    amount: 1892.30,
+    status: 'Processing',
+    estimatedDelivery: 'May 20, 2025'
+  },
+  {
+    id: 'ODA-2584-DRAFT',
+    createdOn: 'May 5, 2025',
+    totalProducts: 8,
+    items: 22,
+    amount: 320.75,
+    status: 'Draft',
+    completion: 60
+  },
+  {
+    id: 'ODA-2583-DRAFT',
+    createdOn: 'May 3, 2025',
+    totalProducts: 0,
+    items: 0,
+    amount: 0,
+    status: 'Draft',
+    completion: 10
+  }
+];
+
+// Tab definitions
+const ORDER_TABS = [
+  { id: 'all', label: 'All Orders' },
+  { id: 'drafts', label: 'Drafts' },
+  { id: 'pending', label: 'Pending Approval' },
+  { id: 'processing', label: 'Processing' },
+  { id: 'approved', label: 'Approved' }
+];
+
+// Filter options
+const STATUS_OPTIONS = [
+  { value: '', label: 'All Statuses' },
+  { value: 'Draft', label: 'Draft' },
+  { value: 'Pending Approval', label: 'Pending Approval' },
+  { value: 'Processing', label: 'Processing' },
+  { value: 'Approved', label: 'Approved' }
+];
+
+const DATE_RANGE_OPTIONS = [
+  { value: 'last30days', label: 'Last 30 days' },
+  { value: 'last60days', label: 'Last 60 days' },
+  { value: 'last90days', label: 'Last 90 days' },
+  { value: 'thisYear', label: 'This Year' },
+  { value: 'custom', label: 'Custom Range' }
+];
 
 const PurchaseOrders: React.FC = () => {
   const { showToast } = useToast();
   const navigate = useNavigate();
-  const [tabValue, setTabValue] = useState(0);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [draftOrders, setDraftOrders] = useState<DraftOrder[]>([]);
+  
+  // State
+  const [currentTab, setCurrentTab] = useState('all');
+  const [filteredOrders, setFilteredOrders] = useState<OrderData[]>(MOCK_ORDERS);
+  const [searchValue, setSearchValue] = useState('');
+  const [statusValue, setStatusValue] = useState('');
+  const [dateValue, setDateValue] = useState('last30days');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
+  
+  // State per il modale dei dettagli dell'ordine
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [selectedOrderDetails, setSelectedOrderDetails] = useState<OrderDetailData | null>(null);
 
-  // Load draft orders on component mount
+  // Filter orders based on selected criteria
   useEffect(() => {
-    setDraftOrders(getDraftOrders());
-  }, []);
+    let result = [...MOCK_ORDERS];
+    
+    // Filter by tab
+    if (currentTab !== 'all') {
+      if (currentTab === 'drafts') {
+        result = result.filter(order => order.status === 'Draft');
+      } else if (currentTab === 'pending') {
+        result = result.filter(order => order.status === 'Pending Approval');
+      } else if (currentTab === 'processing') {
+        result = result.filter(order => order.status === 'Processing');
+      } else if (currentTab === 'approved') {
+        result = result.filter(order => order.status === 'Approved');
+      }
+    }
+    
+    // Filter by search
+    if (searchValue) {
+      const lowerSearch = searchValue.toLowerCase();
+      result = result.filter(order => 
+        order.id.toLowerCase().includes(lowerSearch)
+      );
+    }
+    
+    // Filter by status
+    if (statusValue) {
+      result = result.filter(order => order.status === statusValue);
+    }
+    
+    // Date filter would be implemented here with real data
+    // For now, we're just using the mock data
+    
+    setFilteredOrders(result);
+    setCurrentPage(1); // Reset to first page when filters change
+  }, [currentTab, searchValue, statusValue, dateValue]);
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
+  // Handle tab change
+  const handleTabChange = (tab: string) => {
+    setCurrentTab(tab);
   };
 
-  const handleAddOrder = () => {
-    navigate('/purchase-orders/create');
+  // Handle creating a new ODA
+  const handleCreateOda = () => {
+    navigate('/');
+    showToast('Redirecting to Dashboard', 'info');
   };
 
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(event.target.value);
+  // Calculate total pages
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+  
+  // Get current page items
+  const getCurrentPageItems = () => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredOrders.slice(startIndex, startIndex + itemsPerPage);
   };
 
-  const handleStatusFilterChange = (event: any) => {
-    setFilterStatus(event.target.value);
+  // Funzione per ottenere i dettagli completi di un ordine
+  const getOrderDetails = (orderId: string): OrderDetailData => {
+    const order = MOCK_ORDERS.find(o => o.id === orderId);
+    const orderProducts = ORDER_DETAILS[orderId] || [];
+    const additionalInfo = ORDER_ADDITIONAL_INFO[orderId] || {};
+    
+    if (!order) {
+      throw new Error(`Order with ID ${orderId} not found`);
+    }
+    
+    return {
+      id: order.id,
+      createdOn: order.createdOn,
+      status: order.status,
+      totalProducts: order.totalProducts,
+      totalAmount: order.amount,
+      deliveryAddress: additionalInfo.deliveryAddress,
+      deliveryDate: order.deliveryDate || additionalInfo.deliveryDate,
+      paymentMethod: additionalInfo.paymentMethod,
+      notes: additionalInfo.notes,
+      products: orderProducts
+    };
   };
 
-  const handleViewOrder = (id: string) => {
-    showToast(`Viewing order ${id}`, 'info');
-  };
-
-  const handleEditOrder = (id: string) => {
-    showToast(`Editing order ${id}`, 'info');
-  };
-
-  const handleDeleteOrder = (id: string) => {
-    showToast(`Order ${id} deleted`, 'success');
-  };
-
-  const handleExportOrders = () => {
-    showToast('Orders exported successfully', 'success');
-  };
-
-  const handlePrintOrder = (id: string) => {
-    showToast(`Printing order ${id}`, 'info');
-  };
-
-  const handleSendOrder = (id: string) => {
-    showToast(`Order ${id} sent to supplier`, 'success');
-  };
-
-  const handleDeleteDraft = (id: string) => {
-    if (deleteDraftOrder(id)) {
-      setDraftOrders(getDraftOrders());
-      showToast('Draft order deleted', 'success');
-    } else {
-      showToast('Failed to delete draft order', 'error');
+  // Order action handlers
+  const handleViewDetails = (id: string) => {
+    try {
+      const orderDetails = getOrderDetails(id);
+      setSelectedOrderDetails(orderDetails);
+      setDetailsModalOpen(true);
+    } catch (error) {
+      console.error('Error loading order details:', error);
+      showToast('Failed to load order details', 'error');
     }
   };
 
-  const handleEditDraft = (id: string) => {
-    // In a real app, you would implement a way to load the draft for editing
-    showToast('Edit draft functionality not implemented yet', 'info');
+  const handleReorder = (id: string) => {
+    showToast(`Reordering ${id}`, 'info');
   };
 
-  // Orders data
-  const orders = [
-    { 
-      id: 1, 
-      orderNo: 'PUR-234',
-      supplier: 'MedPharma Supplies',
-      date: '2023-05-05',
-      total: 54320.00,
-      status: 'Pending'
-    },
-    { 
-      id: 2, 
-      orderNo: 'PUR-235',
-      supplier: 'HealthCare Suppliers',
-      date: '2023-05-07',
-      total: 42650.50,
-      status: 'Processing'
-    },
-    { 
-      id: 3, 
-      orderNo: 'PUR-236',
-      supplier: 'Farmacia Retail',
-      date: '2023-05-08',
-      total: 67350.25,
-      status: 'Shipped'
-    },
-    { 
-      id: 4, 
-      orderNo: 'PUR-237',
-      supplier: 'MedPharma Supplies',
-      date: '2023-05-09',
-      total: 34175.75,
-      status: 'Delivered'
-    },
-    { 
-      id: 5, 
-      orderNo: 'PUR-238',
-      supplier: 'Farmacia Retail',
-      date: '2023-05-10',
-      total: 12450.30,
-      status: 'Pending'
-    },
-    { 
-      id: 6, 
-      orderNo: 'PUR-239',
-      supplier: 'HealthCare Suppliers',
-      date: '2023-05-11',
-      total: 43750.00,
-      status: 'Processing'
-    },
-  ];
+  // Crea un oggetto di parametri per passare i dati alla dashboard
+  const handleEdit = (id: string) => {
+    try {
+      const orderDetails = getOrderDetails(id);
+      
+      // Prepara gli oggetti prodotto nel formato che si aspetta la dashboard
+      const productsParam = encodeURIComponent(JSON.stringify(
+        orderDetails.products.map(p => ({
+          id: p.id,
+          code: p.code,
+          name: p.name,
+          quantity: p.quantity,
+          targetPrice: p.unitPrice
+        }))
+      ));
+      
+      // Naviga alla dashboard passando i dati tramite query params
+      navigate(`/?edit=true&products=${productsParam}`);
+      
+      showToast('Redirecting to Dashboard with order products', 'info');
+    } catch (error) {
+      console.error('Error preparing order for edit:', error);
+      showToast('Failed to prepare order for editing', 'error');
+      navigate('/');
+    }
+  };
 
-  // Order Line Items
-  const orderItems = [
-    { id: 1, product: 'Paracetamol 500mg', code: 'MED-001', qty: 50, price: 5.99, total: 299.50 },
-    { id: 2, product: 'Amoxicillin 250mg', code: 'MED-002', qty: 25, price: 12.50, total: 312.50 },
-    { id: 3, product: 'Vitamin D3 1000IU', code: 'MED-003', qty: 100, price: 8.25, total: 825.00 },
-    { id: 4, product: 'Ibuprofen 400mg', code: 'MED-004', qty: 60, price: 6.75, total: 405.00 },
-  ];
+  const handleDelete = (id: string) => {
+    showToast(`Deleting ${id}`, 'warning');
+  };
 
-  // DataGrid columns
-  const columns: GridColDef[] = [
-    { 
-      field: 'orderNo', 
-      headerName: 'Order No', 
-      flex: 1, 
-      minWidth: 150,
-    },
-    { 
-      field: 'supplier', 
-      headerName: 'Supplier', 
-      flex: 1.5, 
-      minWidth: 200,
-    },
-    { 
-      field: 'date', 
-      headerName: 'Date', 
-      flex: 1, 
-      minWidth: 120,
-    },
-    { 
-      field: 'total', 
-      headerName: 'Total', 
-      flex: 1, 
-      minWidth: 120,
-      renderCell: (params) => (
-        <Typography>€{params.value.toFixed(2)}</Typography>
-      ),
-    },
-    { 
-      field: 'status', 
-      headerName: 'Status', 
-      flex: 1, 
-      minWidth: 140,
-      renderCell: (params) => {
-        let color: 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' | undefined;
-        switch(params.value) {
-          case 'Pending':
-            color = 'warning';
-            break;
-          case 'Processing':
-            color = 'info';
-            break;
-          case 'Shipped':
-            color = 'primary';
-            break;
-          case 'Delivered':
-            color = 'success';
-            break;
-          default:
-            color = 'default';
-        }
-        return (
-          <Chip 
-            label={params.value} 
-            color={color} 
-            size="small" 
-            variant="outlined"
-          />
-        );
-      },
-    },
-    { 
-      field: 'actions', 
-      headerName: 'Actions', 
-      flex: 1.5, 
-      minWidth: 180,
-      sortable: false,
-      renderCell: (params) => (
-        <Stack direction="row" spacing={1}>
-          <IconButton 
-            size="small"
-            color="primary"
-            onClick={() => handleViewOrder(params.row.orderNo)}
-          >
-            <VisibilityIcon fontSize="small" />
-          </IconButton>
-          <IconButton 
-            size="small"
-            color="secondary"
-            onClick={() => handleEditOrder(params.row.orderNo)}
-          >
-            <EditIcon fontSize="small" />
-          </IconButton>
-          <IconButton 
-            size="small"
-            color="error"
-            onClick={() => handleDeleteOrder(params.row.orderNo)}
-          >
-            <DeleteIcon fontSize="small" />
-          </IconButton>
-          <IconButton 
-            size="small"
-            color="info"
-            onClick={() => handleSendOrder(params.row.orderNo)}
-          >
-            <SendIcon fontSize="small" />
-          </IconButton>
-        </Stack>
-      ),
-    },
-  ];
+  const handleTrack = (id: string) => {
+    showToast(`Tracking ${id}`, 'info');
+  };
 
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = order.orderNo.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         order.supplier.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = filterStatus === 'all' || order.status === filterStatus;
-    return matchesSearch && matchesFilter;
-  });
+  const handleFollowUp = (id: string) => {
+    showToast(`Following up on ${id}`, 'info');
+  };
+
+  const handleSubmit = (id: string) => {
+    showToast(`Submitting ${id}`, 'success');
+  };
+
+  const handleContinueEditing = (id: string) => {
+    handleEdit(id); // Usiamo la stessa logica di handleEdit
+  };
+
+  // Handlers for order details modal
+  const handlePrintOrder = () => {
+    showToast('Printing order details', 'info');
+    // Qui andrà la logica di stampa reale
+  };
+
+  const handleDownloadOrder = () => {
+    showToast('Downloading order details', 'info');
+    // Qui andrà la logica di download reale
+  };
 
   return (
-    <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" sx={{ fontWeight: 'medium' }}>Purchase Orders Management</Typography>
-        <Button 
-          variant="contained" 
-          startIcon={<AddIcon />}
-          onClick={handleAddOrder}
-        >
-          Create New Order
-        </Button>
-      </Box>
-
-      <Paper sx={{ mb: 3 }}>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs 
-            value={tabValue} 
-            onChange={handleTabChange} 
-            aria-label="orders tabs"
-            sx={{ px: 2 }}
+    <Container maxWidth={false}>
+      <Box sx={{ py: 3 }}>
+        {/* Header with title and create button */}
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          mb: 3 
+        }}>
+          <Typography variant="h4" component="h1" sx={{ fontWeight: 'medium' }}>
+            Purchase Orders (ODA)
+          </Typography>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            onClick={handleCreateOda}
           >
-            <Tab label="All Orders" {...a11yProps(0)} />
-            <Tab label="Pending" {...a11yProps(1)} />
-            <Tab label="Processing" {...a11yProps(2)} />
-            <Tab label="Shipped" {...a11yProps(3)} />
-            <Tab label="Delivered" {...a11yProps(4)} />
-            <Tab label="Drafts" {...a11yProps(5)} />
-          </Tabs>
+            Create New ODA
+          </Button>
         </Box>
-      </Paper>
 
-      <Card>
-        <CardHeader
-          title="Manage Purchase Orders"
-          titleTypographyProps={{ variant: 'h6' }}
-          action={
-            <Stack direction="row" spacing={1}>
-              <Button 
-                variant="outlined" 
-                startIcon={<CloudDownloadIcon />} 
-                size="small"
-                onClick={handleExportOrders}
-              >
-                Export
-              </Button>
-              <Button 
-                variant="outlined" 
-                startIcon={<PrintIcon />} 
-                size="small"
-                onClick={() => handlePrintOrder('all')}
-              >
-                Print
-              </Button>
-            </Stack>
-          }
+        {/* Order tabs */}
+        <OrderTabs
+          currentTab={currentTab}
+          onTabChange={handleTabChange}
+          tabs={ORDER_TABS}
         />
-        <Divider />
-        <CardContent sx={{ p: 2 }}>
-          <Grid container spacing={2} sx={{ mb: 2 }}>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <TextField
-                fullWidth
-                placeholder="Search orders by number or supplier..."
-                value={searchTerm}
-                onChange={handleSearchChange}
-                variant="outlined"
-                size="small"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon fontSize="small" />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <FormControl fullWidth size="small">
-                <InputLabel id="status-filter-label">Status</InputLabel>
-                <Select
-                  labelId="status-filter-label"
-                  id="status-filter"
-                  value={filterStatus}
-                  label="Status"
-                  onChange={handleStatusFilterChange}
-                >
-                  <MenuItem value="all">All Statuses</MenuItem>
-                  <MenuItem value="Pending">Pending</MenuItem>
-                  <MenuItem value="Processing">Processing</MenuItem>
-                  <MenuItem value="Shipped">Shipped</MenuItem>
-                  <MenuItem value="Delivered">Delivered</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <Button
-                fullWidth
-                variant="outlined"
-                startIcon={<FilterListIcon />}
-                onClick={() => {
-                  setSearchTerm('');
-                  setFilterStatus('all');
-                }}
-              >
-                Clear Filters
-              </Button>
-            </Grid>
-          </Grid>
 
-          <Box sx={{ height: 400, width: '100%' }}>
-            <DataGrid
-              rows={filteredOrders}
-              columns={columns}
-              disableColumnMenu
-              disableRowSelectionOnClick
-              pagination
-              pageSizeOptions={[5, 10, 25]}
-              initialState={{
-                pagination: {
-                  paginationModel: { pageSize: 5 },
-                },
-              }}
+        {/* Filter controls */}
+        <OrderFilterControls
+          searchValue={searchValue}
+          statusValue={statusValue}
+          dateValue={dateValue}
+          onSearchChange={setSearchValue}
+          onStatusChange={setStatusValue}
+          onDateChange={setDateValue}
+          statusOptions={STATUS_OPTIONS}
+          dateRangeOptions={DATE_RANGE_OPTIONS}
+        />
+
+        {/* Orders list */}
+        <Box>
+          {getCurrentPageItems().map((order) => (
+            <OrderCard
+              key={order.id}
+              order={order}
+              onViewDetails={handleViewDetails}
+              onReorder={handleReorder}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onTrack={handleTrack}
+              onFollowUp={handleFollowUp}
+              onSubmit={handleSubmit}
+              onContinueEditing={handleContinueEditing}
             />
-          </Box>
-        </CardContent>
-      </Card>
+          ))}
 
-      <Box sx={{ mt: 3 }}>
-        <Card>
-          <CardHeader
-            title="Order Volume Trends"
-            titleTypographyProps={{ variant: 'h6' }}
-          />
-          <Divider />
-          <CardContent>
-            <Grid container spacing={2}>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <Box 
-                  sx={{ 
-                    p: 2, 
-                    textAlign: 'center', 
-                    border: '1px solid #eee', 
-                    borderRadius: 1, 
-                    bgcolor: '#f9f9f9' 
-                  }}
-                >
-                  <Typography variant="h5" color="primary" sx={{ fontWeight: 'bold' }}>€142,350</Typography>
-                  <Typography variant="body2" color="text.secondary">Total Purchase Value</Typography>
-                </Box>
-              </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <Box 
-                  sx={{ 
-                    p: 2, 
-                    textAlign: 'center', 
-                    border: '1px solid #eee', 
-                    borderRadius: 1, 
-                    bgcolor: '#f9f9f9' 
-                  }}
-                >
-                  <Typography variant="h5" color="success.main" sx={{ fontWeight: 'bold' }}>42</Typography>
-                  <Typography variant="body2" color="text.secondary">Orders This Month</Typography>
-                </Box>
-              </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <Box 
-                  sx={{ 
-                    p: 2, 
-                    textAlign: 'center', 
-                    border: '1px solid #eee', 
-                    borderRadius: 1, 
-                    bgcolor: '#f9f9f9' 
-                  }}
-                >
-                  <Typography variant="h5" color="warning.main" sx={{ fontWeight: 'bold' }}>8</Typography>
-                  <Typography variant="body2" color="text.secondary">Pending Approvals</Typography>
-                </Box>
-              </Grid>
-            </Grid>
-          </CardContent>
-        </Card>
-      </Box>
-
-      <Box sx={{ mt: 3 }}>
-        <Card>
-          <CardHeader
-            title="Recently Added Items"
-            titleTypographyProps={{ variant: 'h6' }}
-          />
-          <Divider />
-          <CardContent sx={{ p: 0 }}>
-            <TableContainer>
-              <Table aria-label="recent items table">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Product</TableCell>
-                    <TableCell>Code</TableCell>
-                    <TableCell align="right">Quantity</TableCell>
-                    <TableCell align="right">Price</TableCell>
-                    <TableCell align="right">Total</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {orderItems.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>{item.product}</TableCell>
-                      <TableCell>{item.code}</TableCell>
-                      <TableCell align="right">{item.qty}</TableCell>
-                      <TableCell align="right">€{item.price.toFixed(2)}</TableCell>
-                      <TableCell align="right">€{item.total.toFixed(2)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </CardContent>
-        </Card>
-      </Box>
-
-      <TabPanel value={tabValue} index={5}>
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>Draft Orders</Typography>
-          {draftOrders.length === 0 ? (
-            <Paper sx={{ p: 3, textAlign: 'center' }}>
-              <Typography variant="body1" color="text.secondary">
-                No draft orders found.
+          {filteredOrders.length === 0 && (
+            <Box sx={{ 
+              textAlign: 'center', 
+              py: 8, 
+              bgcolor: 'background.paper', 
+              borderRadius: 1, 
+              border: '1px dashed',
+              borderColor: 'divider'
+            }}>
+              <Typography variant="h6" color="text.secondary">
+                No orders found
               </Typography>
-            </Paper>
-          ) : (
-            <TableContainer component={Paper}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Draft ID</TableCell>
-                    <TableCell>Date Created</TableCell>
-                    <TableCell>Products</TableCell>
-                    <TableCell align="right">Total Amount</TableCell>
-                    <TableCell align="center">Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {draftOrders.map((draft) => (
-                    <TableRow key={draft.id}>
-                      <TableCell>{draft.name || draft.id.replace('draft-', 'Draft #')}</TableCell>
-                      <TableCell>
-                        {new Date(draft.timestamp).toLocaleDateString()} {new Date(draft.timestamp).toLocaleTimeString()}
-                      </TableCell>
-                      <TableCell>{draft.items.length} products</TableCell>
-                      <TableCell align="right">€{draft.totalAmount.toFixed(2)}</TableCell>
-                      <TableCell align="center">
-                        <IconButton 
-                          size="small" 
-                          color="primary" 
-                          onClick={() => handleEditDraft(draft.id)}
-                          title="Edit draft"
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton 
-                          size="small" 
-                          color="error" 
-                          onClick={() => handleDeleteDraft(draft.id)}
-                          title="Delete draft"
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                Try adjusting your filters or create a new order
+              </Typography>
+              <Button
+                variant="outlined"
+                color="primary"
+                sx={{ mt: 2 }}
+                onClick={handleCreateOda}
+              >
+                Create New ODA
+              </Button>
+            </Box>
           )}
         </Box>
-      </TabPanel>
-    </Box>
+
+        {/* Pagination */}
+        {filteredOrders.length > 0 && (
+          <OrderPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredOrders.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            onItemsPerPageChange={setItemsPerPage}
+          />
+        )}
+
+        {/* Order Details Modal */}
+        <OrderDetailsModal
+          open={detailsModalOpen}
+          onClose={() => setDetailsModalOpen(false)}
+          orderDetails={selectedOrderDetails}
+          onPrint={handlePrintOrder}
+          onDownload={handleDownloadOrder}
+        />
+      </Box>
+    </Container>
   );
 };
 

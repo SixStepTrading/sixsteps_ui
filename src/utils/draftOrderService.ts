@@ -18,7 +18,7 @@ export interface DraftOrder {
   name?: string;
 }
 
-const STORAGE_KEY = 'farmabooster_draft_orders';
+const STORAGE_KEY = 'sixsteps_draft_orders';
 
 // Get all draft orders
 export const getDraftOrders = (): DraftOrder[] => {

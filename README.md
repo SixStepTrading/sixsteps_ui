@@ -1,4 +1,4 @@
-# FarmaBooster - Pharmacy Management Dashboard
+# sixsteps - Pharmacy Management Dashboard
 
 A comprehensive pharmacy management system with real-time product data integration.
 
@@ -23,8 +23,8 @@ A comprehensive pharmacy management system with real-time product data integrati
 
 1. Clone the repository
    ```
-   git clone https://github.com/your-username/farmabooster.git
-   cd farmabooster
+   git clone https://github.com/your-username/sixsteps.git
+   cd sixsteps
    ```
 
 2. Install dependencies

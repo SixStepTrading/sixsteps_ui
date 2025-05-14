@@ -105,7 +105,7 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({
   const drawer = (
     <>
       <SidebarHeader 
-        logo="FarmaBooster"
+        logo="Six Steps"
         isCollapsed={isCollapsed}
         onToggleCollapse={onToggleCollapse}
       />
