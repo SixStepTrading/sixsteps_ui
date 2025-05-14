@@ -7,10 +7,20 @@
  */
 export const downloadPreMadeTemplate = (): void => {
   try {
-    // Create a link to the static template file
+    // Extremely simple CSV with just the essential data
+    const csvContent = `Nome Prodotto,Quantità
+ALVITA GINOCCHIERA UNIVERSALE,2
+BIODERMA ATODERM INTENSIVE BAUME 500ML,1
+ZERODOL 20CPR 20MG,3
+ENTEROGERMINA 2 MILIARDI/5ML 10FL,5`;
+
+    // Create a download link
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
-    link.href = `${process.env.PUBLIC_URL}/product_upload_template.csv`;
-    link.setAttribute('download', 'product_upload_template.csv');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'prodotti_esempio.csv');
     link.style.visibility = 'hidden';
     
     document.body.appendChild(link);
@@ -26,21 +36,23 @@ export const downloadPreMadeTemplate = (): void => {
  */
 export const generateExcelTemplate = (): void => {
   try {
-    // Create a sample data structure
+    // Simple, minimal structure that's likely to work in any CSV parser
     const sampleData = [
       {
-        "EAN": "8017858001247",
-        "MINSAN": "034034017",
-        "Product Name": "Aspirina 500mg",
-        "Quantity": "10",
-        "Target Price": "5.25"
+        "Prodotto": "ALVITA GINOCCHIERA UNIVERSALE",
+        "Quantità": "2"
       },
       {
-        "EAN": "8015463204259",
-        "MINSAN": "058364010",
-        "Product Name": "Tachipirina 1000mg",
-        "Quantity": "5",
-        "Target Price": "4.75"
+        "Prodotto": "BIODERMA ATODERM INTENSIVE BAUME 500ML",
+        "Quantità": "1"
+      },
+      {
+        "Prodotto": "ZERODOL 20CPR 20MG",
+        "Quantità": "3"
+      },
+      {
+        "Prodotto": "ENTEROGERMINA 2 MILIARDI/5ML 10FL",
+        "Quantità": "5"
       }
     ];
 
@@ -49,7 +61,6 @@ export const generateExcelTemplate = (): void => {
     const csvContent = [
       headers.join(','),
       ...sampleData.map(row => headers.map(field => {
-        // Escape double quotes and wrap field in quotes if it contains commas or quotes
         const value = row[field as keyof typeof row];
         const strValue = String(value).replace(/"/g, '""');
         return `"${strValue}"`;
@@ -62,7 +73,7 @@ export const generateExcelTemplate = (): void => {
     const url = URL.createObjectURL(blob);
     
     link.setAttribute('href', url);
-    link.setAttribute('download', 'product_upload_template.csv');
+    link.setAttribute('download', 'prodotti_semplificato.csv');
     link.style.visibility = 'hidden';
     
     document.body.appendChild(link);

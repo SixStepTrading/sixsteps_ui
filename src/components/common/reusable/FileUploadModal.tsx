@@ -117,24 +117,24 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
 
   const exampleTableData = [
     { 
-      column: 'Codici Prodotto / EAN / MINSAN', 
-      example: '8017858001247', 
-      description: 'Product code identifiers' 
+      column: 'Nome Prodotto', 
+      example: 'ALVITA GINOCCHIERA UNIVERSALE', 
+      description: 'Nome esatto del prodotto' 
     },
     { 
-      column: 'Product Name', 
-      example: 'Aspirina 500mg', 
-      description: 'Product name (alternative to product codes)' 
+      column: 'Quantità', 
+      example: '2', 
+      description: 'Quantità da ordinare (numero intero)' 
     },
     { 
-      column: 'Quantity', 
-      example: '10', 
-      description: 'Quantity to order (integer)' 
+      column: 'MINSAN', 
+      example: '935281663', 
+      description: 'Codice MINSAN del prodotto (opzionale)' 
     },
     { 
-      column: 'Target Price', 
-      example: '5.25', 
-      description: 'Your target purchase price (decimal)' 
+      column: 'EAN', 
+      example: '5055382312321', 
+      description: 'Codice EAN del prodotto (opzionale)' 
     }
   ];
 
@@ -305,82 +305,122 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
             <Typography variant="h6" sx={{ mb: 2 }}>Guidelines for File Upload</Typography>
             
             <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'medium', color: theme.palette.primary.main }}>
+              File Format
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              Il file più semplice da caricare è un CSV con soltanto il nome del prodotto e la quantità:
+            </Typography>
+            
+            <Box sx={{ 
+              bgcolor: 'rgba(25, 118, 210, 0.08)', 
+              p: 2, 
+              borderRadius: 1,
+              mb: 3,
+              fontFamily: 'monospace',
+              whiteSpace: 'pre'
+            }}>
+              Nome Prodotto,Quantità{'\n'}
+              ALVITA GINOCCHIERA UNIVERSALE,2{'\n'}
+              BIODERMA ATODERM INTENSIVE BAUME 500ML,1{'\n'}
+              ZERODOL 20CPR 20MG,3{'\n'}
+              ENTEROGERMINA 2 MILIARDI/5ML 10FL,5
+            </Box>
+            
+            <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'medium', color: theme.palette.primary.main }}>
               Required Columns
             </Typography>
             <Typography variant="body2" sx={{ mb: 2 }}>
-              Your file must contain at least the following columns:
+              Il file deve contenere almeno una colonna con un identificativo del prodotto:
             </Typography>
             
             <Box component="ul" sx={{ pl: 2, mb: 3 }}>
               <Box component="li" sx={{ mb: 1 }}>
                 <Typography variant="body2">
-                  <strong>Product Identifier</strong> - One of the following:
+                  <strong>Identificativo Prodotto</strong> - Uno dei seguenti:
                 </Typography>
                 <Box component="ul" sx={{ pl: 3 }}>
                   <Box component="li">
                     <Typography variant="body2">
-                      EAN Code (e.g., "8017858001247")
+                      Nome Prodotto (es. "ALVITA GINOCCHIERA UNIVERSALE")
                     </Typography>
                   </Box>
                   <Box component="li">
                     <Typography variant="body2">
-                      MINSAN Code (e.g., "034034017")
+                      Codice EAN (es. "5055382312321")
                     </Typography>
                   </Box>
                   <Box component="li">
                     <Typography variant="body2">
-                      Product Name (e.g., "Aspirina 500mg")
+                      Codice MINSAN (es. "935281663")
                     </Typography>
                   </Box>
                 </Box>
               </Box>
               <Box component="li" sx={{ mb: 1 }}>
                 <Typography variant="body2">
-                  <strong>Quantity</strong> - The number of items you want to order (integer)
-                </Typography>
-              </Box>
-              <Box component="li">
-                <Typography variant="body2">
-                  <strong>Target Price</strong> - Your target purchase price (decimal)
+                  <strong>Quantità</strong> - Numero di pezzi da ordinare (numero intero)
                 </Typography>
               </Box>
             </Box>
             
             <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'medium', color: theme.palette.primary.main }}>
-              Column Name Recognition
+              Prodotti Disponibili
             </Typography>
             <Typography variant="body2" sx={{ mb: 2 }}>
-              The system will automatically recognize columns with names containing:
+              In questa versione demo, sono disponibili solo i seguenti prodotti:
             </Typography>
             
-            <Box sx={{ pl: 2, mb: 3 }}>
-              <Typography component="div" variant="body2">
-                • For <strong>Product Identifiers</strong>: "code", "ean", "minsan", "product", "name", "prodotto", "nome"
-              </Typography>
-              <Typography component="div" variant="body2">
-                • For <strong>Quantity</strong>: "quantity", "qty", "amount", "quantità", "qta"
-              </Typography>
-              <Typography component="div" variant="body2">
-                • For <strong>Target Price</strong>: "target", "price", "prezzo", "target price", "prezzo target"
-              </Typography>
-            </Box>
+            <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow sx={{ bgcolor: 'rgba(25, 118, 210, 0.08)' }}>
+                    <TableCell><strong>Nome Prodotto</strong></TableCell>
+                    <TableCell><strong>MINSAN</strong></TableCell>
+                    <TableCell><strong>EAN</strong></TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  <TableRow>
+                    <TableCell>ALVITA GINOCCHIERA UNIVERSALE</TableCell>
+                    <TableCell>935281663</TableCell>
+                    <TableCell>5055382312321</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>BIODERMA ATODERM INTENSIVE BAUME 500ML</TableCell>
+                    <TableCell>935281511</TableCell>
+                    <TableCell>8058659018183</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>ZERODOL 20CPR 20MG</TableCell>
+                    <TableCell>972462406</TableCell>
+                    <TableCell>8032891460294</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>ENTEROGERMINA 2 MILIARDI/5ML 10FL</TableCell>
+                    <TableCell>931842338</TableCell>
+                    <TableCell>8023891025414</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </TableContainer>
             
-            <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'medium', color: theme.palette.primary.main }}>
-              Important Notes
-            </Typography>
-            <Box sx={{ pl: 2 }}>
-              <Typography component="div" variant="body2">
-                • Columns can be in any order
-              </Typography>
-              <Typography component="div" variant="body2">
-                • Column names are not case-sensitive
-              </Typography>
-              <Typography component="div" variant="body2">
-                • At least one Product Identifier and either Quantity or Target Price are required
-              </Typography>
-              <Typography component="div" variant="body2">
-                • Products will be matched against your inventory using the provided identifiers
-              </Typography>
+            <Box sx={{ 
+              p: 2, 
+              bgcolor: 'rgba(25, 118, 210, 0.08)', 
+              borderRadius: 2, 
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 1
+            }}>
+              <InfoIcon color="primary" sx={{ mt: 0.5 }} />
+              <Box>
+                <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                  Suggerimento
+                </Typography>
+                <Typography variant="body2">
+                  Per un caricamento ottimale, assicurati che i nomi dei prodotti o i codici corrispondano esattamente ai prodotti nel nostro catalogo. Puoi scaricare un template precompilato usando il pulsante in basso.
+                </Typography>
+              </Box>
             </Box>
           </Box>
         </DialogContent>

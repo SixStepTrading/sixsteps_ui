@@ -704,18 +704,56 @@ const Dashboard: React.FC = () => {
           // Handle CSV file
           else if (file.name.endsWith('.csv')) {
             const csvData = data.toString();
-            const workbook = XLSX.read(csvData, { type: 'string' });
-            const firstSheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[firstSheetName];
-            parsedData = XLSX.utils.sheet_to_json(worksheet);
+            console.log("Raw CSV data:", csvData);
+            
+            try {
+              const workbook = XLSX.read(csvData, { type: 'string' });
+              const firstSheetName = workbook.SheetNames[0];
+              const worksheet = workbook.Sheets[firstSheetName];
+              parsedData = XLSX.utils.sheet_to_json(worksheet);
+              console.log("Parsed CSV using XLSX:", parsedData);
+            } catch(xlsxError) {
+              console.error("XLSX parsing failed:", xlsxError);
+              
+              // Fallback to manual CSV parsing
+              try {
+                const lines = csvData.split('\n');
+                const headers = lines[0].split(',').map(h => h.trim());
+                parsedData = [];
+                
+                for(let i = 1; i < lines.length; i++) {
+                  if(lines[i].trim() === '') continue;
+                  
+                  const values = lines[i].split(',');
+                  const row: Record<string, string> = {};
+                  
+                  for(let j = 0; j < headers.length; j++) {
+                    row[headers[j]] = values[j]?.trim() || '';
+                  }
+                  
+                  parsedData.push(row);
+                }
+                console.log("Fallback CSV parsing result:", parsedData);
+              } catch(fallbackError) {
+                console.error("Fallback CSV parsing failed:", fallbackError);
+                reject(new Error('Failed to parse CSV file'));
+                return;
+              }
+            }
           }
           else {
             reject(new Error('Unsupported file format. Please upload Excel (.xlsx, .xls) or CSV (.csv) files.'));
             return;
           }
           
+          if (parsedData.length === 0) {
+            reject(new Error('No data found in file after parsing'));
+            return;
+          }
+          
           resolve(parsedData);
         } catch (error) {
+          console.error("File parsing error:", error);
           reject(new Error('Error parsing file. Please check the file format.'));
         }
       };
@@ -738,114 +776,215 @@ const Dashboard: React.FC = () => {
       throw new Error('No data found in the file or the file is empty');
     }
     
-    // Get column names from the first row of data
-    const firstRow = data[0];
-    const columnNames = Object.keys(firstRow).map(key => key.toLowerCase());
+    // Debug all our static products for comparison
+    console.log("All available products:", products.map(p => ({
+      id: p.id,
+      name: p.name,
+      ean: p.ean,
+      minsan: p.minsan
+    })));
     
-    // Check if required columns exist (using fuzzy matching for flexibility)
-    const hasProductIdentifier = columnNames.some(col => 
-      col.includes('code') || col.includes('ean') || col.includes('minsan') || 
-      col.includes('product') || col.includes('name') || col.includes('prodotto')
-    );
+    // Log the uploaded data for debugging
+    console.log('Uploaded file data:', data);
     
-    const hasQuantity = columnNames.some(col => 
-      col.includes('quantity') || col.includes('qty') || col.includes('amount') || 
-      col.includes('quantità') || col.includes('qta')
-    );
-    
-    const hasTargetPrice = columnNames.some(col => 
-      col.includes('target') || col.includes('price') || col.includes('prezzo') || 
-      col.includes('target price') || col.includes('prezzo target')
-    );
-    
-    if (!hasProductIdentifier) {
-      throw new Error('The file must contain a column for Product Code, EAN, MINSAN, or Product Name');
-    }
-    
-    if (!hasQuantity && !hasTargetPrice) {
-      throw new Error('The file must contain at least one column for Quantity or Target Price');
-    }
-    
-    // Find best match columns
-    const getColumnByPattern = (patterns: string[]): string | null => {
-      return columnNames.find(col => 
-        patterns.some(pattern => col.includes(pattern.toLowerCase()))
-      ) || null;
-    };
-    
-    const codeColumn = getColumnByPattern(['code', 'ean', 'minsan', 'prodotto']);
-    const nameColumn = getColumnByPattern(['name', 'product', 'prodotto', 'nome']);
-    const quantityColumn = getColumnByPattern(['quantity', 'qty', 'amount', 'quantità', 'qta']);
-    const targetPriceColumn = getColumnByPattern(['target', 'price', 'prezzo']);
-    
-    // Filter and update products
+    // The matching logic starts here
     const matchedProductIds = new Set<string>();
-    const updatedProducts = products.map(product => {
-      // Try to find a match in the uploaded data
-      const matchedRow = data.find(row => {
-        if (codeColumn && row[codeColumn]) {
-          const value = String(row[codeColumn]).toLowerCase();
-          if (product.ean.toLowerCase().includes(value) || 
-              product.minsan.toLowerCase().includes(value)) {
-            return true;
-          }
-        }
-        
-        if (nameColumn && row[nameColumn]) {
-          const value = String(row[nameColumn]).toLowerCase();
-          if (product.name.toLowerCase().includes(value)) {
-            return true;
-          }
-        }
-        
-        return false;
-      });
+    
+    // Try to match each row from the uploaded file
+    data.forEach((row, index) => {
+      console.log(`Checking row ${index}:`, row);
       
-      if (matchedRow) {
-        matchedProductIds.add(product.id);
-        let updatedProduct = { ...product };
-        
-        // Update quantity if available
-        if (quantityColumn && matchedRow[quantityColumn] !== undefined) {
-          const quantity = parseInt(matchedRow[quantityColumn], 10);
-          if (!isNaN(quantity) && quantity >= 0) {
-            updatedProduct.quantity = quantity;
-            
-            // Calculate average price if quantity > 0
-            if (quantity > 0) {
-              updatedProduct.averagePrice = calculateAveragePrice(
-                updatedProduct.bestPrices, 
-                quantity, 
-                updatedProduct.publicPrice
-              );
+      // Helper function to extract text safely from any field in the row
+      const extractText = (row: any, possibleFieldNames: string[]): string | null => {
+        for (let field of possibleFieldNames) {
+          // Try with direct field access
+          if (row[field] !== undefined && row[field] !== null) {
+            return String(row[field]).trim();
+          }
+          
+          // Try case-insensitive matching
+          const lowercaseField = field.toLowerCase();
+          for (let key of Object.keys(row)) {
+            if (key.toLowerCase() === lowercaseField && row[key] !== undefined && row[key] !== null) {
+              return String(row[key]).trim();
             }
           }
         }
+        return null;
+      };
+      
+      // Extract product identifiers
+      const ean = extractText(row, ['EAN', 'ean', 'Ean', 'Codice', 'codice', 'Code', 'code']);
+      const minsan = extractText(row, ['MINSAN', 'minsan', 'Minsan', 'AIC', 'aic']);
+      const name = extractText(row, ['Product Name', 'name', 'Nome', 'nome', 'Prodotto', 'prodotto', 'Descrizione', 'descrizione', 'Name', 'Product', 'product']);
+      const quantity = extractText(row, ['Quantity', 'quantity', 'Quantità', 'quantità', 'Qta', 'qta', 'Q.tà', 'q.tà']);
+      const targetPrice = extractText(row, ['Target Price', 'target price', 'Target', 'target', 'Price', 'price', 'Prezzo', 'prezzo']);
+      
+      console.log(`Extracted from row: EAN=${ean}, MINSAN=${minsan}, Name=${name}, Qty=${quantity}, Price=${targetPrice}`);
+      
+      // First attempt exact code matches
+      let matchedProduct: ProductWithQuantity | null = null;
+      if (ean) {
+        matchedProduct = products.find(p => p.ean.trim() === ean) || null;
+        if (matchedProduct) {
+          console.log(`Found exact EAN match for ${ean}: ${matchedProduct.name}`);
+        }
+      }
+      
+      if (!matchedProduct && minsan) {
+        matchedProduct = products.find(p => p.minsan.trim() === minsan) || null;
+        if (matchedProduct) {
+          console.log(`Found exact MINSAN match for ${minsan}: ${matchedProduct.name}`);
+        }
+      }
+      
+      // Try partial code matches if exact match failed
+      if (!matchedProduct && ean) {
+        matchedProduct = products.find(p => 
+          p.ean.includes(ean) || ean.includes(p.ean)
+        ) || null;
+        if (matchedProduct) {
+          console.log(`Found partial EAN match: ${ean} with ${matchedProduct.ean} for ${matchedProduct.name}`);
+        }
+      }
+      
+      if (!matchedProduct && minsan) {
+        matchedProduct = products.find(p => 
+          p.minsan.includes(minsan) || minsan.includes(p.minsan)
+        ) || null;
+        if (matchedProduct) {
+          console.log(`Found partial MINSAN match: ${minsan} with ${matchedProduct.minsan} for ${matchedProduct.name}`);
+        }
+      }
+      
+      // Try exact name match
+      if (!matchedProduct && name) {
+        const normalizedName = name.toLowerCase();
+        matchedProduct = products.find(p => p.name.toLowerCase() === normalizedName) || null;
+        if (matchedProduct) {
+          console.log(`Found exact name match for "${name}": ${matchedProduct.name}`);
+        }
+      }
+      
+      // Try partial name match
+      if (!matchedProduct && name) {
+        const normalizedName = name.toLowerCase();
+        matchedProduct = products.find(p => 
+          p.name.toLowerCase().includes(normalizedName) || normalizedName.includes(p.name.toLowerCase())
+        ) || null;
+        if (matchedProduct) {
+          console.log(`Found partial name match: "${name}" with "${matchedProduct.name}"`);
+        }
+      }
+      
+      // Try word-by-word matching as last resort
+      if (!matchedProduct && name && name.split(/\s+/).length > 1) {
+        const words = name.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+        console.log(`Trying word-by-word match with words:`, words);
         
-        // Update target price if available
-        if (targetPriceColumn && matchedRow[targetPriceColumn] !== undefined) {
-          const targetPrice = parseFloat(matchedRow[targetPriceColumn]);
-          if (!isNaN(targetPrice) && targetPrice >= 0) {
-            updatedProduct.targetPrice = targetPrice;
+        // Find product with highest word match percentage
+        let bestMatchPercentage = 0;
+        let bestMatchId: string | null = null;
+        
+        for (const product of products) {
+          const productWords = product.name.toLowerCase().split(/\s+/);
+          let matchCount = 0;
+          
+          for (const word of words) {
+            if (productWords.some(prodWord => prodWord.includes(word) || word.includes(prodWord))) {
+              matchCount++;
+            }
+          }
+          
+          const matchPercentage = words.length > 0 ? matchCount / words.length : 0;
+          
+          if (matchPercentage > bestMatchPercentage && matchPercentage >= 0.5) {
+            bestMatchPercentage = matchPercentage;
+            bestMatchId = product.id;
           }
         }
         
-        return updatedProduct;
+        if (bestMatchId) {
+          const foundProduct = products.find(p => p.id === bestMatchId);
+          if (foundProduct) {
+            console.log(`Found word match with ${bestMatchPercentage*100}% similarity: "${name}" with "${foundProduct.name}"`);
+            matchedProduct = foundProduct;
+          }
+        }
       }
       
-      return product;
+      // If product is matched, update it
+      if (matchedProduct) {
+        console.log(`Successfully matched product ${matchedProduct.name}`);
+        matchedProductIds.add(matchedProduct.id);
+        
+        // Update quantity if provided
+        let parsedQuantity = 1; // Default to 1
+        if (quantity) {
+          const cleanQuantity = quantity.replace(',', '.');
+          const qtyNumber = parseInt(cleanQuantity, 10);
+          if (!isNaN(qtyNumber) && qtyNumber >= 0) {
+            parsedQuantity = qtyNumber;
+          }
+        }
+        
+        // Update target price if provided
+        let parsedPrice = null;
+        if (targetPrice) {
+          const cleanPrice = targetPrice.replace(',', '.');
+          const priceNumber = parseFloat(cleanPrice);
+          if (!isNaN(priceNumber) && priceNumber >= 0) {
+            parsedPrice = priceNumber;
+          }
+        }
+        
+        // Update product in the products array
+        const productIndex = products.findIndex(p => p.id === matchedProduct!.id);
+        if (productIndex !== -1) {
+          const updatedProduct = { ...products[productIndex] };
+          updatedProduct.quantity = parsedQuantity;
+          
+          if (parsedQuantity > 0) {
+            updatedProduct.averagePrice = calculateAveragePrice(
+              updatedProduct.bestPrices,
+              parsedQuantity,
+              updatedProduct.publicPrice
+            );
+          }
+          
+          if (parsedPrice !== null) {
+            updatedProduct.targetPrice = parsedPrice;
+          }
+          
+          products[productIndex] = updatedProduct;
+        }
+      } else {
+        console.log(`No match found for row ${index}`);
+      }
     });
     
-    // Apply the updates
-    setProducts(updatedProducts);
+    // Update the products state
+    setProducts([...products]);
     
-    // Filter the table to show only matched products
+    // Filter the table to show only matched products and select them
     if (matchedProductIds.size > 0) {
-      const filtered = updatedProducts.filter(p => matchedProductIds.has(p.id));
-      setFilteredProducts(filtered);
+      const matchedProducts = products.filter(p => matchedProductIds.has(p.id));
+      setFilteredProducts(matchedProducts);
+      
+      // Select all matched products with quantity > 0
+      const productsToSelect = matchedProducts
+        .filter(p => p.quantity > 0)
+        .map(p => p.id);
+      
+      setSelected(productsToSelect);
+      
+      // Reset pagination to show all matched products
+      setPage(0);
+      
       showToast(`Found and updated ${matchedProductIds.size} products from your file`, 'success');
     } else {
-      throw new Error('No matching products found in the file');
+      console.error("No matching products found in uploaded file");
+      throw new Error('No matching products found. Please check product codes or names. Our system has 4 products: ALVITA GINOCCHIERA, BIODERMA ATODERM, ZERODOL, and ENTEROGERMINA.');
     }
   };
 

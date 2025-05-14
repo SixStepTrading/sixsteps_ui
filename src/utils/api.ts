@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { Product, ProductPrice } from '../data/mockProducts';
+import { staticMockProducts } from '../data/staticMockData';
 
 // Base URL for the pharmaceutical products API
 const API_BASE_URL = 'https://api.pharmaceutical-database.io/v1';
@@ -92,16 +93,16 @@ export const getFallbackProducts = async (): Promise<{
   categories: string[], 
   manufacturers: string[] 
 }> => {
-  // Import mock data dynamically to avoid circular dependencies
-  const { mockProducts } = await import('../data/mockProducts');
+  // Use the static mock products directly
+  console.log(`Using ${staticMockProducts.length} static mock products`);
   
   // Extract unique categories and manufacturers
-  const categories = Array.from(new Set(mockProducts.map(p => p.category))).sort();
-  const manufacturers = Array.from(new Set(mockProducts.map(p => p.manufacturer))).sort();
+  const categories = Array.from(new Set(staticMockProducts.map(p => p.category))).sort();
+  const manufacturers = Array.from(new Set(staticMockProducts.map(p => p.manufacturer))).sort();
   
   return {
-    products: mockProducts,
-    totalCount: mockProducts.length,
+    products: staticMockProducts,
+    totalCount: staticMockProducts.length,
     categories,
     manufacturers
   };

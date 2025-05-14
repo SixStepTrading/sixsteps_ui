@@ -111,8 +111,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       }}>
         {!isDrawerCollapsed && (
           <Typography variant="h6" sx={{ fontWeight: 'bold', color: theme.palette.primary.main, fontSize: '1rem' }}>
-            FarmaBooster
-          </Typography>
+          FarmaBooster
+        </Typography>
         )}
         <Tooltip title={isDrawerCollapsed ? "Expand menu" : "Collapse menu"}>
           <IconButton 
@@ -134,47 +134,47 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       <List>
         {menuItems.map((item) => (
           <Tooltip title={isDrawerCollapsed ? item.text : ""} placement="right" arrow>
-            <ListItemButton 
-              key={item.text} 
-              component={Link} 
-              to={item.path}
-              selected={location.pathname === item.path}
-              sx={{
+          <ListItemButton 
+            key={item.text} 
+            component={Link} 
+            to={item.path}
+            selected={location.pathname === item.path}
+            sx={{
                 py: 0.75,
                 minHeight: 40,
                 justifyContent: isDrawerCollapsed ? 'center' : 'flex-start',
-                '&.Mui-selected': {
-                  backgroundColor: 'rgba(25, 118, 210, 0.08)',
-                  borderRight: `3px solid ${theme.palette.primary.main}`,
-                  '&:hover': {
-                    backgroundColor: 'rgba(25, 118, 210, 0.12)',
-                  },
-                },
+              '&.Mui-selected': {
+                backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                borderRight: `3px solid ${theme.palette.primary.main}`,
                 '&:hover': {
-                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                  backgroundColor: 'rgba(25, 118, 210, 0.12)',
                 },
-              }}
-            >
-              <ListItemIcon 
-                sx={{ 
-                  color: location.pathname === item.path ? theme.palette.primary.main : 'inherit',
+              },
+              '&:hover': {
+                backgroundColor: 'rgba(0, 0, 0, 0.04)',
+              },
+            }}
+          >
+            <ListItemIcon 
+              sx={{ 
+                color: location.pathname === item.path ? theme.palette.primary.main : 'inherit',
                   minWidth: isDrawerCollapsed ? 0 : 35,
                   mr: isDrawerCollapsed ? 0 : 1,
                   justifyContent: 'center'
-                }}
-              >
-                {item.icon}
-              </ListItemIcon>
+              }}
+            >
+              {item.icon}
+            </ListItemIcon>
               {!isDrawerCollapsed && (
-                <ListItemText 
-                  primary={item.text} 
-                  primaryTypographyProps={{
+            <ListItemText 
+              primary={item.text} 
+              primaryTypographyProps={{
                     fontSize: '0.85rem',
-                    fontWeight: location.pathname === item.path ? 'medium' : 'normal'
-                  }}
-                />
+                fontWeight: location.pathname === item.path ? 'medium' : 'normal'
+              }}
+            />
               )}
-            </ListItemButton>
+          </ListItemButton>
           </Tooltip>
         ))}
       </List>
@@ -187,15 +187,15 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               mr: isDrawerCollapsed ? 0 : 1,
               justifyContent: 'center' 
             }}>
-              <LogoutIcon />
-            </ListItemIcon>
+            <LogoutIcon />
+          </ListItemIcon>
             {!isDrawerCollapsed && (
-              <ListItemText 
-                primary="Logout" 
+          <ListItemText 
+            primary="Logout" 
                 primaryTypographyProps={{ fontSize: '0.85rem' }}
-              />
+          />
             )}
-          </ListItemButton>
+        </ListItemButton>
         </Tooltip>
       </Box>
     </div>
