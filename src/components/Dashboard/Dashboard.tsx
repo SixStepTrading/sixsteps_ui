@@ -39,9 +39,6 @@ import {
   Add as AddIcon,
   Search as SearchIcon,
   ArrowForwardIos as ArrowForwardIosIcon,
-  Bookmark as BookmarkIcon,
-  Save as SaveIcon,
-  Check as CheckIcon,
   FilterList as FilterListIcon,
   Clear as ClearIcon,
   Refresh as RefreshIcon,
@@ -56,7 +53,7 @@ import StatCard from '../common/StatCard';
 import { useToast } from '../../contexts/ToastContext';
 import { Product } from '../../data/mockProducts';
 import { fetchProducts, getFallbackProducts } from '../../utils/api';
-import { ProductRow } from '../common/reusable';
+import { ProductRow, ActionBar } from '../common/reusable';
 import { calculateAveragePrice } from '../common/utils';
 import SortableColumnHeader from '../common/reusable/SortableColumnHeader';
 import ProductFilter from '../common/reusable/ProductFilter';
@@ -121,17 +118,13 @@ const Dashboard: React.FC = () => {
     searchTerm: '',
     category: '',
     manufacturer: '',
-    supplier: '',
-    priceRange: [0, 100] as [number, number],
-    inStockOnly: false,
-    vatRate: '',
+    supplier: ''
   });
   
   // Available filter options derived from product data
   const [categories, setCategories] = useState<string[]>([]);
   const [manufacturers, setManufacturers] = useState<string[]>([]);
   const [suppliers, setSuppliers] = useState<{ value: string; label: string }[]>([]);
-  const [vatRates, setVatRates] = useState<{ value: string | number; label: string }[]>([]);
 
   // State for file upload
   const [fileUploading, setFileUploading] = useState(false);
@@ -175,11 +168,7 @@ const Dashboard: React.FC = () => {
         searchTerm: useServerFiltering ? filterValues.searchTerm : undefined,
         category: useServerFiltering ? filterValues.category : undefined,
         manufacturer: useServerFiltering ? filterValues.manufacturer : undefined,
-        supplier: useServerFiltering ? filterValues.supplier : undefined,
-        inStockOnly: useServerFiltering ? filterValues.inStockOnly : undefined,
-        minPrice: useServerFiltering && filterValues.priceRange[0] > 0 ? filterValues.priceRange[0] : undefined,
-        maxPrice: useServerFiltering && filterValues.priceRange[1] < 100 ? filterValues.priceRange[1] : undefined,
-        vatRate: useServerFiltering ? filterValues.vatRate : undefined,
+        supplier: useServerFiltering ? filterValues.supplier : undefined
       };
       
       // Calculate page number for API (1-indexed vs 0-indexed)
@@ -204,17 +193,14 @@ const Dashboard: React.FC = () => {
       
       // Extract unique suppliers and VAT rates from products
       const uniqueSuppliers = new Set<string>();
-      const uniqueVatRates = new Set<number>();
       
       result.products.forEach(product => {
-        uniqueVatRates.add(product.vat);
         product.bestPrices.forEach(price => {
           uniqueSuppliers.add(price.supplier);
         });
       });
       
       setSuppliers(Array.from(uniqueSuppliers).map(supplier => ({ value: supplier, label: supplier })));
-      setVatRates(Array.from(uniqueVatRates).map(vat => ({ value: vat, label: `${vat}%` })));
       
       // If using server filtering, filtered products = products returned
       if (useServerFiltering) {
@@ -248,25 +234,21 @@ const Dashboard: React.FC = () => {
         setCategories(fallbackData.categories || []);
         setManufacturers(fallbackData.manufacturers || []);
         
-        // Extract unique suppliers and VAT rates from products
+        // Extract unique suppliers from products
         const uniqueSuppliers = new Set<string>();
-        const uniqueVatRates = new Set<number>();
         
         fallbackData.products.forEach(product => {
-          uniqueVatRates.add(product.vat);
           product.bestPrices.forEach(price => {
             uniqueSuppliers.add(price.supplier);
           });
         });
         
         setSuppliers(Array.from(uniqueSuppliers).map(supplier => ({ value: supplier, label: supplier })));
-        setVatRates(Array.from(uniqueVatRates).map(vat => ({ value: vat, label: `${vat}%` })));
         
         setUsingMockData(true);
         
         // If using mock data, we need to apply client-side filtering
-        if (filterValues.searchTerm || filterValues.category || filterValues.manufacturer || 
-            filterValues.inStockOnly || filterValues.priceRange[0] > 0 || filterValues.priceRange[1] < 100) {
+        if (filterValues.searchTerm || filterValues.category || filterValues.manufacturer || filterValues.supplier) {
           applyClientFilters(productsWithQuantity);
         }
       } catch (fallbackErr) {
@@ -326,7 +308,7 @@ const Dashboard: React.FC = () => {
     // Apply supplier filter - now supporting multi-selection
     if (filterValues.supplier) {
       if (Array.isArray(filterValues.supplier) && filterValues.supplier.length > 0) {
-        filtered = filtered.filter(product => 
+    filtered = filtered.filter(product => 
           product.bestPrices.some(price => 
             filterValues.supplier.includes(price.supplier)
           )
@@ -338,37 +320,6 @@ const Dashboard: React.FC = () => {
         );
       }
     }
-    
-    // Apply in-stock filter
-    if (filterValues.inStockOnly) {
-      filtered = filtered.filter(product => product.inStock);
-    }
-    
-    // Apply VAT rate filter - now supporting multi-selection
-    if (filterValues.vatRate) {
-      if (Array.isArray(filterValues.vatRate) && filterValues.vatRate.length > 0) {
-        const vatRateArray = filterValues.vatRate;
-        filtered = filtered.filter(product => {
-          // Convert product vat to string for comparison
-          const productVatStr = product.vat.toString();
-          
-          // Check if any of the selected VAT rates match
-          return vatRateArray.some(rate => {
-            const rateStr = rate.toString();
-            return productVatStr === rateStr;
-          });
-        });
-      } else if ((typeof filterValues.vatRate === 'string' || typeof filterValues.vatRate === 'number') && filterValues.vatRate.toString() !== '') {
-        // Backward compatibility for single selection
-        filtered = filtered.filter(product => product.vat.toString() === filterValues.vatRate.toString());
-      }
-    }
-    
-    // Apply price range filter
-    filtered = filtered.filter(product => {
-      const lowestPrice = product.bestPrices.length > 0 ? product.bestPrices[0].price : 0;
-      return lowestPrice >= filterValues.priceRange[0] && lowestPrice <= filterValues.priceRange[1];
-    });
     
     // Apply sorting if needed
     if (sortBy && sortDirection) {
@@ -621,7 +572,34 @@ const Dashboard: React.FC = () => {
   };
 
   const handleRefresh = () => {
+    // Reset filter values to default state
+    setFilterValues({
+      searchTerm: '',
+      category: '',
+      manufacturer: '',
+      supplier: ''
+    });
+    
+    // Clear selected products
+    setSelected([]);
+    
+    // Reset pagination
+    setPage(0);
+    
+    // Reset products quantities
+    setProducts(prev => prev.map(product => ({
+      ...product,
+      quantity: 0,
+      averagePrice: null,
+      targetPrice: null,
+      showAllPrices: false
+    })));
+    
+    // Load fresh data
     loadProducts(true);
+    
+    // Show confirmation toast
+    showToast('Filtri e selezioni resettati', 'info');
   };
 
   // Get the total quantity of selected products
@@ -989,7 +967,7 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <Box>
+    <Box sx={{ flexGrow: 1, p: 3, pb: 20 }}>
       {error && (
         <Snackbar open={!!error} autoHideDuration={6000} onClose={handleCloseError}>
           <Alert onClose={handleCloseError} severity="warning" sx={{ width: '100%' }}>
@@ -1035,29 +1013,17 @@ const Dashboard: React.FC = () => {
       <Grid container spacing={3}>
         {/* Product Catalog */}
         <Grid size={{ xs: 12 }}>
-          {/* Filters Card - Separated from the table */}
-          <Card sx={{ mb: 2 }}>
-            <CardHeader 
-              title="Product Filters" 
-              titleTypographyProps={{ variant: 'h6' }}
+          {/* ProductFilter integrato direttamente senza Card */}
+          <ProductFilter
+            values={filterValues}
+            onChange={handleFilterChange}
+            onApplyFilters={handleApplyFilters}
+            categories={categories.map(cat => ({ value: cat, label: cat }))}
+            manufacturers={manufacturers.map(mfr => ({ value: mfr, label: mfr }))}
+            suppliers={suppliers}
           />
-            <Divider />
-            <Box sx={{ p: 2 }}>
-              <ProductFilter
-                values={filterValues}
-                onChange={handleFilterChange}
-                onApplyFilters={handleApplyFilters}
-                categories={categories.map(cat => ({ value: cat, label: cat }))}
-                manufacturers={manufacturers.map(mfr => ({ value: mfr, label: mfr }))}
-                suppliers={suppliers}
-                vatRates={vatRates}
-                maxPrice={100}
-                minPrice={0}
-          />
-            </Box>
-          </Card>
 
-          {/* Table Card - Separate from filters */}
+          {/* Table Card */}
           <Card>
             <CardHeader 
               title="Product Catalog" 
@@ -1073,7 +1039,7 @@ const Dashboard: React.FC = () => {
                     />
                   )}
                   
-                  {/* File Upload Button - No longer needs the hidden input */}
+                  {/* File Upload Button */}
                   <Button
                     size="small"
                     variant="outlined"
@@ -1180,7 +1146,7 @@ const Dashboard: React.FC = () => {
                             borderBottom: '2px solid rgba(224, 224, 224, 1)',
                             minWidth: 160,
                             boxShadow: '0 2px 2px -1px rgba(0,0,0,0.1)'
-                          }}>Codici Prodotto</TableCell>
+                          }}>Product Codes</TableCell>
                           <TableCell sx={{ 
                             position: 'sticky', 
                             left: 250, 
@@ -1356,46 +1322,20 @@ const Dashboard: React.FC = () => {
                   </Box>
                 </>
               )}
-              
-              <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #eee', bgcolor: '#f9f9f9' }}>
-                <Typography variant="body2">
-                  Selected Products: {selected.length} products ({getTotalQuantity()} items)
-                </Typography>
-                <Typography variant="body2" color="primary" sx={{ fontWeight: 'bold' }}>
-                  Total Amount: €{totalAmount.toFixed(2)}
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <Button 
-                    variant="outlined" 
-                    startIcon={<BookmarkIcon />}
-                    disabled={selected.length === 0}
-                    onClick={() => showToast('List saved for later', 'success')}
-                  >
-                    Save for Later
-                  </Button>
-                  <Button 
-                    variant="outlined" 
-                    startIcon={<SaveIcon />}
-                    disabled={selected.length === 0}
-                    onClick={() => showToast('Draft saved successfully', 'success')}
-                  >
-                    Save as Draft
-                  </Button>
-                  <Button 
-                    variant="contained" 
-                    color="primary" 
-                    startIcon={<CheckIcon />}
-                    disabled={selected.length === 0}
-                    onClick={handleCreateOda}
-                  >
-                    Create ODA
-                  </Button>
-                </Box>
-              </Box>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
+      
+      {/* Add the ActionBar component outside the Card */}
+      <ActionBar 
+        selectedCount={selected.length}
+        totalItems={getTotalQuantity()}
+        totalAmount={totalAmount}
+        onSaveForLater={() => showToast('List saved for later', 'success')}
+        onSaveAsDraft={() => showToast('Draft saved successfully', 'success')}
+        onCreateOda={handleCreateOda}
+      />
     </Box>
   );
 };

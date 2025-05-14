@@ -107,7 +107,9 @@ const ProductRow: React.FC<ProductRowProps> = ({
           bgcolor: bgColor,
           zIndex: 50,
           borderRight: '1px solid rgba(224, 224, 224, 0.7)',
-          boxShadow: '1px 0px 2px -1px rgba(0,0,0,0.07)'
+          boxShadow: '1px 0px 2px -1px rgba(0,0,0,0.07)',
+          padding: '2px 4px',
+          width: 30
         }}
       >
         {stockExceeded ? (
@@ -116,12 +118,13 @@ const ProductRow: React.FC<ProductRowProps> = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: 24,
-              height: 24,
+              width: 20,
+              height: 20,
               borderRadius: '50%',
               bgcolor: '#ff9800',
               color: 'white',
-              fontWeight: 'bold'
+              fontWeight: 'bold',
+              fontSize: '0.7rem'
             }}>
               !
             </Box>
@@ -131,6 +134,7 @@ const ProductRow: React.FC<ProductRowProps> = ({
             checked={isSelected} 
             size="small"
             disabled={product.quantity === 0}
+            sx={{ padding: 0 }}
           />
         )}
       </TableCell>
@@ -139,10 +143,13 @@ const ProductRow: React.FC<ProductRowProps> = ({
       <TableCell 
         sx={{ 
           position: 'sticky', 
-          left: 50, 
+          left: 30, 
           bgcolor: bgColor,
           zIndex: 50,
-          borderRight: '1px solid rgba(224, 224, 224, 0.7)'
+          borderRight: '1px solid rgba(224, 224, 224, 0.7)',
+          padding: '2px 4px',
+          fontSize: '0.7rem',
+          width: 30
         }}
       >
         {usingMockData ? page * rowsPerPage + index + 1 : index + 1}
@@ -152,18 +159,19 @@ const ProductRow: React.FC<ProductRowProps> = ({
       <TableCell
         sx={{ 
           position: 'sticky', 
-          left: 90, 
+          left: 60, 
           bgcolor: bgColor,
           zIndex: 50,
           borderRight: '1px solid rgba(224, 224, 224, 0.7)',
-          minWidth: 160
+          minWidth: 120,
+          padding: '4px 8px'
         }}
       >
         <Box>
-          <Typography variant="body2" sx={{ fontWeight: 'medium', fontSize: '0.875rem' }}>
+          <Typography variant="body2" sx={{ fontWeight: 'medium', fontSize: '0.75rem' }}>
             EAN: {product.ean}
           </Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
             Minsan: {product.minsan}
           </Typography>
         </Box>
@@ -173,17 +181,19 @@ const ProductRow: React.FC<ProductRowProps> = ({
       <TableCell
         sx={{ 
           position: 'sticky', 
-          left: 250, 
+          left: 180, 
           bgcolor: bgColor,
           zIndex: 50,
-          borderRight: '1px solid rgba(224, 224, 224, 0.7)'
+          borderRight: '1px solid rgba(224, 224, 224, 0.7)',
+          padding: '4px 8px',
+          maxWidth: 200
         }}
       >
         <Box>
-          <Typography variant="body2" sx={{ fontWeight: 'medium', fontSize: '0.875rem' }}>
+          <Typography variant="body2" sx={{ fontWeight: 'medium', fontSize: '0.75rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {product.name}
           </Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
             {product.manufacturer} • {product.inStock ? 'In Stock' : 'Out of Stock'}
           </Typography>
         </Box>
@@ -193,16 +203,18 @@ const ProductRow: React.FC<ProductRowProps> = ({
       <TableCell
         sx={{ 
           position: 'sticky', 
-          left: 450, 
+          left: 380, 
           bgcolor: bgColor,
           zIndex: 50,
-          borderRight: '1px solid rgba(224, 224, 224, 0.7)'
+          borderRight: '1px solid rgba(224, 224, 224, 0.7)',
+          padding: '4px 8px',
+          width: 70
         }}
       >
-        <Typography variant="body2" sx={{ fontWeight: 'medium', fontSize: '0.875rem' }}>
+        <Typography variant="body2" sx={{ fontWeight: 'medium', fontSize: '0.75rem' }}>
           €{product.publicPrice.toFixed(2)}
         </Typography>
-        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
           VAT {product.vat}%
         </Typography>
       </TableCell>
@@ -211,24 +223,24 @@ const ProductRow: React.FC<ProductRowProps> = ({
       <TableCell
         sx={{ 
           position: 'sticky', 
-          left: 550, 
+          left: 450, 
           bgcolor: bgColor,
           zIndex: 50,
           borderRight: '1px solid rgba(224, 224, 224, 0.7)',
-          minWidth: 120,
-          padding: '6px 8px'
+          padding: '4px 8px',
+          width: 70
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <TextField
             type="number"
             size="small" 
             InputProps={{ 
               inputProps: { min: 0, step: 1 },
               sx: { 
-                height: '30px', 
-                fontSize: '0.875rem',
+                height: '26px', 
+                fontSize: '0.75rem',
                 '& .MuiOutlinedInput-notchedOutline': {
                   borderColor: stockExceeded ? '#ff9800' : 'rgba(0, 0, 0, 0.12)',
                   borderWidth: stockExceeded ? '2px' : '1px'
@@ -247,9 +259,9 @@ const ProductRow: React.FC<ProductRowProps> = ({
               onQuantityChange(product.id, isNaN(value) ? 0 : value);
             }}
             sx={{ 
-              width: 100,
+              width: 60,
               '& input': {
-                padding: '6px 8px',
+                padding: '4px 6px',
                 textAlign: 'center'
               },
               '& .MuiOutlinedInput-root': {
@@ -266,11 +278,13 @@ const ProductRow: React.FC<ProductRowProps> = ({
       <TableCell
         sx={{ 
           position: 'sticky', 
-          left: 670, 
+          left: 520, 
           bgcolor: bgColor,
           zIndex: 50,
           borderRight: '1px solid rgba(224, 224, 224, 0.7)',
-          boxShadow: '3px 0px 5px -1px rgba(0,0,0,0.15)'
+          boxShadow: '3px 0px 5px -1px rgba(0,0,0,0.15)',
+          padding: '4px 8px',
+          width: 100
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -286,10 +300,10 @@ const ProductRow: React.FC<ProductRowProps> = ({
                   min: 0, 
                   step: 0.01 
                 },
-                startAdornment: <span style={{ fontSize: '0.875rem', marginRight: 4 }}>€</span>,
+                startAdornment: <span style={{ fontSize: '0.75rem', marginRight: 4 }}>€</span>,
                 sx: { 
-                  height: '30px', 
-                  fontSize: '0.875rem',
+                  height: '26px', 
+                  fontSize: '0.75rem',
                   '& .MuiOutlinedInput-notchedOutline': {
                     borderColor: product.quantity > 0 && product.averagePrice !== null && product.targetPrice !== null ? (
                       product.averagePrice <= product.targetPrice ? '#4caf50' : '#f44336'
@@ -311,9 +325,9 @@ const ProductRow: React.FC<ProductRowProps> = ({
               value={product.targetPrice !== null ? product.targetPrice : ''}
               onChange={(e) => onTargetPriceChange(product.id, e.target.value)}
               sx={{ 
-                width: 100,
+                width: 80,
                 '& input': {
-                  padding: '6px 8px',
+                  padding: '4px 6px',
                   textAlign: 'right'
                 },
                 '& .MuiOutlinedInput-root': {
@@ -330,7 +344,7 @@ const ProductRow: React.FC<ProductRowProps> = ({
             <Box sx={{ ml: 0.5, mt: -1 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <Typography variant="caption" sx={{ 
-                  fontSize: '0.75rem',
+                  fontSize: '0.65rem',
                   color: stockExceeded ? '#ff9800' : (
                     product.targetPrice !== null ? (
                       product.averagePrice <= product.targetPrice ? '#4caf50' : '#f44336'
@@ -351,22 +365,22 @@ const ProductRow: React.FC<ProductRowProps> = ({
                     <Box sx={{ 
                       display: 'inline-flex',
                       color: '#ff9800', 
-                      fontSize: '0.75rem' 
+                      fontSize: '0.65rem' 
                     }}>
-                      <InfoIcon fontSize="small" sx={{ fontSize: '0.75rem' }} />
+                      <InfoIcon fontSize="small" sx={{ fontSize: '0.65rem' }} />
                     </Box>
                   </Tooltip>
                 )}
               </Box>
               <Typography variant="caption" 
                 color={stockExceeded ? '#ff9800' : 'text.secondary'} 
-                sx={{ fontSize: '0.75rem', mt: -0.5 }}
+                sx={{ fontSize: '0.65rem', mt: -0.5 }}
               >
                 Total: €{(product.averagePrice * product.quantity).toFixed(2)}
               </Typography>
             </Box>
           ) : (
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem', ml: 0.5, mt: -1 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem', ml: 0.5, mt: -1 }}>
               No avg. price
             </Typography>
           )}
@@ -375,18 +389,19 @@ const ProductRow: React.FC<ProductRowProps> = ({
 
       {/* Best price 1 */}
       {product.bestPrices.length > 0 ? (
-        <TableCell sx={{ bgcolor: '#e8f5e9' }}>
+        <TableCell sx={{ bgcolor: '#e8f5e9', padding: '4px 8px' }}>
           <PriceDisplay
             publicPrice={product.publicPrice}
             supplierPrice={product.bestPrices[0].price}
             vatRate={product.vat}
             stock={product.bestPrices[0].stock}
             backgroundColor="#e8f5e9"
+            compact
           />
         </TableCell>
       ) : (
-        <TableCell sx={{ bgcolor: '#e8f5e9' }}>
-          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+        <TableCell sx={{ bgcolor: '#e8f5e9', padding: '4px 8px' }}>
+          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
             No supplier
           </Typography>
         </TableCell>
@@ -394,18 +409,19 @@ const ProductRow: React.FC<ProductRowProps> = ({
 
       {/* Best price 2 */}
       {product.bestPrices.length > 1 ? (
-        <TableCell sx={{ bgcolor: '#e3f2fd' }}>
+        <TableCell sx={{ bgcolor: '#e3f2fd', padding: '4px 8px' }}>
           <PriceDisplay
             publicPrice={product.publicPrice}
             supplierPrice={product.bestPrices[1].price}
             vatRate={product.vat}
             stock={product.bestPrices[1].stock}
             backgroundColor="#e3f2fd"
+            compact
           />
         </TableCell>
       ) : (
-        <TableCell sx={{ bgcolor: '#e3f2fd' }}>
-          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+        <TableCell sx={{ bgcolor: '#e3f2fd', padding: '4px 8px' }}>
+          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
             No supplier
           </Typography>
         </TableCell>
@@ -413,25 +429,26 @@ const ProductRow: React.FC<ProductRowProps> = ({
 
       {/* Best price 3 */}
       {product.bestPrices.length > 2 ? (
-        <TableCell sx={{ bgcolor: '#f3e5f5' }}>
+        <TableCell sx={{ bgcolor: '#f3e5f5', padding: '4px 8px' }}>
           <PriceDisplay
             publicPrice={product.publicPrice}
             supplierPrice={product.bestPrices[2].price}
             vatRate={product.vat}
             stock={product.bestPrices[2].stock}
             backgroundColor="#f3e5f5"
+            compact
           />
         </TableCell>
       ) : (
-        <TableCell sx={{ bgcolor: '#f3e5f5' }}>
-          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+        <TableCell sx={{ bgcolor: '#f3e5f5', padding: '4px 8px' }}>
+          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
             No supplier
           </Typography>
         </TableCell>
       )}
 
       {/* Other prices toggle */}
-      <TableCell onClick={(e) => e.stopPropagation()}>
+      <TableCell onClick={(e) => e.stopPropagation()} sx={{ padding: '4px 8px' }}>
         {product.bestPrices.length > 3 ? (
           <>
             <Button 
@@ -443,21 +460,21 @@ const ProductRow: React.FC<ProductRowProps> = ({
                 e.stopPropagation();
                 onToggleAllPrices(product.id);
               }}
-              sx={{ fontSize: '0.8rem', padding: '4px 8px' }}
+              sx={{ fontSize: '0.7rem', padding: '2px 4px', minWidth: 'auto' }}
             >
-              {product.showAllPrices ? 'Hide' : `Show ${product.bestPrices.length - 3} more`}
+              {product.showAllPrices ? 'Hide' : `+${product.bestPrices.length - 3}`}
             </Button>
             
-            <StockAvailability bestPrices={product.bestPrices} />
+            <StockAvailability bestPrices={product.bestPrices} compact />
           </>
         ) : (
           <>
-            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
               None
             </Typography>
             
             {product.bestPrices.length > 0 && (
-              <StockAvailability bestPrices={product.bestPrices} />
+              <StockAvailability bestPrices={product.bestPrices} compact />
             )}
           </>
         )}
@@ -466,13 +483,14 @@ const ProductRow: React.FC<ProductRowProps> = ({
       {/* Additional price columns that show when "Show More" is clicked */}
       {product.showAllPrices && product.bestPrices.length > 3 && 
         product.bestPrices.slice(3).map((priceInfo, idx) => (
-          <TableCell key={idx} sx={{ bgcolor: '#f8f8f8' }}>
+          <TableCell key={idx} sx={{ bgcolor: '#f8f8f8', padding: '4px 8px' }}>
             <PriceDisplay
               publicPrice={product.publicPrice}
               supplierPrice={priceInfo.price}
               vatRate={product.vat}
               stock={priceInfo.stock}
               backgroundColor="#f8f8f8"
+              compact
             />
           </TableCell>
         ))

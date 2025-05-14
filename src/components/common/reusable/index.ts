@@ -15,4 +15,5 @@ export { default as ProductInfo } from './ProductInfo';
 export { default as ProductCodes } from './ProductCodes';
 export { default as PublicPriceDisplay } from './PublicPriceDisplay';
 export { default as AveragePriceDisplay } from './AveragePriceDisplay';
-export { default as ShowMorePricesButton } from './ShowMorePricesButton'; 
+export { default as ShowMorePricesButton } from './ShowMorePricesButton';
+export { default as ActionBar } from './ActionBar'; 

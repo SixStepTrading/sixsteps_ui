@@ -9,6 +9,7 @@ interface PriceDisplayProps {
   stock: number;
   backgroundColor?: string;
   showNetVAT?: boolean;
+  compact?: boolean;
 }
 
 const PriceDisplay: React.FC<PriceDisplayProps> = ({
@@ -17,7 +18,8 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({
   vatRate,
   stock,
   backgroundColor,
-  showNetVAT = true
+  showNetVAT = true,
+  compact = false
 }) => {
   // Calculate price difference and percentages
   const priceDifference = publicPrice - supplierPrice;
@@ -31,18 +33,26 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({
 
   return (
     <Box sx={{ backgroundColor: backgroundColor || 'transparent' }}>
-      <Typography variant="body2" sx={{ fontWeight: 'medium', fontSize: '0.875rem' }}>
+      <Typography variant="body2" sx={{ 
+        fontWeight: 'medium', 
+        fontSize: compact ? '0.75rem' : '0.875rem',
+        lineHeight: compact ? 1.2 : 1.43
+      }}>
         €{supplierPrice.toFixed(2)}
       </Typography>
       
-      <Typography variant="caption" color="error" sx={{ fontSize: '0.75rem', display: 'block' }}>
+      <Typography variant="caption" color="error" sx={{ 
+        fontSize: compact ? '0.65rem' : '0.75rem', 
+        display: 'block',
+        lineHeight: compact ? 1.1 : 1.25
+      }}>
         -€{priceDifference.toFixed(2)} 
         <span style={{ color: '#d32f2f', fontWeight: 'bold' }}>
-          (Sconto: {percentDifference.toFixed(1)}%)
+          ({percentDifference.toFixed(1)}%)
         </span>
       </Typography>
       
-      {showNetVAT && (
+      {showNetVAT && !compact && (
         <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', display: 'block' }}>
           Sconto Netto: <span style={{ color: '#d32f2f', fontWeight: 'bold' }}>
             {netPercentDifference.toFixed(1)}%
@@ -50,7 +60,10 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({
         </Typography>
       )}
       
-      <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+      <Typography variant="body2" sx={{ 
+        fontSize: compact ? '0.7rem' : '0.8rem',
+        lineHeight: compact ? 1.1 : 1.2
+      }}>
         Stock: {stock}
       </Typography>
     </Box>
