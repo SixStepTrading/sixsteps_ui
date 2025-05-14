@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+/// <reference path="../../types/xlsx.d.ts" />
+import React, { useState, useEffect, useCallback, useRef, ChangeEvent } from 'react';
 import { 
   Box, 
   Button, 
@@ -47,7 +48,8 @@ import {
   Info as InfoIcon,
   KeyboardArrowDown as KeyboardArrowDownIcon,
   KeyboardArrowUp as KeyboardArrowUpIcon,
-  KeyboardArrowRight as KeyboardArrowRightIcon
+  KeyboardArrowRight as KeyboardArrowRightIcon,
+  Upload as UploadIcon
 } from '@mui/icons-material';
 import debounce from 'lodash/debounce';
 import StatCard from '../common/StatCard';
@@ -59,6 +61,11 @@ import { calculateAveragePrice } from '../common/utils';
 import SortableColumnHeader from '../common/reusable/SortableColumnHeader';
 import ProductFilter from '../common/reusable/ProductFilter';
 import { SortDirection } from '../common/reusable/SortableColumnHeader';
+import PriceDisplay from '../common/reusable/PriceDisplay';
+import StockAvailability from '../common/reusable/StockAvailability';
+import { isStockExceeded } from '../common/utils/priceCalculations';
+import * as XLSX from 'xlsx';
+import FileUploadModal from '../common/reusable/FileUploadModal';
 
 // Interface for product with quantity
 interface ProductWithQuantity extends Product {
@@ -125,6 +132,13 @@ const Dashboard: React.FC = () => {
   const [manufacturers, setManufacturers] = useState<string[]>([]);
   const [suppliers, setSuppliers] = useState<{ value: string; label: string }[]>([]);
   const [vatRates, setVatRates] = useState<{ value: string | number; label: string }[]>([]);
+
+  // State for file upload
+  const [fileUploading, setFileUploading] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
   // Funzione per gestire l'apertura/chiusura della visualizzazione di tutti i prezzi
   const handleToggleAllPrices = (productId: string) => {
@@ -630,6 +644,211 @@ const Dashboard: React.FC = () => {
     ));
   };
 
+  // Handle file upload button click - Modified to open modal
+  const handleUploadButtonClick = () => {
+    setIsUploadModalOpen(true);
+  };
+
+  // Handle file from modal
+  const handleFileFromModal = (file: File) => {
+    handleProcessFile(file);
+  };
+  
+  // Handle file upload processing
+  const handleProcessFile = async (file: File) => {
+    if (!file) return;
+    
+    try {
+      setFileUploading(true);
+      setUploadError(null);
+      
+      const data = await readExcelOrCSV(file);
+      applyFileDataToProducts(data);
+      
+      setUploadSuccess(true);
+      setTimeout(() => setUploadSuccess(false), 3000);
+    } catch (error) {
+      console.error('Error processing file:', error);
+      setUploadError(error instanceof Error ? error.message : 'Unknown error processing file');
+    } finally {
+      setFileUploading(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+  
+  // Read Excel or CSV file
+  const readExcelOrCSV = (file: File): Promise<any[]> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        try {
+          const data = e.target?.result;
+          if (!data) {
+            reject(new Error('No data found in file'));
+            return;
+          }
+          
+          let parsedData: any[] = [];
+          
+          // Handle Excel file
+          if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+            const workbook = XLSX.read(data, { type: 'binary' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            parsedData = XLSX.utils.sheet_to_json(worksheet);
+          } 
+          // Handle CSV file
+          else if (file.name.endsWith('.csv')) {
+            const csvData = data.toString();
+            const workbook = XLSX.read(csvData, { type: 'string' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            parsedData = XLSX.utils.sheet_to_json(worksheet);
+          }
+          else {
+            reject(new Error('Unsupported file format. Please upload Excel (.xlsx, .xls) or CSV (.csv) files.'));
+            return;
+          }
+          
+          resolve(parsedData);
+        } catch (error) {
+          reject(new Error('Error parsing file. Please check the file format.'));
+        }
+      };
+      
+      reader.onerror = () => {
+        reject(new Error('Error reading file'));
+      };
+      
+      if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+        reader.readAsBinaryString(file);
+      } else {
+        reader.readAsText(file);
+      }
+    });
+  };
+  
+  // Apply file data to products
+  const applyFileDataToProducts = (data: any[]) => {
+    if (!data || data.length === 0) {
+      throw new Error('No data found in the file or the file is empty');
+    }
+    
+    // Get column names from the first row of data
+    const firstRow = data[0];
+    const columnNames = Object.keys(firstRow).map(key => key.toLowerCase());
+    
+    // Check if required columns exist (using fuzzy matching for flexibility)
+    const hasProductIdentifier = columnNames.some(col => 
+      col.includes('code') || col.includes('ean') || col.includes('minsan') || 
+      col.includes('product') || col.includes('name') || col.includes('prodotto')
+    );
+    
+    const hasQuantity = columnNames.some(col => 
+      col.includes('quantity') || col.includes('qty') || col.includes('amount') || 
+      col.includes('quantità') || col.includes('qta')
+    );
+    
+    const hasTargetPrice = columnNames.some(col => 
+      col.includes('target') || col.includes('price') || col.includes('prezzo') || 
+      col.includes('target price') || col.includes('prezzo target')
+    );
+    
+    if (!hasProductIdentifier) {
+      throw new Error('The file must contain a column for Product Code, EAN, MINSAN, or Product Name');
+    }
+    
+    if (!hasQuantity && !hasTargetPrice) {
+      throw new Error('The file must contain at least one column for Quantity or Target Price');
+    }
+    
+    // Find best match columns
+    const getColumnByPattern = (patterns: string[]): string | null => {
+      return columnNames.find(col => 
+        patterns.some(pattern => col.includes(pattern.toLowerCase()))
+      ) || null;
+    };
+    
+    const codeColumn = getColumnByPattern(['code', 'ean', 'minsan', 'prodotto']);
+    const nameColumn = getColumnByPattern(['name', 'product', 'prodotto', 'nome']);
+    const quantityColumn = getColumnByPattern(['quantity', 'qty', 'amount', 'quantità', 'qta']);
+    const targetPriceColumn = getColumnByPattern(['target', 'price', 'prezzo']);
+    
+    // Filter and update products
+    const matchedProductIds = new Set<string>();
+    const updatedProducts = products.map(product => {
+      // Try to find a match in the uploaded data
+      const matchedRow = data.find(row => {
+        if (codeColumn && row[codeColumn]) {
+          const value = String(row[codeColumn]).toLowerCase();
+          if (product.ean.toLowerCase().includes(value) || 
+              product.minsan.toLowerCase().includes(value)) {
+            return true;
+          }
+        }
+        
+        if (nameColumn && row[nameColumn]) {
+          const value = String(row[nameColumn]).toLowerCase();
+          if (product.name.toLowerCase().includes(value)) {
+            return true;
+          }
+        }
+        
+        return false;
+      });
+      
+      if (matchedRow) {
+        matchedProductIds.add(product.id);
+        let updatedProduct = { ...product };
+        
+        // Update quantity if available
+        if (quantityColumn && matchedRow[quantityColumn] !== undefined) {
+          const quantity = parseInt(matchedRow[quantityColumn], 10);
+          if (!isNaN(quantity) && quantity >= 0) {
+            updatedProduct.quantity = quantity;
+            
+            // Calculate average price if quantity > 0
+            if (quantity > 0) {
+              updatedProduct.averagePrice = calculateAveragePrice(
+                updatedProduct.bestPrices, 
+                quantity, 
+                updatedProduct.publicPrice
+              );
+            }
+          }
+        }
+        
+        // Update target price if available
+        if (targetPriceColumn && matchedRow[targetPriceColumn] !== undefined) {
+          const targetPrice = parseFloat(matchedRow[targetPriceColumn]);
+          if (!isNaN(targetPrice) && targetPrice >= 0) {
+            updatedProduct.targetPrice = targetPrice;
+          }
+        }
+        
+        return updatedProduct;
+      }
+      
+      return product;
+    });
+    
+    // Apply the updates
+    setProducts(updatedProducts);
+    
+    // Filter the table to show only matched products
+    if (matchedProductIds.size > 0) {
+      const filtered = updatedProducts.filter(p => matchedProductIds.has(p.id));
+      setFilteredProducts(filtered);
+      showToast(`Found and updated ${matchedProductIds.size} products from your file`, 'success');
+    } else {
+      throw new Error('No matching products found in the file');
+    }
+  };
+
   return (
     <Box>
       {error && (
@@ -639,6 +858,30 @@ const Dashboard: React.FC = () => {
           </Alert>
         </Snackbar>
       )}
+      
+      {uploadError && (
+        <Snackbar open={!!uploadError} autoHideDuration={6000} onClose={() => setUploadError(null)}>
+          <Alert onClose={() => setUploadError(null)} severity="error" sx={{ width: '100%' }}>
+            {uploadError}
+          </Alert>
+        </Snackbar>
+      )}
+      
+      {uploadSuccess && (
+        <Snackbar open={uploadSuccess} autoHideDuration={3000} onClose={() => setUploadSuccess(false)}>
+          <Alert onClose={() => setUploadSuccess(false)} severity="success" sx={{ width: '100%' }}>
+            File processed successfully
+          </Alert>
+        </Snackbar>
+      )}
+
+      {/* File Upload Modal */}
+      <FileUploadModal
+        open={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        onFileUpload={handleFileFromModal}
+        acceptedFileTypes=".xlsx,.xls,.csv"
+      />
       
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
@@ -690,12 +933,25 @@ const Dashboard: React.FC = () => {
                       sx={{ mr: 1 }}
                     />
                   )}
+                  
+                  {/* File Upload Button - No longer needs the hidden input */}
                   <Button
                     size="small"
                     variant="outlined"
+                    startIcon={<UploadIcon />}
+                    onClick={handleUploadButtonClick}
+                    disabled={loading || fileUploading}
+                    color="primary"
+                  >
+                    {fileUploading ? 'Processing...' : 'Upload Products'}
+                  </Button>
+                  
+                  <Button 
+                    size="small" 
+                    variant="outlined"
                     startIcon={<RefreshIcon />}
                     onClick={handleRefresh}
-                    disabled={loading}
+                    disabled={loading || fileUploading}
                   >
                     Refresh
                   </Button>
@@ -745,25 +1001,18 @@ const Dashboard: React.FC = () => {
                       }
                     }}
                   >
-                    <Table aria-label="product catalog table" stickyHeader size="small">
+                    <Table stickyHeader size="small">
                       <TableHead>
-                        <TableRow sx={{ 
-                          '& th': { 
-                            fontWeight: 'bold', 
-                            bgcolor: '#f5f5f5', 
-                            position: 'sticky',
-                            top: 0,
-                            zIndex: 3
-                          } 
-                        }}>
+                        <TableRow>
                           <TableCell padding="checkbox" sx={{ 
                             position: 'sticky', 
                             left: 0, 
                             top: 0,
-                            bgcolor: '#f5f5f5', 
-                            minWidth: 50,
-                            zIndex: 5,
-                            borderRight: '1px solid rgba(224, 224, 224, 0.4)'
+                            zIndex: 20,
+                            bgcolor: '#f5f5f5',
+                            borderRight: '1px solid rgba(224, 224, 224, 0.7)',
+                            borderBottom: '2px solid rgba(224, 224, 224, 1)',
+                            boxShadow: '0 2px 2px -1px rgba(0,0,0,0.1)'
                           }}>
                             <Checkbox
                               indeterminate={selected.length > 0 && selected.length < filteredProducts.filter(p => p.quantity > 0).length}
@@ -776,55 +1025,55 @@ const Dashboard: React.FC = () => {
                             position: 'sticky', 
                             left: 50, 
                             top: 0,
-                            bgcolor: '#f5f5f5', 
-                            minWidth: 40, 
-                            zIndex: 5,
-                            borderRight: '1px solid rgba(224, 224, 224, 0.4)'
+                            zIndex: 20,
+                            bgcolor: '#f5f5f5',
+                            borderRight: '1px solid rgba(224, 224, 224, 0.7)',
+                            borderBottom: '2px solid rgba(224, 224, 224, 1)',
+                            boxShadow: '0 2px 2px -1px rgba(0,0,0,0.1)'
                           }}>#</TableCell>
-                          <SortableColumnHeader
-                            id="code"
-                            label="Codici Prodotto"
-                            activeSort={sortBy}
-                            activeDirection={sortDirection}
-                            onSort={handleSort}
-                            isSticky={true}
-                            leftPosition={90}
-                            minWidth={160}
-                            backgroundColor="#f5f5f5"
-                            zIndex={5}
-                          />
-                          <SortableColumnHeader
-                            id="name"
-                            label="Product Name"
-                            activeSort={sortBy}
-                            activeDirection={sortDirection}
-                            onSort={handleSort}
-                            isSticky={true}
-                            leftPosition={250}
-                            minWidth={200}
-                            backgroundColor="#f5f5f5"
-                            zIndex={5}
-                          />
-                          <SortableColumnHeader
-                            id="publicPrice"
-                            label="Public Price"
-                            activeSort={sortBy}
-                            activeDirection={sortDirection}
-                            onSort={handleSort}
-                            isSticky={true}
-                            leftPosition={450}
-                            minWidth={100}
-                            backgroundColor="#f5f5f5"
-                            zIndex={5}
-                          />
+                          <TableCell sx={{ 
+                            position: 'sticky', 
+                            left: 90, 
+                            top: 0,
+                            zIndex: 20,
+                            bgcolor: '#f5f5f5',
+                            borderRight: '1px solid rgba(224, 224, 224, 0.7)',
+                            borderBottom: '2px solid rgba(224, 224, 224, 1)',
+                            minWidth: 160,
+                            boxShadow: '0 2px 2px -1px rgba(0,0,0,0.1)'
+                          }}>Codici Prodotto</TableCell>
+                          <TableCell sx={{ 
+                            position: 'sticky', 
+                            left: 250, 
+                            top: 0,
+                            zIndex: 20,
+                            bgcolor: '#f5f5f5',
+                            borderRight: '1px solid rgba(224, 224, 224, 0.7)',
+                            borderBottom: '2px solid rgba(224, 224, 224, 1)',
+                            minWidth: 200, 
+                            boxShadow: '0 2px 2px -1px rgba(0,0,0,0.1)'
+                          }}>Product Name</TableCell>
+                          <TableCell sx={{ 
+                            position: 'sticky', 
+                            left: 450, 
+                            top: 0,
+                            zIndex: 20,
+                            bgcolor: '#f5f5f5',
+                            borderRight: '1px solid rgba(224, 224, 224, 0.7)',
+                            borderBottom: '2px solid rgba(224, 224, 224, 1)',
+                            minWidth: 100, 
+                            boxShadow: '0 2px 2px -1px rgba(0,0,0,0.1)'
+                          }}>Public Price</TableCell>
                           <TableCell sx={{ 
                             position: 'sticky', 
                             left: 550, 
                             top: 0,
-                            bgcolor: '#f5f5f5', 
-                            minWidth: 120, 
-                            zIndex: 5,
-                            borderRight: '1px solid rgba(224, 224, 224, 0.4)'
+                            zIndex: 20,
+                            bgcolor: '#f5f5f5',
+                            borderRight: '1px solid rgba(224, 224, 224, 0.7)',
+                            borderBottom: '2px solid rgba(224, 224, 224, 1)',
+                            minWidth: 120,
+                            boxShadow: '0 2px 2px -1px rgba(0,0,0,0.1)'
                           }}>
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                               Quantity
@@ -839,62 +1088,78 @@ const Dashboard: React.FC = () => {
                             position: 'sticky', 
                             left: 670, 
                             top: 0,
-                            bgcolor: '#f5f5f5', 
-                            minWidth: 110, 
-                            zIndex: 5,
-                            borderRight: '1px solid rgba(224, 224, 224, 0.4)'
+                            zIndex: 20,
+                            bgcolor: '#f5f5f5',
+                            borderRight: '1px solid rgba(224, 224, 224, 0.7)',
+                            borderBottom: '2px solid rgba(224, 224, 224, 1)',
+                            minWidth: 150,
+                            boxShadow: '3px 0 5px -1px rgba(0,0,0,0.15), 0 2px 2px -1px rgba(0,0,0,0.1)'
                           }}>
+                            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              Avg. Price
-                              <Tooltip title="Average price based on the ordered quantity and available supplier prices. If the quantity exceeds the stock of the best supplier, prices from the next best suppliers will be used.">
+                                Target Price
+                                <Tooltip title="Set your desired target price. This helps identify if current supplier prices match your expectations.">
                                 <IconButton size="small" sx={{ padding: '2px' }}>
                                   <InfoIcon fontSize="small" sx={{ fontSize: '1rem' }} />
                                 </IconButton>
                               </Tooltip>
+                              </Box>
+                              <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                                (Avg. Price)
+                              </Typography>
                             </Box>
                           </TableCell>
-                            
-                          {/* Target Price column */}
-                          <TableCell
-                            sx={{ 
-                              position: 'sticky', 
-                              left: 770, 
-                              top: 0,
-                              bgcolor: '#f5f5f5', 
-                              minWidth: 120, 
-                              zIndex: 5,
-                              borderRight: '1px solid rgba(224, 224, 224, 0.4)'
-                            }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              Target Price
-                              <Tooltip title="Set your desired target price. This helps identify if current supplier prices match your expectations.">
-                                <IconButton size="small" sx={{ padding: '2px' }}>
-                                  <InfoIcon fontSize="small" sx={{ fontSize: '1rem' }} />
-                                </IconButton>
-                              </Tooltip>
-                            </Box>
-                          </TableCell>
-                            
-                          {/* Scrollable columns */}
-                          <SortableColumnHeader
-                            id="bestPrice"
-                            label="Best Price"
-                            activeSort={sortBy}
-                            activeDirection={sortDirection}
-                            onSort={handleSort}
-                            backgroundColor="#e8f5e9"
-                            minWidth={120}
-                          />
-                          <TableCell sx={{ bgcolor: '#e3f2fd', minWidth: 120 }}>2nd Best</TableCell>
-                          <TableCell sx={{ bgcolor: '#f3e5f5', minWidth: 120 }}>3rd Best</TableCell>
-                          <TableCell sx={{ minWidth: 120 }}>Other prices</TableCell>
-                            
+                          <TableCell sx={{ 
+                            position: 'sticky',
+                            top: 0,
+                            zIndex: 15,
+                            bgcolor: '#e8f5e9', 
+                            minWidth: 120,
+                            borderBottom: '2px solid rgba(224, 224, 224, 1)',
+                            boxShadow: '0 2px 2px -1px rgba(0,0,0,0.1)'
+                          }}>Best Price</TableCell>
+                          <TableCell sx={{ 
+                            position: 'sticky',
+                            top: 0,
+                            zIndex: 15,
+                            bgcolor: '#e3f2fd', 
+                            minWidth: 120,
+                            borderBottom: '2px solid rgba(224, 224, 224, 1)',
+                            boxShadow: '0 2px 2px -1px rgba(0,0,0,0.1)'
+                          }}>2nd Best</TableCell>
+                          <TableCell sx={{ 
+                            position: 'sticky',
+                            top: 0,
+                            zIndex: 15,
+                            bgcolor: '#f3e5f5', 
+                            minWidth: 120,
+                            borderBottom: '2px solid rgba(224, 224, 224, 1)',
+                            boxShadow: '0 2px 2px -1px rgba(0,0,0,0.1)'
+                          }}>3rd Best</TableCell>
+                          <TableCell sx={{ 
+                            position: 'sticky',
+                            top: 0,
+                            zIndex: 15,
+                            bgcolor: '#f5f5f5',
+                            minWidth: 120,
+                            borderBottom: '2px solid rgba(224, 224, 224, 1)',
+                            boxShadow: '0 2px 2px -1px rgba(0,0,0,0.1)'
+                          }}>Other prices</TableCell>
+                          
                           {/* Dynamic additional price columns in header */}
                           {filteredProducts.some(p => p.showAllPrices && p.bestPrices.length > 3) && 
                             Array.from({ length: Math.max(...filteredProducts
                               .filter(p => p.showAllPrices)
                               .map(p => p.bestPrices.length > 3 ? p.bestPrices.length - 3 : 0)) }, (_, i) => (
-                              <TableCell key={i} sx={{ bgcolor: '#f8f8f8', minWidth: 120 }}>
+                              <TableCell key={i} sx={{ 
+                                position: 'sticky',
+                                top: 0,
+                                zIndex: 15,
+                                bgcolor: '#f8f8f8', 
+                                minWidth: 120,
+                                borderBottom: '2px solid rgba(224, 224, 224, 1)',
+                                boxShadow: '0 2px 2px -1px rgba(0,0,0,0.1)'
+                              }}>
                                 Price {i + 4}
                               </TableCell>
                             ))

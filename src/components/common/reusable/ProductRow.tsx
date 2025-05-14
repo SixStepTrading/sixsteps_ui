@@ -105,8 +105,9 @@ const ProductRow: React.FC<ProductRowProps> = ({
           position: 'sticky', 
           left: 0, 
           bgcolor: bgColor,
-          zIndex: 2,
-          borderRight: '1px solid rgba(224, 224, 224, 0.7)'
+          zIndex: 50,
+          borderRight: '1px solid rgba(224, 224, 224, 0.7)',
+          boxShadow: '1px 0px 2px -1px rgba(0,0,0,0.07)'
         }}
       >
         {stockExceeded ? (
@@ -140,7 +141,7 @@ const ProductRow: React.FC<ProductRowProps> = ({
           position: 'sticky', 
           left: 50, 
           bgcolor: bgColor,
-          zIndex: 2,
+          zIndex: 50,
           borderRight: '1px solid rgba(224, 224, 224, 0.7)'
         }}
       >
@@ -153,7 +154,7 @@ const ProductRow: React.FC<ProductRowProps> = ({
           position: 'sticky', 
           left: 90, 
           bgcolor: bgColor,
-          zIndex: 2,
+          zIndex: 50,
           borderRight: '1px solid rgba(224, 224, 224, 0.7)',
           minWidth: 160
         }}
@@ -174,7 +175,7 @@ const ProductRow: React.FC<ProductRowProps> = ({
           position: 'sticky', 
           left: 250, 
           bgcolor: bgColor,
-          zIndex: 2,
+          zIndex: 50,
           borderRight: '1px solid rgba(224, 224, 224, 0.7)'
         }}
       >
@@ -194,7 +195,7 @@ const ProductRow: React.FC<ProductRowProps> = ({
           position: 'sticky', 
           left: 450, 
           bgcolor: bgColor,
-          zIndex: 2,
+          zIndex: 50,
           borderRight: '1px solid rgba(224, 224, 224, 0.7)'
         }}
       >
@@ -212,7 +213,7 @@ const ProductRow: React.FC<ProductRowProps> = ({
           position: 'sticky', 
           left: 550, 
           bgcolor: bgColor,
-          zIndex: 2,
+          zIndex: 50,
           borderRight: '1px solid rgba(224, 224, 224, 0.7)',
           minWidth: 120,
           padding: '6px 8px'
@@ -261,107 +262,114 @@ const ProductRow: React.FC<ProductRowProps> = ({
         </Box>
       </TableCell>
 
-      {/* Average price cell */}
+      {/* Target Price and Avg. Price cell */}
       <TableCell
         sx={{ 
           position: 'sticky', 
           left: 670, 
           bgcolor: bgColor,
-          zIndex: 2,
-          borderRight: '1px solid rgba(224, 224, 224, 0.7)'
-        }}
-      >
-        {product.quantity > 0 && product.averagePrice !== null ? (
-          <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <Typography variant="body2" sx={{ 
-                fontWeight: 'medium', 
-                fontSize: '0.875rem',
-                color: stockExceeded ? '#ff9800' : 'inherit'
-              }}>
-                €{product.averagePrice.toFixed(2)}
-              </Typography>
-              
-              {stockExceeded && (
-                <Tooltip title="Il prezzo medio potrebbe essere impreciso a causa di stock insufficiente">
-                  <Box sx={{ 
-                    display: 'inline-flex',
-                    color: '#ff9800', 
-                    fontSize: '1rem' 
-                  }}>
-                    <InfoIcon fontSize="small" />
-                  </Box>
-                </Tooltip>
-              )}
-            </Box>
-            <Typography variant="caption" 
-              color={stockExceeded ? '#ff9800' : 'text.secondary'} 
-              sx={{ fontSize: '0.75rem' }}
-            >
-              Total: €{(product.averagePrice * product.quantity).toFixed(2)}
-            </Typography>
-          </Box>
-        ) : (
-          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
-            --
-          </Typography>
-        )}
-      </TableCell>
-
-      {/* Target price cell */}
-      <TableCell
-        sx={{ 
-          position: 'sticky', 
-          left: 770, 
-          bgcolor: bgColor,
-          zIndex: 2,
+          zIndex: 50,
           borderRight: '1px solid rgba(224, 224, 224, 0.7)',
-          minWidth: 120,
-          padding: '6px 8px'
+          boxShadow: '3px 0px 5px -1px rgba(0,0,0,0.15)'
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <TextField
-            type="number"
-            size="small"
-            placeholder="€ Target"
-            InputProps={{ 
-              inputProps: { 
-                min: 0, 
-                step: 0.01 
-              },
-              startAdornment: <span style={{ fontSize: '0.875rem', marginRight: 4 }}>€</span>,
-              sx: { 
-                height: '30px', 
-                fontSize: '0.875rem',
-                '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: 'rgba(0, 0, 0, 0.12)',
-                  borderWidth: '1px'
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          {/* Target Price Input */}
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 0 }}>
+            <TextField
+              type="number"
+              size="small"
+              placeholder="€ Target"
+              InputProps={{ 
+                inputProps: { 
+                  min: 0, 
+                  step: 0.01 
                 },
-                '&:hover .MuiOutlinedInput-notchedOutline': {
-                  borderColor: 'rgba(0, 0, 0, 0.23)'
-                },
-                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#1976d2'
+                startAdornment: <span style={{ fontSize: '0.875rem', marginRight: 4 }}>€</span>,
+                sx: { 
+                  height: '30px', 
+                  fontSize: '0.875rem',
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: product.quantity > 0 && product.averagePrice !== null && product.targetPrice !== null ? (
+                      product.averagePrice <= product.targetPrice ? '#4caf50' : '#f44336'
+                    ) : 'rgba(0, 0, 0, 0.12)',
+                    borderWidth: product.quantity > 0 && product.averagePrice !== null && product.targetPrice !== null ? '2px' : '1px'
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                    borderColor: product.quantity > 0 && product.averagePrice !== null && product.targetPrice !== null ? (
+                      product.averagePrice <= product.targetPrice ? '#4caf50' : '#f44336'
+                    ) : 'rgba(0, 0, 0, 0.23)'
+                  },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderColor: product.quantity > 0 && product.averagePrice !== null && product.targetPrice !== null ? (
+                      product.averagePrice <= product.targetPrice ? '#4caf50' : '#f44336'
+                    ) : '#1976d2'
+                  }
                 }
-              }
-            }}
-            value={product.targetPrice !== null ? product.targetPrice : ''}
-            onChange={(e) => onTargetPriceChange(product.id, e.target.value)}
-            sx={{ 
-              width: 100,
-              '& input': {
-                padding: '6px 8px',
-                textAlign: 'right'
-              },
-              '& .MuiOutlinedInput-root': {
-                borderRadius: '4px',
-                backgroundColor: 'white'
-              }
-            }}
-            onClick={(e) => e.stopPropagation()}
-          />
+              }}
+              value={product.targetPrice !== null ? product.targetPrice : ''}
+              onChange={(e) => onTargetPriceChange(product.id, e.target.value)}
+              sx={{ 
+                width: 100,
+                '& input': {
+                  padding: '6px 8px',
+                  textAlign: 'right'
+                },
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '4px',
+                  backgroundColor: 'white'
+                }
+              }}
+              onClick={(e) => e.stopPropagation()}
+            />
+          </Box>
+          
+          {/* Average Price Display */}
+          {product.quantity > 0 && product.averagePrice !== null ? (
+            <Box sx={{ ml: 0.5, mt: -1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Typography variant="caption" sx={{ 
+                  fontSize: '0.75rem',
+                  color: stockExceeded ? '#ff9800' : (
+                    product.targetPrice !== null ? (
+                      product.averagePrice <= product.targetPrice ? '#4caf50' : '#f44336'
+                    ) : 'text.secondary'
+                  )
+                }}>
+                  Avg: €{product.averagePrice.toFixed(2)}
+                  {product.targetPrice !== null && product.averagePrice <= product.targetPrice && (
+                    <span style={{ marginLeft: '4px', color: '#4caf50' }}>✓</span>
+                  )}
+                  {product.targetPrice !== null && product.averagePrice > product.targetPrice && (
+                    <span style={{ marginLeft: '4px', color: '#f44336' }}>(+{(product.averagePrice - product.targetPrice).toFixed(2)})</span>
+                  )}
+                </Typography>
+                
+                {stockExceeded && (
+                  <Tooltip title="Il prezzo medio potrebbe essere impreciso a causa di stock insufficiente">
+                    <Box sx={{ 
+                      display: 'inline-flex',
+                      color: '#ff9800', 
+                      fontSize: '0.75rem' 
+                    }}>
+                      <InfoIcon fontSize="small" sx={{ fontSize: '0.75rem' }} />
+                    </Box>
+                  </Tooltip>
+                )}
+              </Box>
+              <Typography variant="caption" 
+                color={stockExceeded ? '#ff9800' : 'text.secondary'} 
+                sx={{ fontSize: '0.75rem', mt: -0.5 }}
+              >
+                Total: €{(product.averagePrice * product.quantity).toFixed(2)}
+              </Typography>
+            </Box>
+          ) : (
+            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem', ml: 0.5, mt: -1 }}>
+              No avg. price
+            </Typography>
+          )}
         </Box>
       </TableCell>
 

@@ -122,9 +122,14 @@ const SortableColumnHeader: React.FC<SortableColumnHeaderProps> = ({
           position: 'sticky',
           left: leftPosition,
           top: 0,
-          zIndex: zIndex,
-          borderRight: '1px solid rgba(224, 224, 224, 0.4)'
-        } : {},
+          zIndex: 100,
+          borderRight: '1px solid rgba(224, 224, 224, 0.4)',
+          boxShadow: isSticky && leftPosition === 450 ? '3px 0px 5px -1px rgba(0,0,0,0.15)' : 'none'
+        } : {
+          position: 'sticky',
+          top: 0,
+          zIndex: 2
+        },
         bgcolor: backgroundColor,
         minWidth: minWidth,
         fontWeight: 'bold',
