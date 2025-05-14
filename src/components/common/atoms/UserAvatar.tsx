@@ -8,6 +8,7 @@ interface UserAvatarProps {
   size?: 'small' | 'medium' | 'large';
   showInfo?: boolean;
   sx?: SxProps<Theme>;
+  onClick?: (event: React.MouseEvent<HTMLDivElement>) => void;
 }
 
 const UserAvatar: React.FC<UserAvatarProps> = ({
@@ -16,7 +17,8 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
   avatarSrc,
   size = 'medium',
   showInfo = true,
-  sx
+  sx,
+  onClick
 }) => {
   // Determina le dimensioni dell'avatar in base alla prop size
   const avatarSizes = {
@@ -38,7 +40,15 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
   const initials = getInitials(name);
   
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', ...sx }}>
+    <Box 
+      sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        cursor: onClick ? 'pointer' : 'default',
+        ...sx 
+      }}
+      onClick={onClick}
+    >
       <Avatar 
         src={avatarSrc} 
         sx={{ 
@@ -46,6 +56,11 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
           bgcolor: 'primary.main', 
           color: 'primary.contrastText',
           fontWeight: 'medium',
+          transition: 'all 0.2s ease-in-out',
+          '&:hover': onClick ? {
+            transform: 'scale(1.05)',
+            boxShadow: '0 0 0 2px rgba(25, 118, 210, 0.3)'
+          } : {}
         }}
       >
         {initials}

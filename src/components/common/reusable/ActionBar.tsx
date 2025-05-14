@@ -6,9 +6,9 @@ interface ActionBarProps {
   selectedCount: number;
   totalItems: number;
   totalAmount: number;
-  onSaveForLater: () => void;
   onSaveAsDraft: () => void;
   onCreateOda: () => void;
+  onSaveForLater?: () => void;
 }
 
 const ActionBar: React.FC<ActionBarProps> = (props) => {
@@ -32,10 +32,10 @@ const ActionBar: React.FC<ActionBarProps> = (props) => {
       selectedCount={props.selectedCount}
       totalItems={props.totalItems}
       totalAmount={props.totalAmount}
-      onSaveForLater={props.onSaveForLater}
       onSaveAsDraft={props.onSaveAsDraft}
       onCreateOrder={props.onCreateOda}
       sidebarWidth={sidebarWidth}
+      onSaveForLater={props.onSaveForLater}
     />
   );
 };

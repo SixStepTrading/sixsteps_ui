@@ -39,8 +39,19 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
         autoHideDuration={5000}
         onClose={handleClose}
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        sx={{ 
+          zIndex: 10100 // Ensure it's higher than SummaryBar (9999) and OrderConfirmationModal (10000)
+        }}
       >
-        <Alert onClose={handleClose} severity={type} sx={{ width: '100%' }}>
+        <Alert 
+          onClose={handleClose} 
+          severity={type} 
+          sx={{ 
+            width: '100%',
+            boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.15)'
+          }}
+          elevation={6}
+        >
           {message}
         </Alert>
       </Snackbar>

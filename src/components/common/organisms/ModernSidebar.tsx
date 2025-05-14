@@ -20,6 +20,7 @@ import {
 import { SidebarItem } from '../atoms';
 import { SidebarHeader } from '../molecules';
 import { NotificationsPanel } from '.';
+import { useUser } from '../../../contexts/UserContext';
 
 interface MenuItem {
   text: string;
@@ -53,6 +54,7 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({
   const theme = useTheme();
   const location = useLocation();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { userRole, userName } = useUser();
   
   // State for notification panel
   const [notificationsAnchorEl, setNotificationsAnchorEl] = useState<HTMLElement | null>(null);
@@ -81,7 +83,8 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({
   const mainMenuItems: MenuItem[] = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
     { text: 'Purchase Orders', icon: <ShoppingCartIcon />, path: '/purchase-orders' },
-    { text: 'User Management', icon: <PeopleIcon />, path: '/user-management' },
+    // Show User Management only to Admin users
+    ...(userRole === 'Admin' ? [{ text: 'User Management', icon: <PeopleIcon />, path: '/user-management' }] : []),
   ];
   
   // Utility menu
@@ -103,8 +106,6 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({
     <>
       <SidebarHeader 
         logo="FarmaBooster"
-        userName="Admin Panel"
-        userRole="Administrator"
         isCollapsed={isCollapsed}
         onToggleCollapse={onToggleCollapse}
       />

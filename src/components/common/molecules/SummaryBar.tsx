@@ -11,7 +11,6 @@ import {
   Stack
 } from '@mui/material';
 import {
-  Bookmark as BookmarkIcon,
   Save as SaveIcon,
   ShoppingCart as CartIcon
 } from '@mui/icons-material';
@@ -20,20 +19,20 @@ interface SummaryBarProps {
   selectedCount: number;
   totalItems: number;
   totalAmount: number;
-  onSaveForLater: () => void;
   onSaveAsDraft: () => void;
   onCreateOrder: () => void;
   sidebarWidth: number;
+  onSaveForLater?: () => void;
 }
 
 const SummaryBar: React.FC<SummaryBarProps> = ({
   selectedCount,
   totalItems,
   totalAmount,
-  onSaveForLater,
   onSaveAsDraft,
   onCreateOrder,
-  sidebarWidth = 0
+  sidebarWidth = 0,
+  onSaveForLater
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -63,7 +62,7 @@ const SummaryBar: React.FC<SummaryBarProps> = ({
           }),
         }}
       >
-        {/* Riepilogo selezione */}
+        {/* Selection summary */}
         <Box 
           sx={{ 
             display: 'flex', 
@@ -77,19 +76,19 @@ const SummaryBar: React.FC<SummaryBarProps> = ({
               fontWeight="medium"
               sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}
             >
-              Prodotti selezionati: {selectedCount}
+              Selected products: {selectedCount}
             </Typography>
             <Typography 
               variant="caption" 
               color="text.secondary"
               sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
             >
-              {totalItems} articoli in totale
+              {totalItems} items in total
             </Typography>
           </Box>
         </Box>
 
-        {/* Prezzo totale */}
+        {/* Total price */}
         <Box 
           sx={{ 
             display: { xs: 'flex', sm: 'block' }, 
@@ -116,14 +115,14 @@ const SummaryBar: React.FC<SummaryBarProps> = ({
               display: { xs: 'block', sm: 'none' }
             }}
           >
-            Totale
+            Total
           </Typography>
         </Box>
 
-        {/* Divisore in mobile */}
+        {/* Mobile divider */}
         {isMobile && <Divider sx={{ mb: 1.5 }} />}
 
-        {/* Pulsanti azione */}
+        {/* Action buttons */}
         <Stack 
           direction={{ xs: 'row', sm: 'row' }} 
           spacing={{ xs: 1, sm: 1.5 }}
@@ -132,24 +131,13 @@ const SummaryBar: React.FC<SummaryBarProps> = ({
             justifyContent: { xs: 'space-between', sm: 'flex-end' }
           }}
         >
-          {!isTablet && (
-            <Button
-              variant="outlined"
-              startIcon={<BookmarkIcon />}
-              size="small"
-              onClick={onSaveForLater}
-            >
-              Salva per dopo
-            </Button>
-          )}
-          
           <Button
             variant="outlined"
             startIcon={<SaveIcon />}
             size="small"
             onClick={onSaveAsDraft}
           >
-            {isTablet ? 'Salva' : 'Salva bozza'}
+            {isTablet ? 'Save' : 'Save draft'}
           </Button>
           
           <Button
@@ -160,7 +148,7 @@ const SummaryBar: React.FC<SummaryBarProps> = ({
             onClick={onCreateOrder}
             sx={{ px: { xs: 2, sm: 3 } }}
           >
-            {isTablet ? 'Crea ODA' : 'Crea Ordine'}
+            {isTablet ? 'Create PO' : 'Create Order'}
           </Button>
         </Stack>
       </Paper>

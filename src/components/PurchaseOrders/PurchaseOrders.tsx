@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -40,6 +41,7 @@ import {
 } from '@mui/icons-material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { useToast } from '../../contexts/ToastContext';
+import { getDraftOrders, deleteDraftOrder, DraftOrder } from '../../utils/draftOrderService';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -76,16 +78,23 @@ function a11yProps(index: number) {
 
 const PurchaseOrders: React.FC = () => {
   const { showToast } = useToast();
+  const navigate = useNavigate();
   const [tabValue, setTabValue] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [draftOrders, setDraftOrders] = useState<DraftOrder[]>([]);
+
+  // Load draft orders on component mount
+  useEffect(() => {
+    setDraftOrders(getDraftOrders());
+  }, []);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
   const handleAddOrder = () => {
-    showToast('New order form opened', 'info');
+    navigate('/purchase-orders/create');
   };
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -118,6 +127,20 @@ const PurchaseOrders: React.FC = () => {
 
   const handleSendOrder = (id: string) => {
     showToast(`Order ${id} sent to supplier`, 'success');
+  };
+
+  const handleDeleteDraft = (id: string) => {
+    if (deleteDraftOrder(id)) {
+      setDraftOrders(getDraftOrders());
+      showToast('Draft order deleted', 'success');
+    } else {
+      showToast('Failed to delete draft order', 'error');
+    }
+  };
+
+  const handleEditDraft = (id: string) => {
+    // In a real app, you would implement a way to load the draft for editing
+    showToast('Edit draft functionality not implemented yet', 'info');
   };
 
   // Orders data
@@ -316,6 +339,7 @@ const PurchaseOrders: React.FC = () => {
             <Tab label="Processing" {...a11yProps(2)} />
             <Tab label="Shipped" {...a11yProps(3)} />
             <Tab label="Delivered" {...a11yProps(4)} />
+            <Tab label="Drafts" {...a11yProps(5)} />
           </Tabs>
         </Box>
       </Paper>
@@ -507,6 +531,63 @@ const PurchaseOrders: React.FC = () => {
           </CardContent>
         </Card>
       </Box>
+
+      <TabPanel value={tabValue} index={5}>
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="h6" sx={{ mb: 2 }}>Draft Orders</Typography>
+          {draftOrders.length === 0 ? (
+            <Paper sx={{ p: 3, textAlign: 'center' }}>
+              <Typography variant="body1" color="text.secondary">
+                No draft orders found.
+              </Typography>
+            </Paper>
+          ) : (
+            <TableContainer component={Paper}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Draft ID</TableCell>
+                    <TableCell>Date Created</TableCell>
+                    <TableCell>Products</TableCell>
+                    <TableCell align="right">Total Amount</TableCell>
+                    <TableCell align="center">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {draftOrders.map((draft) => (
+                    <TableRow key={draft.id}>
+                      <TableCell>{draft.name || draft.id.replace('draft-', 'Draft #')}</TableCell>
+                      <TableCell>
+                        {new Date(draft.timestamp).toLocaleDateString()} {new Date(draft.timestamp).toLocaleTimeString()}
+                      </TableCell>
+                      <TableCell>{draft.items.length} products</TableCell>
+                      <TableCell align="right">€{draft.totalAmount.toFixed(2)}</TableCell>
+                      <TableCell align="center">
+                        <IconButton 
+                          size="small" 
+                          color="primary" 
+                          onClick={() => handleEditDraft(draft.id)}
+                          title="Edit draft"
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton 
+                          size="small" 
+                          color="error" 
+                          onClick={() => handleDeleteDraft(draft.id)}
+                          title="Delete draft"
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </Box>
+      </TabPanel>
     </Box>
   );
 };

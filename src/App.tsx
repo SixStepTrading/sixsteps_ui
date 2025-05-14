@@ -4,10 +4,13 @@ import { ThemeProvider, CssBaseline } from '@mui/material';
 import theme from './theme';
 import { ToastProvider } from './contexts/ToastContext';
 import { SidebarProvider } from './contexts/SidebarContext';
+import { UserProvider } from './contexts/UserContext';
 import MainLayout from './layouts/MainLayout';
 import Dashboard from './components/Dashboard/Dashboard';
 import PurchaseOrders from './components/PurchaseOrders/PurchaseOrders';
+import OrderCreation from './components/PurchaseOrders/OrderCreation';
 import UserManagement from './components/UserManagement/UserManagement';
+import PrivateRoute from './components/common/PrivateRoute';
 
 function App() {
   return (
@@ -15,16 +18,22 @@ function App() {
       <CssBaseline />
       <ToastProvider>
         <SidebarProvider>
-          <Router>
-            <MainLayout>
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/purchase-orders" element={<PurchaseOrders />} />
-                <Route path="/user-management" element={<UserManagement />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </MainLayout>
-          </Router>
+          <UserProvider>
+            <Router>
+              <MainLayout>
+                <Routes>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/purchase-orders" element={<PurchaseOrders />} />
+                  <Route path="/purchase-orders/create" element={<OrderCreation />} />
+                  <Route 
+                    path="/user-management" 
+                    element={<PrivateRoute element={<UserManagement />} requiredRole="Admin" />} 
+                  />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </MainLayout>
+            </Router>
+          </UserProvider>
         </SidebarProvider>
       </ToastProvider>
     </ThemeProvider>

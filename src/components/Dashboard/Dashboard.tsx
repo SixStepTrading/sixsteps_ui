@@ -51,6 +51,7 @@ import {
 import debounce from 'lodash/debounce';
 import StatCard from '../common/StatCard';
 import { useToast } from '../../contexts/ToastContext';
+import { useUser } from '../../contexts/UserContext';
 import { Product } from '../../data/mockProducts';
 import { fetchProducts, getFallbackProducts } from '../../utils/api';
 import { ProductRow, ActionBar } from '../common/reusable';
@@ -63,6 +64,9 @@ import StockAvailability from '../common/reusable/StockAvailability';
 import { isStockExceeded } from '../common/utils/priceCalculations';
 import * as XLSX from 'xlsx';
 import FileUploadModal from '../common/reusable/FileUploadModal';
+import OrderConfirmationModal, { ProductItem, OrderData } from '../common/molecules/OrderConfirmationModal';
+import AddProductModal, { ProductFormData } from '../common/molecules/AddProductModal';
+import { v4 as uuid } from 'uuid';
 
 // Interface for product with quantity
 interface ProductWithQuantity extends Product {
@@ -74,6 +78,8 @@ interface ProductWithQuantity extends Product {
 
 const Dashboard: React.FC = () => {
   const { showToast } = useToast();
+  const { userRole } = useUser();
+  const isAdmin = userRole === 'Admin';
   const tableRef = useRef<HTMLDivElement>(null);
   
   // State for product data and pagination
@@ -132,6 +138,13 @@ const Dashboard: React.FC = () => {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+
+  // State per il modal di conferma ordine
+  const [confirmationModalOpen, setConfirmationModalOpen] = useState(false);
+  const [selectedProductsForOrder, setSelectedProductsForOrder] = useState<ProductItem[]>([]);
+
+  // State per la modale di aggiunta prodotto
+  const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
 
   // Funzione per gestire l'apertura/chiusura della visualizzazione di tutti i prezzi
   const handleToggleAllPrices = (productId: string) => {
@@ -555,13 +568,75 @@ const Dashboard: React.FC = () => {
       return;
     }
     
-    const totalQuantity = filteredProducts
-      .filter(p => selected.includes(p.id))
-      .reduce((sum, p) => sum + p.quantity, 0);
+    // Format products for modal with detailed price information
+    const productsForModal: ProductItem[] = productsWithQuantity.map(id => {
+      const product = filteredProducts.find(p => p.id === id)!;
+      
+      // Sort prices from lowest to highest
+      const sortedPrices = [...product.bestPrices].sort((a, b) => a.price - b.price);
+      
+      // Create optimized price breakdowns from bestPrices
+      const priceBreakdowns = [];
+      let remainingQuantity = product.quantity;
+      
+      // Allocate quantities to suppliers starting from the cheapest
+      for (const price of sortedPrices) {
+        if (remainingQuantity <= 0) break;
+        
+        const allocatedQuantity = Math.min(remainingQuantity, price.stock);
+        if (allocatedQuantity > 0) {
+          priceBreakdowns.push({
+            quantity: allocatedQuantity,
+            unitPrice: price.price,
+            supplier: price.supplier,
+            stock: price.stock
+          });
+          
+          remainingQuantity -= allocatedQuantity;
+        }
+      }
+      
+      return {
+        id: product.id,
+        name: product.name,
+        code: product.ean || product.minsan,
+        supplier: product.bestPrices[0]?.supplier || 'Various suppliers',
+        quantity: product.quantity,
+        unitPrice: product.averagePrice || product.bestPrices[0]?.price || product.publicPrice,
+        averagePrice: product.averagePrice || undefined,
+        priceBreakdowns: priceBreakdowns
+      };
+    });
     
-    showToast(`ODA created with ${productsWithQuantity.length} products (${totalQuantity} items) totaling €${totalAmount.toFixed(2)}`, 'success');
+    // Save selected products and open confirmation modal
+    setSelectedProductsForOrder(productsForModal);
+    setConfirmationModalOpen(true);
+  };
+  
+  // Handle order submission from the modal
+  const handleSubmitOrder = (orderData: OrderData) => {
+    // In a real app, you would submit this to your backend
+    const order = {
+      ...orderData,
+      items: selectedProductsForOrder,
+      totalAmount,
+      timestamp: new Date().toISOString()
+    };
     
-    // Clear selection and reset quantities
+    console.log('Submitting order:', order);
+    showToast('Order submitted successfully', 'success');
+    
+    // Clear the selection and reset quantities
+    setSelected([]);
+    handleCloseError();
+    loadProducts(true);
+  };
+  
+  // Handle saving order as draft
+  const handleSaveOrderAsDraft = () => {
+    showToast('Order saved as draft', 'success');
+    
+    // Clear the selection and reset quantities
     setSelected([]);
     handleCloseError();
     loadProducts(true);
@@ -966,27 +1041,111 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  // Funzione per aprire la modale di aggiunta prodotto
+  const handleOpenAddProductModal = () => {
+    setIsAddProductModalOpen(true);
+  };
+
+  // Funzione per chiudere la modale di aggiunta prodotto
+  const handleCloseAddProductModal = () => {
+    setIsAddProductModalOpen(false);
+  };
+
+  // Funzione per aggiungere un nuovo prodotto
+  const handleAddProduct = (productData: ProductFormData) => {
+    // Crea un nuovo prodotto con i dati del form
+    const newProduct: ProductWithQuantity = {
+      id: uuid(),
+      ean: productData.productCode,  // Utilizziamo productCode come EAN
+      minsan: '',  // Campo opzionale
+      name: productData.productName,
+      publicPrice: productData.publicPrice,
+      vat: productData.vat,  // Use the VAT from form data
+      category: 'Manually added',
+      manufacturer: productData.manufacturer,  // Use the manufacturer from form data
+      description: 'Product added manually',
+      bestPrices: [
+        {
+          supplier: 'Internal Stock',
+          price: productData.stockPrice,
+          stock: productData.stockQuantity  // Usiamo stock invece di quantity
+        }
+      ],
+      inStock: productData.stockQuantity > 0,
+      quantity: 0,  // Campo per ProductWithQuantity
+      averagePrice: null,  // Campo per ProductWithQuantity
+      showAllPrices: false,  // Campo per ProductWithQuantity
+      targetPrice: null  // Campo per ProductWithQuantity
+    };
+
+    // Aggiungi il prodotto all'array esistente
+    setProducts(prevProducts => [newProduct, ...prevProducts]);
+    setFilteredProducts(prevFiltered => [newProduct, ...prevFiltered]);
+    
+    // Aumenta il conteggio totale
+    setTotalCount(prev => prev + 1);
+    
+    // Notifica l'utente
+    showToast(
+      `Product "${productData.productName}" successfully added!`,
+      'success'
+    );
+  };
+
   return (
     <Box sx={{ flexGrow: 1, p: 3, pb: 20 }}>
       {error && (
-        <Snackbar open={!!error} autoHideDuration={6000} onClose={handleCloseError}>
-          <Alert onClose={handleCloseError} severity="warning" sx={{ width: '100%' }}>
+        <Snackbar 
+          open={!!error} 
+          autoHideDuration={6000} 
+          onClose={handleCloseError}
+          sx={{ zIndex: 10100 }} // Higher than SummaryBar (9999)
+          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        >
+          <Alert 
+            onClose={handleCloseError} 
+            severity="warning" 
+            sx={{ width: '100%', boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.15)' }}
+            elevation={6}
+          >
             {error}
           </Alert>
         </Snackbar>
       )}
       
       {uploadError && (
-        <Snackbar open={!!uploadError} autoHideDuration={6000} onClose={() => setUploadError(null)}>
-          <Alert onClose={() => setUploadError(null)} severity="error" sx={{ width: '100%' }}>
+        <Snackbar 
+          open={!!uploadError} 
+          autoHideDuration={6000} 
+          onClose={() => setUploadError(null)}
+          sx={{ zIndex: 10100 }} // Higher than SummaryBar (9999)
+          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        >
+          <Alert 
+            onClose={() => setUploadError(null)} 
+            severity="error" 
+            sx={{ width: '100%', boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.15)' }}
+            elevation={6}
+          >
             {uploadError}
           </Alert>
         </Snackbar>
       )}
       
       {uploadSuccess && (
-        <Snackbar open={uploadSuccess} autoHideDuration={3000} onClose={() => setUploadSuccess(false)}>
-          <Alert onClose={() => setUploadSuccess(false)} severity="success" sx={{ width: '100%' }}>
+        <Snackbar 
+          open={uploadSuccess} 
+          autoHideDuration={3000} 
+          onClose={() => setUploadSuccess(false)}
+          sx={{ zIndex: 10100 }} // Higher than SummaryBar (9999)
+          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        >
+          <Alert 
+            onClose={() => setUploadSuccess(false)} 
+            severity="success" 
+            sx={{ width: '100%', boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.15)' }}
+            elevation={6}
+          >
             File processed successfully
           </Alert>
         </Snackbar>
@@ -1030,13 +1189,18 @@ const Dashboard: React.FC = () => {
               titleTypographyProps={{ variant: 'h6' }}
               action={
                 <Box sx={{ display: 'flex', gap: 1 }}>
-                  {usingMockData && (
-                    <Chip 
-                      label="Using Mock Data" 
-                      color="warning" 
-                      size="small" 
-                      sx={{ mr: 1 }}
-                    />
+                  {/* Removed "Using Mock Data" chip */}
+                  
+                  {isAdmin && (
+                    <Button
+                      size="small"
+                      variant="contained"
+                      color="primary"
+                      startIcon={<AddIcon />}
+                      onClick={handleOpenAddProductModal}
+                    >
+                      Add Product
+                    </Button>
                   )}
                   
                   {/* File Upload Button */}
@@ -1328,13 +1492,29 @@ const Dashboard: React.FC = () => {
       </Grid>
       
       {/* Add the ActionBar component outside the Card */}
-      <ActionBar 
+      <ActionBar
         selectedCount={selected.length}
         totalItems={getTotalQuantity()}
         totalAmount={totalAmount}
-        onSaveForLater={() => showToast('List saved for later', 'success')}
         onSaveAsDraft={() => showToast('Draft saved successfully', 'success')}
         onCreateOda={handleCreateOda}
+      />
+
+      {/* Order Confirmation Modal */}
+      <OrderConfirmationModal
+        open={confirmationModalOpen}
+        onClose={() => setConfirmationModalOpen(false)}
+        onSaveAsDraft={handleSaveOrderAsDraft}
+        onSubmitOrder={handleSubmitOrder}
+        products={selectedProductsForOrder}
+        totalAmount={totalAmount}
+      />
+
+      {/* Add Product Modal */}
+      <AddProductModal
+        open={isAddProductModalOpen}
+        onClose={handleCloseAddProductModal}
+        onAddProduct={handleAddProduct}
       />
     </Box>
   );
