@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { isStockExceeded } from '../common/utils/priceCalculations';
 import { Product } from '../../data/mockProducts';
+import { SidebarContext } from '../../contexts/SidebarContext';
 
 export interface ProductWithQuantity extends Product {
   quantity: number;
@@ -127,6 +128,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
 }) => {
   const [modalProduct, setModalProduct] = useState<ProductWithQuantity | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { isDrawerCollapsed } = useContext(SidebarContext);
   
   // Determina se ci sono prodotti selezionati con problemi
   const selectionWithProblems = selected.some(id => {
@@ -175,259 +177,268 @@ const ProductTable: React.FC<ProductTableProps> = ({
         </div>
       </div>
       
-      {/* Header columns */}
-      <div className="flex items-center px-4 py-3 text-xs uppercase text-slate-500 font-semibold tracking-wider bg-gray-50 rounded-t-lg rounded-xl my-1.5 border-b border-gray-200">
-        <div className="w-[4%] text-center">#</div>
-        <div className="w-[13%]">Codes</div>
-        <div className="w-[3%]"></div>
-        <div className="w-[20%]">Product Name</div>
-        <div className="w-[12%] text-right">Public Price</div>
-        <div className="w-[8%] text-center">Qty</div>
-        <div className="w-[10%] text-center">Target Price</div>
-        <div className="w-[30%] text-right">Prices</div>
-      </div>
+      {/* Table container with fixed width and horizontal scroll */}
+      <div className="overflow-x-auto">
+        <div className={`${isDrawerCollapsed ? 'min-w-[1000px]' : 'min-w-[1200px]'} transition-all duration-300`}> {/* Fixed minimum width based on sidebar state */}
+          {/* Header columns */}
+          <div className="flex items-center px-3 py-3 text-xs uppercase text-slate-500 font-semibold tracking-wider bg-gray-50 rounded-t-lg rounded-xl my-1.5 border-b border-gray-200">
+            <div className={`${isDrawerCollapsed ? 'w-[3.5%]' : 'w-[4%]'} text-center`}>#</div>
+            <div className={`${isDrawerCollapsed ? 'w-[12%]' : 'w-[13%]'}`}>Codes</div>
+            <div className="w-[3%]"></div>
+            <div className={`${isDrawerCollapsed ? 'w-[19%]' : 'w-[20%]'}`}>Product Name</div>
+            <div className={`${isDrawerCollapsed ? 'w-[11%]' : 'w-[12%]'} text-right`}>Public Price</div>
+            <div className={`${isDrawerCollapsed ? 'w-[7.5%]' : 'w-[8%]'} text-center`}>Qty</div>
+            <div className={`${isDrawerCollapsed ? 'w-[9.5%]' : 'w-[10%]'} text-center`}>Target Price</div>
+            <div className={`${isDrawerCollapsed ? 'w-[21%]' : 'w-[22%]'} text-right`}>Prices</div>
+            <div className={`${isDrawerCollapsed ? 'w-[7.5%]' : 'w-[8%]'} text-right`}>Stock</div>
+          </div>
 
-      {/* Rows */}
-      {products.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-center bg-white rounded-xl shadow border border-slate-100">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12 text-gray-300 mb-3">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3 3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
-          </svg>
-          <h3 className="text-lg font-medium text-gray-700">No products found</h3>
-          <p className="text-gray-500 mt-1 max-w-md">Try adjusting your search or filter criteria to find products.</p>
-        </div>
-      ) : (
-        products.map((product, idx) => {
-          const isProductSelected = isSelected(product.id);
-          const isExceeded = isStockExceeded(product.quantity, product.bestPrices);
-          // Calcolo dello stock totale del prodotto
-          const totalProductStock = product.bestPrices.reduce((sum, price) => sum + price.stock, 0);
-          
-          // Messaggio di errore per il tooltip
-          const errorMessage = isExceeded ? 
-            `Insufficient stock: You requested ${product.quantity} units, but only ${totalProductStock} are available. Please reduce the quantity or select another product.` : '';
-            
-          return (
-            <div
-              key={product.id}
-              className={`
-                flex items-center px-4 py-3 bg-white border border-gray-100 last:rounded-b-lg
-                ${isProductSelected ? 'bg-blue-50' : ''}
-                ${isExceeded ? 'bg-amber-50 border-l-4 border-l-amber-500' : ''}
-                hover:bg-blue-50 cursor-pointer
-                relative
-                rounded-xl my-1.5
-              `}
-              onClick={() => {
-                if (product.quantity <= 0) {
-                  // Mostra messaggio di errore per quantità non impostata
-                  alert("Please set a quantity before selecting this product.");
-                } else if (!isExceeded) {
-                  onSelect(product.id);
-                }
-              }}
-            >
-              {/* # and checkbox */}
-              <div className="w-[4%] flex justify-center">
-                {isExceeded ? (
-                  <Tooltip text={errorMessage} position="top">
-                    <div className="flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-white text-xs font-bold">
-                      !
-                    </div>
-                  </Tooltip>
-                ) : (
-                  <input
-                    type="checkbox"
-                    checked={isProductSelected}
-                    disabled={product.quantity === 0}
-                    className="w-4 h-4 rounded border-gray-300 text-blue-600"
-                    onChange={e => e.stopPropagation()}
-                    onClick={e => {
-                      e.stopPropagation();
-                      if (product.quantity > 0) {
-                        onSelect(product.id);
-                      }
-                    }}
-                  />
-                )}
-              </div>
-
-              {/* Codes */}
-              <div className="w-[13%] flex flex-col text-xs text-slate-500">
-                <div className="flex">
-                  <span className="font-semibold text-slate-700 w-14">EAN:</span> {product.ean}
-                </div>
-                <div className="flex">
-                  <span className="font-semibold text-slate-700 w-14">Minsan:</span> {product.minsan}
-                </div>
-              </div>
-
-              {/* Product Image - Add a small thumbnail */}
-              <div className="w-[3%] flex justify-center items-center mr-2">
-                {product.image ? (
-                  <img 
-                    src={product.image} 
-                    alt={product.name}
-                    className="w-[40px] h-[40px] object-cover rounded-md shadow-sm border border-gray-200 hover:scale-150 transition-transform duration-200"
-                    onError={(e) => {
-                      // If image fails to load, use a fallback
-                      (e.target as HTMLImageElement).src = 'https://via.placeholder.com/40?text=N/A';
-                    }}
-                  />
-                ) : (
-                  <div className="w-[40px] h-[40px] flex items-center justify-center bg-gray-100 rounded-md border border-gray-200 text-gray-400 text-xs">
-                    N/A
-                  </div>
-                )}
-              </div>
-
-              {/* Name */}
-              <div className="w-[20%] flex flex-col">
-                <span className="font-medium text-sm text-slate-800 truncate">{product.name}</span>
-                <span className="text-xs text-slate-400">{product.manufacturer}</span>
-              </div>
-
-              {/* Price */}
-              <div className="w-[12%] text-right">
-                <span className="font-semibold text-sm text-slate-700">€{product.publicPrice.toFixed(2)}</span>
-                <div className="text-xs text-slate-400">VAT {product.vat}%</div>
-              </div>
-
-              {/* Quantity */}
-              <div className="w-[8%] flex justify-center" onClick={e => e.stopPropagation()}>
-                <div className="relative w-full max-w-[70px]">
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={product.quantity || ''}
-                    onChange={e => {
-                      const value = parseInt(e.target.value);
-                      onQuantityChange(product.id, isNaN(value) ? 0 : value);
-                    }}
-                    className={`w-full h-9 text-sm px-2 py-1 text-center rounded border ${
-                      isExceeded ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-gray-300 bg-white'
-                    } focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-sm`}
-                  />
-                  {isExceeded && (
-                    <Tooltip text={errorMessage} position="top">
-                      <span className="absolute -top-2 -right-2 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white">!</span>
-                    </Tooltip>
-                  )}
-                </div>
-              </div>
-
-              {/* Target price + avg */}
-              <div className="w-[10%] flex justify-center" onClick={e => e.stopPropagation()}>
-                <div className="w-full max-w-[80px]">
-                  <div className="relative">
-                    <span className="absolute left-2 top-2 text-xs text-slate-400">€</span>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder="Target"
-                      value={product.targetPrice !== null ? product.targetPrice : ''}
-                      onChange={e => onTargetPriceChange(product.id, e.target.value)}
-                      className={`w-full h-9 text-sm pl-6 pr-2 py-1 text-right rounded border bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-sm
-                        ${product.quantity > 0 && product.averagePrice !== null && product.targetPrice !== null
-                          ? product.averagePrice <= product.targetPrice
-                            ? 'border-green-500 bg-green-50 text-green-700'
-                            : 'border-red-500 bg-red-50 text-red-700'
-                          : 'border-gray-300'}`}
-                    />
-                  </div>
-                  {/* Avg price */}
-                  {product.quantity > 0 && product.averagePrice !== null ? (
-                    <div className="mt-1 text-xs">
-                      <div className={`font-semibold flex items-center justify-between ${
-                        isExceeded
-                          ? 'text-amber-500'
-                          : product.targetPrice !== null
-                          ? product.averagePrice <= product.targetPrice
-                            ? 'text-green-600'
-                            : 'text-red-600'
-                          : 'text-slate-600'
-                      }`}>
-                        <span>Avg:</span> 
-                        <span>€{product.averagePrice.toFixed(2)}
-                        {product.targetPrice !== null && product.averagePrice <= product.targetPrice && (
-                          <span className="ml-1 text-green-500">✓</span>
-                        )}</span>
-                      </div>
-                      <div className="text-slate-500 flex items-center justify-between">
-                        <span>Tot:</span>
-                        <span>€{(product.averagePrice * product.quantity).toFixed(2)}</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-xs text-slate-400 mt-1 text-center">--</div>
-                  )}
-                </div>
-              </div>
-
-              {/* Prices */}
-              <div className="w-[22%] flex flex-wrap justify-end gap-1">
-                {product.bestPrices.slice(0, 3).map((price, i) => {
-                  const { grossDiscountPercent, netDiscountPercent } = calculateDiscounts(
-                    product.publicPrice, 
-                    price.price, 
-                    product.vat
-                  );
-                  
-                  const priceLabels = ["Best price", "Second best price", "Third best price"];
-                  const grossDiscountTooltip = `${grossDiscountPercent.toFixed(0)}% off public price`;
-                  const netDiscountTooltip = `${netDiscountPercent.toFixed(0)}% off net price (VAT excl.)`;
-                  
-                  return (
-                    <div key={i} className={`rounded px-2 py-1 text-xs transition-all duration-150 hover:shadow-md
-                      ${i === 0 ? 'bg-green-50 text-green-700 hover:bg-green-100' : 
-                        i === 1 ? 'bg-blue-50 text-blue-700 hover:bg-blue-100' : 
-                        'bg-purple-50 text-purple-700 hover:bg-purple-100'}`}
-                    >
-                      <Tooltip text={priceLabels[i]} position="left">
-                        <div className="font-semibold text-sm">€{price.price.toFixed(2)}</div>
-                      </Tooltip>
-                      <div className="text-xs flex gap-1 items-center">
-                        <Tooltip text={grossDiscountTooltip} position="left">
-                          <span className="text-red-500 hover:font-medium cursor-help" title="Gross discount">{grossDiscountPercent.toFixed(0)}%</span>
-                        </Tooltip>
-                        <span className="text-slate-400">|</span>
-                        <Tooltip text={netDiscountTooltip} position="left">
-                          <span className="text-orange-500 hover:font-medium cursor-help" title="Net discount">{netDiscountPercent.toFixed(0)}%</span>
-                        </Tooltip>
-                      </div>
-                      <div className="text-xs">Stock: {price.stock}</div>
-                    </div>
-                  );
-                })}
-              </div>
-              
-              {/* Total Stock + Show more prices (colonna extra) */}
-              <div className="w-[8%] flex flex-col items-end text-xs">
-                <div className="text-slate-600">
-                  Total Stock: <span className="font-medium text-blue-600">{totalProductStock}</span>
-                </div>
-                
-                {product.bestPrices.length > 3 && (
-                  <button
-                    className="text-blue-500 text-xs flex items-center mt-1"
-                    onClick={e => {
-                      e.stopPropagation();
-                      openPriceModal(product);
-                    }}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3 mr-1">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 21v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21m0 0h4.5V3.545M12.75 21h7.5V10.75M2.25 21h1.5m18 0h-18M2.25 9l4.5-1.636M18.75 3l-1.5.545m0 6.205l3 1m1.5.5l-1.5-.5M6.75 7.364V3h-3v18m3-13.636l10.5-3.819" />
-                    </svg>
-                    Show more
-                  </button>
-                )}
-              </div>
+          {/* Rows */}
+          {products.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center bg-white rounded-xl shadow border border-slate-100">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12 text-gray-300 mb-3">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3 3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+              </svg>
+              <h3 className="text-lg font-medium text-gray-700">No products found</h3>
+              <p className="text-gray-500 mt-1 max-w-md">Try adjusting your search or filter criteria to find products.</p>
             </div>
-          );
-        })
-      )}
+          ) : (
+            products.map((product, idx) => {
+              const isProductSelected = isSelected(product.id);
+              const isExceeded = isStockExceeded(product.quantity, product.bestPrices);
+              // Calcolo dello stock totale del prodotto
+              const totalProductStock = product.bestPrices.reduce((sum, price) => sum + price.stock, 0);
+              
+              // Messaggio di errore per il tooltip
+              const errorMessage = isExceeded ? 
+                `Insufficient stock: You requested ${product.quantity} units, but only ${totalProductStock} are available. Please reduce the quantity or select another product.` : '';
+                
+              return (
+                <div
+                  key={product.id}
+                  className={`
+                    flex items-center px-3 py-3 bg-white border border-gray-100 last:rounded-b-lg
+                    ${isProductSelected ? 'bg-blue-50' : ''}
+                    ${isExceeded ? 'bg-amber-50 border-l-4 border-l-amber-500' : ''}
+                    hover:bg-blue-50 cursor-pointer
+                    relative
+                    rounded-xl my-1.5
+                  `}
+                  onClick={() => {
+                    if (product.quantity <= 0) {
+                      // Mostra messaggio di errore per quantità non impostata
+                      alert("Please set a quantity before selecting this product.");
+                    } else if (!isExceeded) {
+                      onSelect(product.id);
+                    }
+                  }}
+                >
+                  {/* Row number and Checkbox combined */}
+                  <div className={`${isDrawerCollapsed ? 'w-[3.5%]' : 'w-[4%]'} flex items-center`}>
+                    <div className="flex items-center">
+                      <span className="w-5 text-xs text-gray-600 font-medium text-center">{idx + 1}</span>
+                      {isExceeded ? (
+                        <Tooltip text={errorMessage} position="top">
+                          <div className="flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-white text-xs font-bold">
+                            !
+                          </div>
+                        </Tooltip>
+                      ) : (
+                        <input
+                          type="checkbox"
+                          checked={isProductSelected}
+                          disabled={product.quantity === 0}
+                          className="w-4 h-4 rounded border-gray-300 text-blue-600"
+                          onChange={e => e.stopPropagation()}
+                          onClick={e => {
+                            e.stopPropagation();
+                            if (product.quantity > 0) {
+                              onSelect(product.id);
+                            }
+                          }}
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Codes */}
+                  <div className={`${isDrawerCollapsed ? 'w-[12%]' : 'w-[13%]'} flex flex-col text-xs text-slate-500`}>
+                    <div className="flex">
+                      <span className="font-semibold text-slate-700 w-14">EAN:</span> {product.ean}
+                    </div>
+                    <div className="flex">
+                      <span className="font-semibold text-slate-700 w-14">Minsan:</span> {product.minsan}
+                    </div>
+                  </div>
+
+                  {/* Product Image - Add a small thumbnail */}
+                  <div className="w-[3%] flex justify-center items-center mr-2">
+                    {product.image ? (
+                      <img 
+                        src={product.image} 
+                        alt={product.name}
+                        className="w-[40px] h-[40px] object-cover rounded-md shadow-sm border border-gray-200 hover:scale-150 transition-transform duration-200"
+                        onError={(e) => {
+                          // If image fails to load, use a fallback
+                          (e.target as HTMLImageElement).src = 'https://via.placeholder.com/40?text=N/A';
+                        }}
+                      />
+                    ) : (
+                      <div className="w-[40px] h-[40px] flex items-center justify-center bg-gray-100 rounded-md border border-gray-200 text-gray-400 text-xs">
+                        N/A
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Name */}
+                  <div className={`${isDrawerCollapsed ? 'w-[19%]' : 'w-[20%]'} flex flex-col`}>
+                    <span className="font-medium text-sm text-slate-800 truncate">{product.name}</span>
+                    <span className="text-xs text-slate-400">{product.manufacturer}</span>
+                  </div>
+
+                  {/* Price */}
+                  <div className={`${isDrawerCollapsed ? 'w-[11%]' : 'w-[12%]'} text-right`}>
+                    <span className="font-semibold text-sm text-slate-700">€{product.publicPrice.toFixed(2)}</span>
+                    <div className="text-xs text-slate-400">VAT {product.vat}%</div>
+                  </div>
+
+                  {/* Quantity */}
+                  <div className={`${isDrawerCollapsed ? 'w-[7.5%]' : 'w-[8%]'} flex justify-center`} onClick={e => e.stopPropagation()}>
+                    <div className="relative w-full max-w-[70px]">
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={product.quantity || ''}
+                        onChange={e => {
+                          const value = parseInt(e.target.value);
+                          onQuantityChange(product.id, isNaN(value) ? 0 : value);
+                        }}
+                        className={`w-full h-9 text-sm px-2 py-1 text-center rounded border ${
+                          isExceeded ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-gray-300 bg-white'
+                        } focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-sm`}
+                      />
+                      {isExceeded && (
+                        <Tooltip text={errorMessage} position="top">
+                          <span className="absolute -top-2 -right-2 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white">!</span>
+                        </Tooltip>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Target price + avg */}
+                  <div className={`${isDrawerCollapsed ? 'w-[9.5%]' : 'w-[10%]'} flex justify-center`} onClick={e => e.stopPropagation()}>
+                    <div className="w-full max-w-[80px]">
+                      <div className="relative">
+                        <span className="absolute left-2 top-2 text-xs text-slate-400">€</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="Target"
+                          value={product.targetPrice !== null ? product.targetPrice : ''}
+                          onChange={e => onTargetPriceChange(product.id, e.target.value)}
+                          className={`w-full h-9 text-sm pl-6 pr-2 py-1 text-right rounded border bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-sm
+                            ${product.quantity > 0 && product.averagePrice !== null && product.targetPrice !== null
+                              ? product.averagePrice <= product.targetPrice
+                                ? 'border-green-500 bg-green-50 text-green-700'
+                                : 'border-red-500 bg-red-50 text-red-700'
+                              : 'border-gray-300'}`}
+                        />
+                      </div>
+                      {/* Avg price */}
+                      {product.quantity > 0 && product.averagePrice !== null ? (
+                        <div className="mt-1 text-xs">
+                          <div className={`font-semibold flex items-center justify-between ${
+                            isExceeded
+                              ? 'text-amber-500'
+                              : product.targetPrice !== null
+                              ? product.averagePrice <= product.targetPrice
+                                ? 'text-green-600'
+                                : 'text-red-600'
+                              : 'text-slate-600'
+                          }`}>
+                            <span>Avg:</span> 
+                            <span>€{product.averagePrice.toFixed(2)}
+                            {product.targetPrice !== null && product.averagePrice <= product.targetPrice && (
+                              <span className="ml-1 text-green-500">✓</span>
+                            )}</span>
+                          </div>
+                          <div className="text-slate-500 flex items-center justify-between">
+                            <span>Tot:</span>
+                            <span>€{(product.averagePrice * product.quantity).toFixed(2)}</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-xs text-slate-400 mt-1 text-center">--</div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Prices */}
+                  <div className={`${isDrawerCollapsed ? 'w-[21%]' : 'w-[22%]'} flex flex-wrap justify-end gap-1`}>
+                    {product.bestPrices.slice(0, 3).map((price, i) => {
+                      const { grossDiscountPercent, netDiscountPercent } = calculateDiscounts(
+                        product.publicPrice, 
+                        price.price, 
+                        product.vat
+                      );
+                      
+                      const priceLabels = ["Best price", "Second best price", "Third best price"];
+                      const grossDiscountTooltip = `${grossDiscountPercent.toFixed(0)}% off public price`;
+                      const netDiscountTooltip = `${netDiscountPercent.toFixed(0)}% off net price (VAT excl.)`;
+                      
+                      return (
+                        <div key={i} className={`rounded px-2 py-1 text-xs transition-all duration-150 hover:shadow-md
+                          ${i === 0 ? 'bg-green-50 text-green-700 hover:bg-green-100' : 
+                            i === 1 ? 'bg-blue-50 text-blue-700 hover:bg-blue-100' : 
+                            'bg-purple-50 text-purple-700 hover:bg-purple-100'}`}
+                        >
+                          <Tooltip text={priceLabels[i]} position="left">
+                            <div className="font-semibold text-sm">€{price.price.toFixed(2)}</div>
+                          </Tooltip>
+                          <div className="text-xs flex gap-1 items-center">
+                            <Tooltip text={grossDiscountTooltip} position="left">
+                              <span className="text-red-500 hover:font-medium cursor-help" title="Gross discount">{grossDiscountPercent.toFixed(0)}%</span>
+                            </Tooltip>
+                            <span className="text-slate-400">|</span>
+                            <Tooltip text={netDiscountTooltip} position="left">
+                              <span className="text-orange-500 hover:font-medium cursor-help" title="Net discount">{netDiscountPercent.toFixed(0)}%</span>
+                            </Tooltip>
+                          </div>
+                          <div className="text-xs">Stock: {price.stock}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Total Stock + Show more prices */}
+                  <div className={`${isDrawerCollapsed ? 'w-[7.5%]' : 'w-[8%]'} flex flex-col items-end text-xs`}>
+                    <div className="text-slate-600 whitespace-nowrap">
+                      Stock: <span className="font-medium text-blue-600">{totalProductStock}</span>
+                    </div>
+                    
+                    {product.bestPrices.length > 3 && (
+                      <button
+                        className="text-blue-500 text-xs flex items-center mt-1 whitespace-nowrap"
+                        onClick={e => {
+                          e.stopPropagation();
+                          openPriceModal(product);
+                        }}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3 mr-1">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 21v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21m0 0h4.5V3.545M12.75 21h7.5V10.75M2.25 21h1.5m18 0h-18M2.25 9l4.5-1.636M18.75 3l-1.5.545m0 6.205l3 1m1.5.5l-1.5-.5M6.75 7.364V3h-3v18m3-13.636l10.5-3.819" />
+                        </svg>
+                        Show more
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
       
       {/* Modal per i dettagli prezzi */}
       <PriceModal 

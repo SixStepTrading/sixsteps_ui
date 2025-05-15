@@ -72,7 +72,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         {isMobile && <div className="h-14 sm:h-0" />}
         
         {/* Main container */}
-        <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 min-h-screen max-w-7xl">
+        <div className="container mx-auto px-2 sm:px-3 py-6 sm:py-8 min-h-screen max-w-7xl">
           {children}
         </div>
       </main>

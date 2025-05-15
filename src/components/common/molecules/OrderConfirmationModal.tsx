@@ -286,7 +286,7 @@ const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
         </IconButton>
       </DialogTitle>
       
-      <DialogContent sx={{ p: { xs: 2, sm: 3 }, pt: { xs: 4, sm: 5 } }}>
+      <DialogContent sx={{ p: { xs: 1, sm: 2 }, pt: { xs: 3, sm: 4 } }}>
         <Box sx={{ mb: 3, mt: 2 }}>
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, sm: 6 }}>
@@ -364,9 +364,15 @@ const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
             mb: 3, 
             border: `1px solid ${theme.palette.divider}`,
             borderRadius: 1,
+            overflow: 'auto'
           }}
         >
-          <Table size="small">
+          <Table 
+            size="small"
+            sx={{
+              minWidth: '800px'
+            }}
+          >
             <TableHead>
               <TableRow sx={{ bgcolor: 'rgba(0, 0, 0, 0.02)' }}>
                 <TableCell sx={{ fontWeight: 'medium' }}>Product</TableCell>
