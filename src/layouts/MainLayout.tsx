@@ -37,7 +37,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const currentWidth = isDrawerCollapsed ? COLLAPSED_WIDTH : DRAWER_WIDTH;
 
   return (
-    <div className="flex min-h-screen bg-gray-200">
+    <div className="flex min-h-screen bg-gray-100">
       {/* Mobile hamburger button */}
       {isMobile && (
         <button
