@@ -1,16 +1,9 @@
 import React from 'react';
-import { 
-  ListItemButton, 
-  ListItemIcon, 
-  ListItemText, 
-  Tooltip,
-  SvgIconProps
-} from '@mui/material';
 import { Link } from 'react-router-dom';
 import IconWithBadge from './IconWithBadge';
 
 interface SidebarItemProps {
-  icon: React.ReactElement<SvgIconProps>;
+  icon: React.ReactElement;
   text: string;
   to?: string;
   isSelected?: boolean;
@@ -28,73 +21,85 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
   badgeContent,
   onClick
 }) => {
+  // Base classes for the button
+  const buttonClasses = `
+    relative
+    flex 
+    items-center 
+    w-full 
+    py-2.5
+    px-3
+    my-1
+    rounded
+    transition-colors
+    duration-150
+    ${isSelected 
+      ? 'bg-blue-100 text-blue-800 hover:bg-blue-100' 
+      : 'hover:bg-gray-100 text-gray-700'
+    }
+    ${isCollapsed ? 'justify-center mx-1' : 'justify-start mx-2'}
+  `;
+
+  // Classes for the icon
+  const iconClasses = `
+    ${isCollapsed ? '' : 'mr-3'}
+    ${isSelected ? 'text-blue-600' : 'text-gray-500'}
+    flex-shrink-0
+  `;
+
+  // Content to be rendered
   const content = (
-    <ListItemButton
-      component={to ? Link : 'div'}
-      to={to}
+    <div
+      className={buttonClasses}
       onClick={onClick}
-      selected={isSelected}
-      sx={{
-        py: 1,
-        minHeight: 44,
-        justifyContent: isCollapsed ? 'center' : 'flex-start',
-        borderRadius: 1,
-        my: 0.5,
-        mx: isCollapsed ? 0.5 : 1,
-        '&.Mui-selected': {
-          backgroundColor: 'primary.light',
-          color: 'primary.dark',
-          '&:hover': {
-            backgroundColor: 'primary.light',
-          },
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            left: 0,
-            top: '25%',
-            height: '50%',
-            width: 3,
-            bgcolor: 'primary.main',
-            borderRadius: '0 4px 4px 0'
-          },
-        },
-        '&:hover': {
-          backgroundColor: 'action.hover',
-        },
-      }}
     >
-      <ListItemIcon
-        sx={{
-          minWidth: isCollapsed ? 0 : 36,
-          mr: isCollapsed ? 0 : 1,
-          justifyContent: 'center',
-          color: isSelected ? 'primary.main' : 'inherit',
-        }}
-      >
-        <IconWithBadge 
-          icon={icon} 
-          badgeContent={badgeContent}
-        />
-      </ListItemIcon>
-      
-      {!isCollapsed && (
-        <ListItemText
-          primary={text}
-          primaryTypographyProps={{
-            fontSize: '0.875rem',
-            fontWeight: isSelected ? 'medium' : 'normal',
-          }}
-        />
+      {/* Indicator for selected item */}
+      {isSelected && (
+        <div className="absolute left-0 top-1/4 h-1/2 w-1 bg-blue-600 rounded-r"></div>
       )}
-    </ListItemButton>
+      
+      {/* Icon with badge */}
+      <div className={iconClasses}>
+        {badgeContent !== undefined && badgeContent > 0 ? (
+          <div className="relative">
+            {icon}
+            <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-4 h-4 bg-red-500 text-white text-xs font-bold rounded-full">
+              {badgeContent > 99 ? '99+' : badgeContent}
+            </span>
+          </div>
+        ) : icon}
+      </div>
+      
+      {/* Text (only when not collapsed) */}
+      {!isCollapsed && (
+        <span className={`text-sm ${isSelected ? 'font-medium' : 'font-normal'}`}>
+          {text}
+        </span>
+      )}
+    </div>
   );
 
-  // Wrappa con Tooltip solo se il menu è collassato
-  return isCollapsed ? (
-    <Tooltip title={text} placement="right" arrow>
+  // Wrap with tooltip if collapsed
+  const wrappedContent = isCollapsed ? (
+    <div className="group relative">
       {content}
-    </Tooltip>
+      <div className="absolute left-full ml-2 py-1 px-2 bg-gray-800 text-white text-xs rounded 
+                      invisible opacity-0 group-hover:visible group-hover:opacity-100 
+                      transition-opacity duration-300 whitespace-nowrap z-50">
+        {text}
+        <div className="absolute top-1/2 -left-1 -translate-y-1/2 w-2 h-2 bg-gray-800 rotate-45"></div>
+      </div>
+    </div>
   ) : content;
+
+  // Render as Link if 'to' prop is provided, otherwise as a div
+  return to ? (
+    <Link to={to} className="block no-underline">
+      {wrappedContent}
+    </Link>
+  ) : (
+    wrappedContent
+  );
 };
 
 export default SidebarItem; 

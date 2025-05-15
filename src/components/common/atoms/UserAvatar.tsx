@@ -1,5 +1,4 @@
 import React from 'react';
-import { Avatar, Box, Typography, SxProps, Theme } from '@mui/material';
 
 interface UserAvatarProps {
   name: string;
@@ -7,7 +6,7 @@ interface UserAvatarProps {
   avatarSrc?: string;
   size?: 'small' | 'medium' | 'large';
   showInfo?: boolean;
-  sx?: SxProps<Theme>;
+  className?: string;
   onClick?: (event: React.MouseEvent<HTMLDivElement>) => void;
 }
 
@@ -17,17 +16,17 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
   avatarSrc,
   size = 'medium',
   showInfo = true,
-  sx,
+  className,
   onClick
 }) => {
-  // Determina le dimensioni dell'avatar in base alla prop size
+  // Determine avatar sizes based on size prop
   const avatarSizes = {
-    small: { width: 32, height: 32, fontSize: '0.75rem' },
-    medium: { width: 40, height: 40, fontSize: '1rem' },
-    large: { width: 48, height: 48, fontSize: '1.25rem' },
+    small: 'w-8 h-8 text-xs',
+    medium: 'w-10 h-10 text-sm',
+    large: 'w-12 h-12 text-base',
   };
   
-  // Prendi le iniziali dal nome
+  // Get initials from name
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -37,64 +36,61 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
       .substring(0, 2);
   };
   
-  const initials = getInitials(name);
+  const initials = getInitials(name || 'User');
   
   return (
-    <Box 
-      sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        cursor: onClick ? 'pointer' : 'default',
-        ...sx 
-      }}
+    <div 
+      className={`
+        flex items-center 
+        ${onClick ? 'cursor-pointer' : 'cursor-default'}
+        ${className || ''}
+      `}
       onClick={onClick}
     >
-      <Avatar 
-        src={avatarSrc} 
-        sx={{ 
-          ...avatarSizes[size],
-          bgcolor: 'primary.main', 
-          color: 'primary.contrastText',
-          fontWeight: 'medium',
-          transition: 'all 0.2s ease-in-out',
-          '&:hover': onClick ? {
-            transform: 'scale(1.05)',
-            boxShadow: '0 0 0 2px rgba(25, 118, 210, 0.3)'
-          } : {}
-        }}
+      <div 
+        className={`
+          ${avatarSizes[size]}
+          bg-blue-600 text-white
+          rounded-full
+          flex items-center justify-center
+          font-medium
+          transition-all duration-200
+          ${onClick ? 'hover:scale-105 hover:shadow-[0_0_0_2px_rgba(37,99,235,0.3)]' : ''}
+        `}
       >
-        {initials}
-      </Avatar>
+        {avatarSrc ? (
+          <img 
+            src={avatarSrc} 
+            alt={name} 
+            className="w-full h-full object-cover rounded-full"
+          />
+        ) : (
+          initials
+        )}
+      </div>
       
       {showInfo && (
-        <Box sx={{ ml: 1.5 }}>
-          <Typography 
-            variant="body2" 
-            sx={{ 
-              fontWeight: 'medium',
-              fontSize: size === 'small' ? '0.75rem' : '0.875rem',
-              lineHeight: 1.2
-            }}
-          >
+        <div className="ml-3">
+          <div className={`
+            font-medium 
+            ${size === 'small' ? 'text-xs' : 'text-sm'}
+            leading-tight
+          `}>
             {name}
-          </Typography>
+          </div>
           
           {role && (
-            <Typography 
-              variant="caption" 
-              color="text.secondary" 
-              sx={{ 
-                fontSize: size === 'small' ? '0.65rem' : '0.75rem',
-                display: 'block',
-                lineHeight: 1.2
-              }}
-            >
+            <div className={`
+              text-gray-500
+              ${size === 'small' ? 'text-[0.65rem]' : 'text-xs'}
+              leading-tight
+            `}>
               {role}
-            </Typography>
+            </div>
           )}
-        </Box>
+        </div>
       )}
-    </Box>
+    </div>
   );
 };
 

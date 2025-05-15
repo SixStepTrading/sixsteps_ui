@@ -1,21 +1,5 @@
 import React, { useState } from 'react';
-import { 
-  Box, 
-  Drawer, 
-  List, 
-  useTheme, 
-  Divider,
-  useMediaQuery,
-  SvgIconProps
-} from '@mui/material';
 import { useLocation } from 'react-router-dom';
-import { 
-  Dashboard as DashboardIcon,
-  ShoppingCart as ShoppingCartIcon,
-  People as PeopleIcon,
-  Notifications as NotificationsIcon,
-  ExitToApp as LogoutIcon
-} from '@mui/icons-material';
 
 import { SidebarItem } from '../atoms';
 import { SidebarHeader } from '../molecules';
@@ -24,7 +8,7 @@ import { useUser } from '../../../contexts/UserContext';
 
 interface MenuItem {
   text: string;
-  icon: React.ReactElement<SvgIconProps>;
+  icon: React.ReactElement;
   path?: string;
   badgeContent?: number;
   onClick?: () => void;
@@ -51,10 +35,9 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({
   notificationCount = 0,
   onLogout
 }) => {
-  const theme = useTheme();
   const location = useLocation();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { userRole, userName } = useUser();
+  const isMobile = window.innerWidth < 640;
   
   // State for notification panel
   const [notificationsAnchorEl, setNotificationsAnchorEl] = useState<HTMLElement | null>(null);
@@ -62,11 +45,7 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({
   
   // Handle click on notifications button
   const handleNotificationsClick = () => {
-    // We need to capture the event in a DOM element reference to use as anchor
-    // This is handled by the SidebarItem component which provides the event
-    // We're using the currentTarget here as a workaround
-    const element = document.activeElement as HTMLElement;
-    setNotificationsAnchorEl(element);
+    setNotificationsAnchorEl(document.getElementById('notification-button'));
   };
   
   // Close notifications panel
@@ -81,40 +60,76 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({
   
   // Main menu
   const mainMenuItems: MenuItem[] = [
-    { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
-    { text: 'Purchase Orders', icon: <ShoppingCartIcon />, path: '/purchase-orders' },
+    { 
+      text: 'Dashboard', 
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+        </svg>
+      ), 
+      path: '/' 
+    },
+    { 
+      text: 'Purchase Orders', 
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+        </svg>
+      ), 
+      path: '/purchase-orders' 
+    },
     // Show User Management only to Admin users
-    ...(userRole === 'Admin' ? [{ text: 'User Management', icon: <PeopleIcon />, path: '/user-management' }] : []),
+    ...(userRole === 'Admin' ? [
+      { 
+        text: 'User Management', 
+        icon: (
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+        ), 
+        path: '/user-management' 
+      }
+    ] : []),
   ];
   
   // Utility menu
   const utilityItems: MenuItem[] = [
     { 
       text: 'Notifications', 
-      icon: <NotificationsIcon />, 
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" id="notification-button" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        </svg>
+      ), 
       badgeContent: currentNotificationCount,
       onClick: handleNotificationsClick
     },
     { 
       text: 'Logout', 
-      icon: <LogoutIcon />, 
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+        </svg>
+      ), 
       onClick: onLogout || (() => console.log('Logout clicked'))
     }
   ];
   
   const drawer = (
-    <>
+    <div className="flex flex-col h-full">
       <SidebarHeader 
         logo="Six Steps"
         isCollapsed={isCollapsed}
         onToggleCollapse={onToggleCollapse}
       />
       
+      <hr className="border-gray-200 my-2" />
+      
       {/* Main menu */}
-      <List sx={{ px: 1 }}>
+      <ul className="px-1.5">
         {mainMenuItems.map((item) => (
+          <li key={item.text}>
           <SidebarItem
-            key={item.text}
             icon={item.icon}
             text={item.text}
             to={item.path}
@@ -122,18 +137,19 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({
             isCollapsed={isCollapsed}
             onClick={item.onClick}
           />
+          </li>
         ))}
-      </List>
+      </ul>
       
-      <Box sx={{ flexGrow: 1 }} />
+      <div className="flex-grow"></div>
       
       {/* Utility menu (at bottom) */}
-      <Box sx={{ mt: 'auto' }}>
-        <Divider sx={{ my: 1 }} />
-        <List sx={{ px: 1 }}>
+      <div className="mt-auto">
+        <hr className="border-gray-200 my-2" />
+        <ul className="px-1.5">
           {utilityItems.map((item) => (
+            <li key={item.text}>
             <SidebarItem
-              key={item.text}
               icon={item.icon}
               text={item.text}
               to={item.path}
@@ -141,75 +157,56 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({
               badgeContent={item.badgeContent}
               onClick={item.onClick}
             />
+            </li>
           ))}
-        </List>
-      </Box>
+        </ul>
+      </div>
+    </div>
+  );
+  
+  return (
+    <nav className={`${isMobile ? '' : 'hidden sm:block'}`}>
+      {/* Mobile drawer (temporary) */}
+      {mobileOpen && (
+        <div className="block sm:hidden">
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-40"
+            onClick={onMobileClose}
+          ></div>
+          <div className={`
+            fixed left-0 top-0 bottom-0 
+            w-[${DRAWER_WIDTH}px] 
+            bg-white border-r border-gray-200 
+            shadow-lg z-50 
+            transition-transform duration-300
+          `}>
+        {drawer}
+          </div>
+        </div>
+      )}
       
-      {/* Notifications panel */}
+      {/* Desktop drawer (permanent) */}
+      <div className={`
+        hidden sm:block
+        fixed left-0 top-0 bottom-0
+        w-[${isCollapsed ? COLLAPSED_WIDTH : DRAWER_WIDTH}px]
+        bg-white border-r border-gray-200
+        transition-all duration-300 ease-in-out
+        ${isCollapsed ? 'shadow-none' : 'shadow-sm'}
+        overflow-hidden
+        z-30
+      `}>
+        {drawer}
+      </div>
+      
+      {/* Notifications Panel */}
       <NotificationsPanel
         anchorEl={notificationsAnchorEl}
-        open={Boolean(notificationsAnchorEl)}
+        open={!!notificationsAnchorEl}
         onClose={handleNotificationsClose}
         onNotificationsChange={handleNotificationsUpdate}
       />
-    </>
-  );
-  
-  // Current drawer width
-  const currentWidth = isCollapsed ? COLLAPSED_WIDTH : DRAWER_WIDTH;
-  
-  return (
-    <Box
-      component="nav"
-      sx={{
-        width: { sm: currentWidth },
-        flexShrink: { sm: 0 },
-      }}
-    >
-      {/* Mobile drawer (temporary) */}
-      <Drawer
-        variant="temporary"
-        open={mobileOpen}
-        onClose={onMobileClose}
-        ModalProps={{ keepMounted: true }}
-        sx={{
-          display: { xs: 'block', sm: 'none' },
-          '& .MuiDrawer-paper': {
-            boxSizing: 'border-box',
-            width: DRAWER_WIDTH,
-            borderRight: `1px solid ${theme.palette.divider}`,
-            backgroundImage: 'none',
-            boxShadow: theme.shadows[3]
-          },
-        }}
-      >
-        {drawer}
-      </Drawer>
-      
-      {/* Desktop drawer (permanent) */}
-      <Drawer
-        variant="permanent"
-        sx={{
-          display: { xs: 'none', sm: 'block' },
-          '& .MuiDrawer-paper': {
-            boxSizing: 'border-box',
-            width: currentWidth,
-            borderRight: `1px solid ${theme.palette.divider}`,
-            backgroundImage: 'none',
-            boxShadow: isCollapsed ? 'none' : theme.shadows[1],
-            transition: theme.transitions.create('width', {
-              easing: theme.transitions.easing.sharp,
-              duration: theme.transitions.duration.enteringScreen,
-            }),
-            overflowX: 'hidden',
-            backgroundColor: theme.palette.background.paper,
-          },
-        }}
-        open
-      >
-        {drawer}
-      </Drawer>
-    </Box>
+    </nav>
   );
 };
 

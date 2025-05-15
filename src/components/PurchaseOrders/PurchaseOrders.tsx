@@ -1,14 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Box,
-  Button,
-  Typography,
-  Container,
-} from '@mui/material';
-import {
-  Add as AddIcon,
-} from '@mui/icons-material';
 import { useToast } from '../../contexts/ToastContext';
 
 // Import our custom components
@@ -250,150 +241,120 @@ const PurchaseOrders: React.FC = () => {
     setCurrentTab(tab);
   };
 
-  // Handle creating a new ODA
+  // Handle creating a new purchase order
   const handleCreateOda = () => {
-    navigate('/');
-    showToast('Redirecting to Dashboard', 'info');
+    //navigate('/purchase-orders/new');
+    showToast('This feature is coming soon!', 'info');
   };
 
-  // Calculate total pages
-  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
-  
-  // Get current page items
+  // Get only the items for the current page
   const getCurrentPageItems = () => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filteredOrders.slice(startIndex, startIndex + itemsPerPage);
   };
 
-  // Funzione per ottenere i dettagli completi di un ordine
+  // Get full order details from order ID
   const getOrderDetails = (orderId: string): OrderDetailData => {
     const order = MOCK_ORDERS.find(o => o.id === orderId);
-    const orderProducts = ORDER_DETAILS[orderId] || [];
+    const products = ORDER_DETAILS[orderId] || [];
     const additionalInfo = ORDER_ADDITIONAL_INFO[orderId] || {};
     
     if (!order) {
-      throw new Error(`Order with ID ${orderId} not found`);
+      throw new Error(`Order ${orderId} not found`);
     }
     
     return {
       id: order.id,
       createdOn: order.createdOn,
       status: order.status,
-      totalProducts: order.totalProducts,
+      products,
+      deliveryAddress: additionalInfo.deliveryAddress || '',
+      deliveryDate: additionalInfo.deliveryDate || order.deliveryDate || order.estimatedDelivery || '',
+      paymentMethod: additionalInfo.paymentMethod || '',
+      notes: additionalInfo.notes || '',
       totalAmount: order.amount,
-      deliveryAddress: additionalInfo.deliveryAddress,
-      deliveryDate: order.deliveryDate || additionalInfo.deliveryDate,
-      paymentMethod: additionalInfo.paymentMethod,
-      notes: additionalInfo.notes,
-      products: orderProducts
+      totalProducts: order.items
     };
   };
 
-  // Order action handlers
+  // Handle opening the details modal
   const handleViewDetails = (id: string) => {
     try {
-      const orderDetails = getOrderDetails(id);
-      setSelectedOrderDetails(orderDetails);
+      const details = getOrderDetails(id);
+      setSelectedOrderDetails(details);
       setDetailsModalOpen(true);
     } catch (error) {
-      console.error('Error loading order details:', error);
-      showToast('Failed to load order details', 'error');
+      showToast(`Failed to load order details: ${error}`, 'error');
     }
   };
 
+  // Handle reordering
   const handleReorder = (id: string) => {
-    showToast(`Reordering ${id}`, 'info');
+    showToast(`Reordering order ${id}`, 'info');
   };
 
-  // Crea un oggetto di parametri per passare i dati alla dashboard
+  // Handle editing an order
   const handleEdit = (id: string) => {
-    try {
-      const orderDetails = getOrderDetails(id);
-      
-      // Prepara gli oggetti prodotto nel formato che si aspetta la dashboard
-      const productsParam = encodeURIComponent(JSON.stringify(
-        orderDetails.products.map(p => ({
-          id: p.id,
-          code: p.code,
-          name: p.name,
-          quantity: p.quantity,
-          targetPrice: p.unitPrice
-        }))
-      ));
-      
-      // Naviga alla dashboard passando i dati tramite query params
-      navigate(`/?edit=true&products=${productsParam}`);
-      
-      showToast('Redirecting to Dashboard with order products', 'info');
-    } catch (error) {
-      console.error('Error preparing order for edit:', error);
-      showToast('Failed to prepare order for editing', 'error');
-      navigate('/');
-    }
+    // navigate(`/purchase-orders/edit/${id}`);
+    showToast('This feature is coming soon!', 'info');
   };
 
+  // Handler for deleting an order
   const handleDelete = (id: string) => {
-    showToast(`Deleting ${id}`, 'warning');
+    showToast(`Order ${id} has been deleted`, 'success');
   };
 
+  // Handler for tracking an order
   const handleTrack = (id: string) => {
-    showToast(`Tracking ${id}`, 'info');
+    showToast(`Tracking information for order ${id} coming soon`, 'info');
   };
 
+  // Handler for following up on an order
   const handleFollowUp = (id: string) => {
-    showToast(`Following up on ${id}`, 'info');
+    showToast(`Follow up email sent for order ${id}`, 'success');
   };
 
+  // Handler for submitting a draft order
   const handleSubmit = (id: string) => {
-    showToast(`Submitting ${id}`, 'success');
+    showToast(`Draft order ${id} has been submitted for approval`, 'success');
   };
 
+  // Handler for continuing to edit a draft order
   const handleContinueEditing = (id: string) => {
-    handleEdit(id); // Usiamo la stessa logica di handleEdit
+    // navigate(`/purchase-orders/edit/${id}`);
+    showToast('This feature is coming soon!', 'info');
   };
 
-  // Handlers for order details modal
+  // Handler for printing an order
   const handlePrintOrder = () => {
-    showToast('Printing order details', 'info');
-    // Qui andrà la logica di stampa reale
+    window.print();
+    showToast('Printing order...', 'info');
   };
 
+  // Handler for downloading an order
   const handleDownloadOrder = () => {
-    showToast('Downloading order details', 'info');
-    // Qui andrà la logica di download reale
+    showToast('Order downloaded as PDF', 'success');
   };
 
   return (
-    <Container maxWidth={false}>
-      <Box sx={{ py: 3 }}>
-        {/* Header with title and create button */}
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          mb: 3 
-        }}>
-          <Typography variant="h4" component="h1" sx={{ fontWeight: 'medium' }}>
-            Purchase Orders (ODA)
-          </Typography>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={handleCreateOda}
-          >
-            Create New ODA
-          </Button>
-        </Box>
+    <div className="container mx-auto px-4 py-6">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-semibold">Purchase Orders</h1>
+          <p className="text-gray-600 text-sm">Manage and track your purchase orders</p>
+        </div>
+        <button
+          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center space-x-1"
+          onClick={handleCreateOda}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          <span>Create Order</span>
+        </button>
+      </div>
 
-        {/* Order tabs */}
-        <OrderTabs
-          currentTab={currentTab}
-          onTabChange={handleTabChange}
-          tabs={ORDER_TABS}
-        />
-
-        {/* Filter controls */}
+      <div className="mb-6">
         <OrderFilterControls
           searchValue={searchValue}
           statusValue={statusValue}
@@ -404,64 +365,52 @@ const PurchaseOrders: React.FC = () => {
           statusOptions={STATUS_OPTIONS}
           dateRangeOptions={DATE_RANGE_OPTIONS}
         />
+      </div>
 
-        {/* Orders list */}
-        <Box>
-          {getCurrentPageItems().map((order) => (
-            <OrderCard
-              key={order.id}
-              order={order}
-              onViewDetails={handleViewDetails}
-              onReorder={handleReorder}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onTrack={handleTrack}
-              onFollowUp={handleFollowUp}
-              onSubmit={handleSubmit}
-              onContinueEditing={handleContinueEditing}
-            />
-          ))}
+      <div className="mb-6">
+        <OrderTabs
+          tabs={ORDER_TABS}
+          currentTab={currentTab}
+          onTabChange={handleTabChange}
+        />
+      </div>
 
-          {filteredOrders.length === 0 && (
-            <Box sx={{ 
-              textAlign: 'center', 
-              py: 8, 
-              bgcolor: 'background.paper', 
-              borderRadius: 1, 
-              border: '1px dashed',
-              borderColor: 'divider'
-            }}>
-              <Typography variant="h6" color="text.secondary">
-                No orders found
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                Try adjusting your filters or create a new order
-              </Typography>
-              <Button
-                variant="outlined"
-                color="primary"
-                sx={{ mt: 2 }}
-                onClick={handleCreateOda}
-              >
-                Create New ODA
-              </Button>
-            </Box>
-          )}
-        </Box>
-
-        {/* Pagination */}
-        {filteredOrders.length > 0 && (
-          <OrderPagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={filteredOrders.length}
-            itemsPerPage={itemsPerPage}
-            onPageChange={setCurrentPage}
-            onItemsPerPageChange={setItemsPerPage}
+      <div className="mb-6">
+        {getCurrentPageItems().map(order => (
+          <OrderCard
+            key={order.id}
+            order={order}
+            onViewDetails={handleViewDetails}
+            onReorder={handleReorder}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onTrack={handleTrack}
+            onFollowUp={handleFollowUp}
+            onSubmit={handleSubmit}
+            onContinueEditing={handleContinueEditing}
           />
+        ))}
+        
+        {filteredOrders.length === 0 && (
+          <div className="p-8 bg-white rounded-lg shadow text-center">
+            <p className="text-gray-500">No orders found matching your criteria.</p>
+          </div>
         )}
-
-        {/* Order Details Modal */}
+      </div>
+      
+      {filteredOrders.length > 0 && (
+        <OrderPagination
+          currentPage={currentPage}
+          totalItems={filteredOrders.length}
+          totalPages={Math.ceil(filteredOrders.length / itemsPerPage)}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          onItemsPerPageChange={setItemsPerPage}
+        />
+      )}
+      
+      {/* Order Details Modal */}
+      {selectedOrderDetails && (
         <OrderDetailsModal
           open={detailsModalOpen}
           onClose={() => setDetailsModalOpen(false)}
@@ -469,8 +418,8 @@ const PurchaseOrders: React.FC = () => {
           onPrint={handlePrintOrder}
           onDownload={handleDownloadOrder}
         />
-      </Box>
-    </Container>
+      )}
+    </div>
   );
 };
 

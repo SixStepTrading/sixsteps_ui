@@ -1,7 +1,5 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider, CssBaseline } from '@mui/material';
-import theme from './theme';
 import { ToastProvider } from './contexts/ToastContext';
 import { SidebarProvider } from './contexts/SidebarContext';
 import { UserProvider } from './contexts/UserContext';
@@ -13,28 +11,27 @@ import PrivateRoute from './components/common/PrivateRoute';
 
 function App() {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
+    <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
       <ToastProvider>
         <SidebarProvider>
           <UserProvider>
-            <Router>
-              <MainLayout>
-                <Routes>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="/purchase-orders" element={<PurchaseOrders />} />
+          <Router>
+            <MainLayout>
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/purchase-orders" element={<PurchaseOrders />} />
                   <Route 
                     path="/user-management" 
                     element={<PrivateRoute element={<UserManagement />} requiredRole="Admin" />} 
                   />
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-              </MainLayout>
-            </Router>
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </MainLayout>
+          </Router>
           </UserProvider>
         </SidebarProvider>
       </ToastProvider>
-    </ThemeProvider>
+    </div>
   );
 }
 

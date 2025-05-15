@@ -9,6 +9,9 @@ declare module 'xlsx' {
 
   export const utils: {
     sheet_to_json<T>(worksheet: WorkSheet, options?: any): T[];
+    json_to_sheet<T>(data: T[], options?: any): WorkSheet;
+    book_new(): WorkBook;
+    book_append_sheet(workbook: WorkBook, worksheet: WorkSheet, name: string): void;
   };
 
   export function read(data: string | ArrayBuffer, options?: {
@@ -29,4 +32,6 @@ declare module 'xlsx' {
     bookVBA?: boolean;
     password?: string;
   }): WorkBook;
+  
+  export function writeFile(workbook: WorkBook, filename: string): void;
 } 

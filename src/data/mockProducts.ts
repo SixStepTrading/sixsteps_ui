@@ -18,6 +18,7 @@ export interface Product {
   vat: number;
   bestPrices: ProductPrice[];
   inStock: boolean;
+  image?: string;
 }
 
 // Helper function to generate random EAN-13
@@ -137,6 +138,32 @@ const generateProductName = (category: string): string => {
   return `${name} ${getRandomElement(formulations)}`;
 };
 
+// Generate placeholder image URLs for products
+const generatePlaceholderImage = (category: string): string => {
+  // Using a more reliable placeholder image service with category-based images
+  const categoryToImage: Record<string, string> = {
+    'Analgesics': 'https://images.unsplash.com/photo-1607619056574-7b8d3ee536b2?w=150&h=150&fit=crop',
+    'Antibiotics': 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=150&h=150&fit=crop',
+    'Antivirals': 'https://images.unsplash.com/photo-1631815588090-d4bfec5b1ccb?w=150&h=150&fit=crop',
+    'Vitamins': 'https://images.unsplash.com/photo-1577401239170-897942555fb3?w=150&h=150&fit=crop',
+    'Supplements': 'https://images.unsplash.com/photo-1622363902056-09b5cc941231?w=150&h=150&fit=crop',
+    'Dermatological': 'https://images.unsplash.com/photo-1576426863848-c21f53c60b19?w=150&h=150&fit=crop',
+    'Gastrointestinal': 'https://images.unsplash.com/photo-1578496479932-143476d3ca3d?w=150&h=150&fit=crop',
+    'Cardiovascular': 'https://images.unsplash.com/photo-1559757175-7b21e7afae0d?w=150&h=150&fit=crop',
+    'Respiratory': 'https://images.unsplash.com/photo-1584362917165-526a968579e8?w=150&h=150&fit=crop',
+    'Eye care': 'https://images.unsplash.com/photo-1516714819001-8ee7a3380b1a?w=150&h=150&fit=crop',
+    'Dental care': 'https://images.unsplash.com/photo-1571586100127-cdaef780fc61?w=150&h=150&fit=crop',
+    'First aid': 'https://images.unsplash.com/photo-1583947215259-38e31be8751f?w=150&h=150&fit=crop',
+    'Hygiene products': 'https://images.unsplash.com/photo-1605264964528-06416fe38727?w=150&h=150&fit=crop',
+    'Baby care': 'https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=150&h=150&fit=crop',
+    'Orthopedic': 'https://images.unsplash.com/photo-1538883726308-e679382d32a2?w=150&h=150&fit=crop',
+    'Diabetes management': 'https://images.unsplash.com/photo-1586015555917-809317b14d86?w=150&h=150&fit=crop'
+  };
+  
+  // Use category-specific image or a default one
+  return categoryToImage[category] || 'https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=150&h=150&fit=crop';
+};
+
 // Generate 1000 products
 export const generateMockProducts = (count: number = 1000): Product[] => {
   const products: Product[] = [];
@@ -177,7 +204,8 @@ export const generateMockProducts = (count: number = 1000): Product[] => {
       publicPrice,
       vat: category.includes('Baby') ? 4 : 22, // Different VAT rates
       bestPrices,
-      inStock
+      inStock,
+      image: generatePlaceholderImage(category)
     });
   }
   

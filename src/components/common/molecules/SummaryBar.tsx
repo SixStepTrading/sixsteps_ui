@@ -1,19 +1,4 @@
 import React from 'react';
-import {
-  Box,
-  Paper,
-  Typography,
-  Button,
-  Divider,
-  Slide,
-  useTheme,
-  useMediaQuery,
-  Stack
-} from '@mui/material';
-import {
-  Save as SaveIcon,
-  ShoppingCart as CartIcon
-} from '@mui/icons-material';
 
 interface SummaryBarProps {
   selectedCount: number;
@@ -23,6 +8,7 @@ interface SummaryBarProps {
   onCreateOrder: () => void;
   sidebarWidth: number;
   onSaveForLater?: () => void;
+  hasSelectionProblems?: boolean;
 }
 
 const SummaryBar: React.FC<SummaryBarProps> = ({
@@ -32,127 +18,69 @@ const SummaryBar: React.FC<SummaryBarProps> = ({
   onSaveAsDraft,
   onCreateOrder,
   sidebarWidth = 0,
-  onSaveForLater
+  onSaveForLater,
+  hasSelectionProblems = false
 }) => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isTablet = useMediaQuery(theme.breakpoints.down('md'));
+  // Non mostrare la barra se non ci sono elementi selezionati
+  if (selectedCount === 0) return null;
   
   return (
-    <Slide direction="up" in={selectedCount > 0} mountOnEnter unmountOnExit>
-      <Paper
-        elevation={4}
-        sx={{
-          position: 'fixed',
-          bottom: 0,
-          left: { xs: 0, sm: `${sidebarWidth}px` },
-          right: 0,
-          zIndex: 9999,
-          p: { xs: 1.5, sm: 2 },
-          display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
-          justifyContent: 'space-between',
-          alignItems: { xs: 'stretch', sm: 'center' },
-          bgcolor: theme.palette.background.paper,
-          borderTop: `1px solid ${theme.palette.divider}`,
-          boxShadow: '0px -2px 10px rgba(0, 0, 0, 0.1)',
-          transition: theme.transitions.create(['left'], {
-            easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.enteringScreen,
-          }),
-        }}
-      >
-        {/* Selection summary */}
-        <Box 
-          sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            mb: { xs: 1, sm: 0 } 
-          }}
-        >
-          <Box>
-            <Typography 
-              variant="body2" 
-              fontWeight="medium"
-              sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}
+    <div 
+      className="fixed bottom-0 z-50 transition-all duration-300 ease-in-out"
+      style={{
+        left: `${sidebarWidth + 24}px`, // 24px di padding dal sidebar
+        right: '24px' // 24px di padding dal lato destro
+      }}
+    >
+      <div className="bg-white border border-gray-200 rounded-t-lg shadow-lg px-6 py-4 max-w-5xl mx-auto">
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center">
+          {/* Selection summary */}
+          <div className="flex items-center mb-3 sm:mb-0">
+            <div>
+              <p className="text-sm font-medium">
+                Selected products: <span className="font-bold">{selectedCount}</span>
+              </p>
+              <p className="text-xs text-gray-500">
+                {totalItems} items in total
+              </p>
+            </div>
+          </div>
+
+          {/* Total price */}
+          <div className="flex items-center justify-between sm:justify-center mb-3 sm:mb-0 sm:mx-4">
+            <span className="text-lg font-bold text-blue-600">€{totalAmount.toFixed(2)}</span>
+            <span className="text-xs text-gray-500 sm:hidden ml-2">Total</span>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex justify-between sm:justify-end gap-3">
+            <button
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors duration-200 flex items-center"
+              onClick={onSaveAsDraft}
             >
-              Selected products: {selectedCount}
-            </Typography>
-            <Typography 
-              variant="caption" 
-              color="text.secondary"
-              sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6h5a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2h5v5.586l-1.293-1.293zM9 4a1 1 0 012 0v2H9V4z" />
+              </svg>
+              Save draft
+            </button>
+            
+            <button
+              className={`px-4 py-2 text-sm font-medium text-white rounded-md transition-colors duration-200 flex items-center
+                ${hasSelectionProblems 
+                  ? 'bg-gray-400 cursor-not-allowed' 
+                  : 'bg-blue-600 hover:bg-blue-700'}`}
+              onClick={onCreateOrder}
+              disabled={hasSelectionProblems}
             >
-              {totalItems} items in total
-            </Typography>
-          </Box>
-        </Box>
-
-        {/* Total price */}
-        <Box 
-          sx={{ 
-            display: { xs: 'flex', sm: 'block' }, 
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            mb: { xs: 1.5, sm: 0 }
-          }}
-        >
-          <Typography 
-            variant="h6" 
-            color="primary" 
-            sx={{ 
-              fontWeight: 'bold', 
-              fontSize: { xs: '1rem', sm: '1.1rem' }
-            }}
-          >
-            €{totalAmount.toFixed(2)}
-          </Typography>
-          <Typography 
-            variant="caption" 
-            color="text.secondary"
-            sx={{ 
-              fontSize: { xs: '0.7rem', sm: '0.75rem' },
-              display: { xs: 'block', sm: 'none' }
-            }}
-          >
-            Total
-          </Typography>
-        </Box>
-
-        {/* Mobile divider */}
-        {isMobile && <Divider sx={{ mb: 1.5 }} />}
-
-        {/* Action buttons */}
-        <Stack 
-          direction={{ xs: 'row', sm: 'row' }} 
-          spacing={{ xs: 1, sm: 1.5 }}
-          sx={{ 
-            width: { xs: '100%', sm: 'auto' },
-            justifyContent: { xs: 'space-between', sm: 'flex-end' }
-          }}
-        >
-          <Button
-            variant="outlined"
-            startIcon={<SaveIcon />}
-            size="small"
-            onClick={onSaveAsDraft}
-          >
-            {isTablet ? 'Save' : 'Save draft'}
-          </Button>
-          
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<CartIcon />}
-            size="small"
-            onClick={onCreateOrder}
-            sx={{ px: { xs: 2, sm: 3 } }}
-          >
-            {isTablet ? 'Create PO' : 'Create Order'}
-          </Button>
-        </Stack>
-      </Paper>
-    </Slide>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
+              </svg>
+              Create Order
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

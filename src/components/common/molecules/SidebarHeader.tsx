@@ -1,25 +1,4 @@
-import React from 'react';
-import { 
-  Box, 
-  Typography, 
-  IconButton, 
-  Divider, 
-  Tooltip, 
-  Paper,
-  Popper,
-  Grow,
-  ClickAwayListener,
-  Switch,
-  Stack,
-  Button,
-  alpha
-} from '@mui/material';
-import { 
-  KeyboardArrowLeft as CollapseIcon, 
-  KeyboardArrowDown as ArrowDownIcon,
-  AdminPanelSettings as AdminIcon,
-  ShoppingBag as BuyerIcon
-} from '@mui/icons-material';
+import React, { useState, useRef, useEffect } from 'react';
 import { UserAvatar } from '../atoms';
 import { useUser } from '../../../contexts/UserContext';
 
@@ -28,8 +7,6 @@ interface SidebarHeaderProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   avatarSrc?: string;
-  userName?: string;
-  userRole?: string;
 }
 
 const SidebarHeader: React.FC<SidebarHeaderProps> = ({
@@ -47,296 +24,219 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
   } = useUser();
   
   // State for profile popper
-  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
-  const open = Boolean(anchorEl);
-
-  // Handle clicks on the user avatar
-  const handleAvatarClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    setAnchorEl(anchorEl ? null : event.currentTarget);
-  };
-
-  // Handle menu close
-  const handleClose = () => {
-    setAnchorEl(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  
+  // Refs for tracking DOM elements
+  const menuRef = useRef<HTMLDivElement>(null);
+  const avatarRef = useRef<HTMLDivElement>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  // Handle toggling menu visibility
+  const toggleMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Clear any existing timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    
+    // Set new state with a small delay to prevent event conflict
+    timeoutRef.current = setTimeout(() => {
+      setMenuOpen(prev => !prev);
+    }, 10);
   };
 
   // Handle role switching
-  const handleRoleSwitch = (newRole: 'Admin' | 'Buyer') => {
-    setUserRole(newRole);
-    handleClose();
+  const handleRoleSwitch = (newRole: 'Admin' | 'Buyer', e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Set role with delay to avoid state conflicts
+    setTimeout(() => {
+      setUserRole(newRole);
+      setMenuOpen(false);
+    }, 10);
   };
+  
+  // Effect for handling clicks outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      // Check if click was outside both the menu and avatar
+      if (
+        menuRef.current && 
+        !menuRef.current.contains(event.target as Node) &&
+        avatarRef.current && 
+        !avatarRef.current.contains(event.target as Node)
+      ) {
+        setMenuOpen(false);
+      }
+    };
+    
+    // Only add listener when menu is open
+    if (menuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [menuOpen]);
+  
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <>
-      {/* Logo e controllo collasso */}
-      <Box 
-        sx={{ 
-          p: 2, 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: isCollapsed ? 'center' : 'space-between'
-        }}
-      >
+      {/* Logo and collapse control */}
+      <div className={`p-2 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
         {!isCollapsed && (
-          <Typography 
-            variant="h6" 
-            sx={{ 
-              fontWeight: 'bold', 
-              color: 'primary.main', 
-              fontSize: '1rem',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis'
-            }}
-          >
+          <h2 className="font-bold text-blue-600 text-base truncate">
             {logo}
-          </Typography>
+          </h2>
         )}
         
-        <Tooltip title={isCollapsed ? "Espandi menu" : "Comprimi menu"}>
-          <IconButton
+        <button
             onClick={onToggleCollapse}
-            size="small"
-            edge={isCollapsed ? 'start' : 'end'}
-            color="primary"
-            sx={{
-              border: '1px solid',
-              borderColor: 'primary.light',
-              bgcolor: 'primary.lighter',
-              transition: 'transform 0.3s ease-in-out',
-              transform: isCollapsed ? 'rotate(180deg)' : 'rotate(0deg)',
-              '&:hover': {
-                bgcolor: 'primary.light',
-              }
-            }}
+          className={`
+            p-1.5
+            text-blue-600
+            border border-blue-200
+            bg-blue-50
+            hover:bg-blue-100
+            rounded-full
+            transition-transform duration-300
+            ${isCollapsed ? 'rotate-180' : 'rotate-0'}
+          `}
+          title={isCollapsed ? "Expand menu" : "Collapse menu"}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+      </div>
+      
+      {/* User profile */}
+      <div className="px-2 py-1.5 relative">
+        <div 
+          ref={avatarRef}
+          onClick={toggleMenu}
+          className={`
+            flex items-center
+            cursor-pointer
+            transition-all duration-200
+            p-2
+            rounded-lg
+            hover:bg-blue-50
+            ${isCollapsed ? 'justify-center' : 'justify-start'}
+          `}
+        >
+          <div className={`relative ${isCollapsed ? 'flex flex-col items-center' : 'flex items-center'}`}>
+            {/* Avatar */}
+            <div className={`${isCollapsed ? 'w-10 h-10' : 'w-12 h-12'} rounded-full bg-blue-100 flex items-center justify-center overflow-hidden text-blue-600 font-medium border-2 border-white shadow-sm`}>
+              {avatarSrc ? (
+                <img src={avatarSrc} alt={userName} className="w-full h-full object-cover" />
+              ) : (
+                <span className={`${isCollapsed ? 'text-sm' : 'text-lg'}`}>{userName?.charAt(0)}</span>
+              )}
+            </div>
+            
+            {/* User info (only when sidebar is expanded) */}
+            {!isCollapsed && (
+              <div className="ml-3 flex-grow">
+                <div className="font-medium text-gray-800 text-sm">{userName}</div>
+                <div className="text-xs text-gray-500">{userDescription}</div>
+              </div>
+            )}
+            
+            {/* Role indicator */}
+            {!isCollapsed ? (
+              <div className="ml-auto flex items-center text-gray-500">
+                <div className={`w-2 h-2 rounded-full mr-1 transition-all duration-200 ${userRole === 'Admin' ? 'bg-red-500' : 'bg-green-500'}`}></div>
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  className={`h-4 w-4 transition-transform duration-200 ${menuOpen ? 'rotate-180' : 'rotate-0'}`} 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            ) : (
+              <div 
+                className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${userRole === 'Admin' ? 'bg-red-500' : 'bg-green-500'}`}
+                title="Click to change role"
+              ></div>
+            )}
+          </div>
+        </div>
+
+        {/* Role selector popup */}
+        {menuOpen && (
+          <div 
+            ref={menuRef}
+            className={`
+              absolute z-50 bg-white rounded-lg shadow-lg p-4 mt-2
+              border border-gray-200 min-w-[240px]
+              ${isCollapsed ? 'left-full ml-4' : 'left-0 top-full'}
+            `}
           >
-            <CollapseIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-      </Box>
-      
-      {/* Profilo utente (migliorato) */}
-      <Box 
-        sx={{ 
-          px: 2, 
-          py: 1.5,
-          position: 'relative'
-        }}
-      >
-        <Box
-          onClick={handleAvatarClick}
-          sx={{ 
-            display: 'flex', 
-            alignItems: 'center',
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-            p: isCollapsed ? 0.5 : 1,
-            borderRadius: 1.5,
-            position: 'relative',
-            justifyContent: isCollapsed ? 'center' : 'flex-start',
-            '&:hover': {
-              bgcolor: alpha('#4285F4', 0.08),
-              '& .role-indicator': {
-                boxShadow: '0 0 0 2px #fff, 0 0 0 4px currentColor'
-              }
-            }
-          }}
-          aria-describedby={open ? 'role-popper' : undefined}
-        >
-          <UserAvatar
-            name={userName}
-            role={isCollapsed ? undefined : userDescription}
-            avatarSrc={avatarSrc}
-            size={isCollapsed ? 'medium' : 'large'}
-            showInfo={!isCollapsed}
-            sx={{
-              flexDirection: isCollapsed ? 'column' : 'row',
-              alignItems: isCollapsed ? 'center' : 'flex-start',
-            }}
-          />
-
-          {!isCollapsed && (
-            <Box 
-              sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                ml: 'auto', 
-                color: 'text.secondary',
-                fontSize: '0.8rem'
-              }}
-            >
-              <Box 
-                className="role-indicator"
-                sx={{ 
-                  width: 8, 
-                  height: 8, 
-                  borderRadius: '50%', 
-                  bgcolor: userRole === 'Admin' ? 'error.main' : 'success.main',
-                  color: userRole === 'Admin' ? 'error.main' : 'success.main',
-                  mr: 0.5,
-                  transition: 'all 0.2s'
-                }}
-              />
-              <ArrowDownIcon 
-                fontSize="small" 
-                sx={{ 
-                  fontSize: '1rem',
-                  transition: 'transform 0.2s',
-                  transform: open ? 'rotate(180deg)' : 'rotate(0deg)'
-                }}
-              />
-            </Box>
-          )}
-
-          {isCollapsed && (
-            <Tooltip title="Click per cambiare ruolo" placement="right">
-              <Box 
-                className="role-indicator"
-                sx={{ 
-                  position: 'absolute',
-                  bottom: -2,
-                  right: -2,
-                  width: 12, 
-                  height: 12, 
-                  borderRadius: '50%', 
-                  bgcolor: userRole === 'Admin' ? 'error.main' : 'success.main',
-                  color: userRole === 'Admin' ? 'error.main' : 'success.main',
-                  border: '2px solid #fff',
-                  boxShadow: '0 0 0 1px rgba(0,0,0,0.1)',
-                  transition: 'all 0.2s',
-                  zIndex: 1
-                }}
-              />
-            </Tooltip>
-          )}
-        </Box>
-
-        {/* Role Selector Popper */}
-        <Popper
-          id="role-popper"
-          open={open}
-          anchorEl={anchorEl}
-          placement={isCollapsed ? "right" : "bottom-start"}
-          transition
-          disablePortal={false}
-          modifiers={[
-            {
-              name: 'preventOverflow',
-              enabled: true,
-              options: {
-                altAxis: true,
-                altBoundary: true,
-                boundary: document.body
-              },
-            },
-          ]}
-          sx={{ 
-            zIndex: 1300,
-            width: 'auto',
-            minWidth: 240
-          }}
-        >
-          {({ TransitionProps }) => (
-            <Grow
-              {...TransitionProps}
-              style={{ 
-                transformOrigin: isCollapsed ? 'left center' : 'top left',
-                marginLeft: isCollapsed ? '16px' : '0'
-              }}
-            >
-              <Paper 
-                elevation={8}
-                sx={{ 
-                  p: 2,
-                  mt: isCollapsed ? 0 : 0.5,
-                  overflow: 'hidden',
-                  border: '1px solid',
-                  borderColor: 'divider'
-                }}
-              >
-                <ClickAwayListener onClickAway={handleClose}>
-                  <Box>
-                    {isCollapsed && (
-                      <Box sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
-                        <UserAvatar
-                          name={userName}
-                          size="small"
-                          avatarSrc={avatarSrc}
-                          showInfo={false}
-                        />
-                        <Box sx={{ ml: 1 }}>
-                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                            {userName}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {userDescription}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    )}
-                    
-                    <Typography
-                      variant="subtitle2"
-                      color="text.secondary"
-                      sx={{ mb: 2, fontWeight: 500 }}
-                    >
-                      Seleziona Ruolo
-                    </Typography>
-
-                    {/* Role Toggle */}
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        width: '100%',
-                        mb: 2
-                      }}
-                    >
-                      <Stack direction="row" spacing={2} alignItems="center">
-                        <Button
-                          variant={userRole === 'Buyer' ? 'contained' : 'outlined'}
-                          onClick={() => handleRoleSwitch('Buyer')}
-                          startIcon={<BuyerIcon />}
-                          color="primary"
-                          fullWidth
-                          sx={{ 
-                            justifyContent: 'flex-start',
-                            py: 1,
-                            borderRadius: 2,
-                            backgroundColor: userRole === 'Buyer' ? 'primary.main' : 'transparent',
-                            borderColor: userRole === 'Buyer' ? 'primary.main' : 'divider'
-                          }}
-                        >
-                          Buyer
-                        </Button>
-                        
-                        <Button
-                          variant={userRole === 'Admin' ? 'contained' : 'outlined'}
-                          onClick={() => handleRoleSwitch('Admin')}
-                          startIcon={<AdminIcon />}
-                          color="error"
-                          fullWidth
-                          sx={{ 
-                            justifyContent: 'flex-start',
-                            py: 1,
-                            borderRadius: 2,
-                            backgroundColor: userRole === 'Admin' ? 'error.main' : 'transparent',
-                            borderColor: userRole === 'Admin' ? 'error.main' : 'divider'
-                          }}
-                        >
-                          Admin
-                        </Button>
-                      </Stack>
-                    </Box>
-                  </Box>
-                </ClickAwayListener>
-              </Paper>
-            </Grow>
-          )}
-        </Popper>
-      </Box>
-      
-      <Divider sx={{ my: 1 }} />
+            <div className="text-sm font-medium text-gray-900 border-b pb-2 mb-2">
+              User Profile
+            </div>
+            
+            <div className="flex flex-col space-y-2">
+              <div className="text-xs text-gray-500">SWITCH ROLE</div>
+              
+              <div className="flex flex-col space-y-2">
+                <button
+                  onClick={(e) => handleRoleSwitch('Admin', e)}
+                  className={`
+                    flex items-center p-2 rounded-md text-left
+                    ${userRole === 'Admin' ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50'}
+                  `}
+                >
+                  <div className={`w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center mr-2`}>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="font-medium text-sm">Admin</div>
+                    <div className="text-xs text-gray-500">Full access to all features</div>
+                  </div>
+                </button>
+                
+                <button
+                  onClick={(e) => handleRoleSwitch('Buyer', e)}
+                  className={`
+                    flex items-center p-2 rounded-md text-left
+                    ${userRole === 'Buyer' ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50'}
+                  `}
+                >
+                  <div className={`w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center mr-2`}>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="font-medium text-sm">Buyer</div>
+                    <div className="text-xs text-gray-500">Limited to purchase functions</div>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </>
   );
 };

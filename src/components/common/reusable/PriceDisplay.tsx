@@ -1,6 +1,4 @@
 import React from 'react';
-import { Typography, Box, Tooltip } from '@mui/material';
-import { Info as InfoIcon } from '@mui/icons-material';
 
 interface PriceDisplayProps {
   publicPrice: number;
@@ -32,41 +30,30 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({
   const netPercentDifference = Math.abs(((netPublicPrice - supplierPrice) / netPublicPrice) * 100);
 
   return (
-    <Box sx={{ backgroundColor: backgroundColor || 'transparent' }}>
-      <Typography variant="body2" sx={{ 
-        fontWeight: 'medium', 
-        fontSize: compact ? '0.75rem' : '0.875rem',
-        lineHeight: compact ? 1.2 : 1.43
-      }}>
+    <div className={`${backgroundColor ? '' : 'bg-transparent'}`}>
+      <p className={`font-medium ${compact ? 'text-[0.75rem] leading-tight' : 'text-[0.875rem] leading-normal'}`}>
         €{supplierPrice.toFixed(2)}
-      </Typography>
+      </p>
       
-      <Typography variant="caption" color="error" sx={{ 
-        fontSize: compact ? '0.65rem' : '0.75rem', 
-        display: 'block',
-        lineHeight: compact ? 1.1 : 1.25
-      }}>
+      <p className={`text-red-600 ${compact ? 'text-[0.65rem] leading-tight' : 'text-[0.75rem] leading-snug'} block`}>
         -€{priceDifference.toFixed(2)} 
-        <span style={{ color: '#d32f2f', fontWeight: 'bold' }}>
+        <span className="text-red-600 font-bold">
           ({percentDifference.toFixed(1)}%)
         </span>
-      </Typography>
+      </p>
       
       {showNetVAT && !compact && (
-        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', display: 'block' }}>
-          Sconto Netto: <span style={{ color: '#d32f2f', fontWeight: 'bold' }}>
+        <p className="text-gray-500 text-[0.7rem] block">
+          Sconto Netto: <span className="text-red-600 font-bold">
             {netPercentDifference.toFixed(1)}%
           </span>
-        </Typography>
+        </p>
       )}
       
-      <Typography variant="body2" sx={{ 
-        fontSize: compact ? '0.7rem' : '0.8rem',
-        lineHeight: compact ? 1.1 : 1.2
-      }}>
+      <p className={`${compact ? 'text-[0.7rem] leading-tight' : 'text-[0.8rem] leading-snug'}`}>
         Stock: {stock}
-      </Typography>
-    </Box>
+      </p>
+    </div>
   );
 };
 

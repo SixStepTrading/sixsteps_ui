@@ -1,53 +1,5 @@
 /// <reference path="../../types/xlsx.d.ts" />
 import React, { useState, useEffect, useCallback, useRef, ChangeEvent } from 'react';
-import { 
-  Box, 
-  Button, 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  Divider, 
-  Grid, 
-  Typography, 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow,
-  Chip,
-  IconButton,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Checkbox,
-  TablePagination,
-  CircularProgress,
-  SelectChangeEvent,
-  Alert,
-  Snackbar,
-  Tooltip,
-  Paper
-} from '@mui/material';
-import { 
-  ShoppingCart, 
-  AttachMoney, 
-  Inventory, 
-  LocalShipping,
-  Add as AddIcon,
-  Search as SearchIcon,
-  ArrowForwardIos as ArrowForwardIosIcon,
-  FilterList as FilterListIcon,
-  Clear as ClearIcon,
-  Refresh as RefreshIcon,
-  Info as InfoIcon,
-  KeyboardArrowDown as KeyboardArrowDownIcon,
-  KeyboardArrowUp as KeyboardArrowUpIcon,
-  KeyboardArrowRight as KeyboardArrowRightIcon,
-  Upload as UploadIcon
-} from '@mui/icons-material';
 import debounce from 'lodash/debounce';
 import StatCard from '../common/StatCard';
 import { useToast } from '../../contexts/ToastContext';
@@ -67,6 +19,93 @@ import FileUploadModal from '../common/reusable/FileUploadModal';
 import OrderConfirmationModal, { ProductItem, OrderData } from '../common/molecules/OrderConfirmationModal';
 import AddProductModal, { ProductFormData } from '../common/molecules/AddProductModal';
 import { v4 as uuid } from 'uuid';
+import ProductTable from './ProductTable';
+
+// Icons (we'll use SVG or Heroicons)
+const ShoppingCartIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+  </svg>
+);
+
+const MoneyIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+);
+
+const InventoryIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+  </svg>
+);
+
+const ShippingIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
+  </svg>
+);
+
+const AddIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+  </svg>
+);
+
+const SearchIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+  </svg>
+);
+
+const FilterListIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+  </svg>
+);
+
+const ClearIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+  </svg>
+);
+
+const RefreshIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+  </svg>
+);
+
+const InfoIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+);
+
+const ArrowDownIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+  </svg>
+);
+
+const ArrowUpIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+  </svg>
+);
+
+const ArrowRightIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+  </svg>
+);
+
+const UploadIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+  </svg>
+);
 
 // Interface for product with quantity
 interface ProductWithQuantity extends Product {
@@ -145,6 +184,9 @@ const Dashboard: React.FC = () => {
 
   // State per la modale di aggiunta prodotto
   const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
+
+  // New state for selection problems
+  const [selectionWithProblems, setSelectionWithProblems] = useState(false);
 
   // Funzione per gestire l'apertura/chiusura della visualizzazione di tutti i prezzi
   const handleToggleAllPrices = (productId: string) => {
@@ -1092,63 +1134,60 @@ const Dashboard: React.FC = () => {
     );
   };
 
+  // Add handler for selection problems
+  const handleSelectionWithProblemsChange = (hasProblems: boolean) => {
+    setSelectionWithProblems(hasProblems);
+  };
+
   return (
-    <Box sx={{ flexGrow: 1, p: 3, pb: 20 }}>
+    <div className="flex-grow p-3 pb-20">
+      {/* Error notifications */}
       {error && (
-        <Snackbar 
-          open={!!error} 
-          autoHideDuration={6000} 
-          onClose={handleCloseError}
-          sx={{ zIndex: 10100 }} // Higher than SummaryBar (9999)
-          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-        >
-          <Alert 
-            onClose={handleCloseError} 
-            severity="warning" 
-            sx={{ width: '100%', boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.15)' }}
-            elevation={6}
-          >
-            {error}
-          </Alert>
-        </Snackbar>
+        <div className="fixed top-4 right-4 z-[10100] w-96 shadow-lg">
+          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-md flex items-start">
+            <div className="flex-grow">
+              <div className="text-yellow-800 font-medium">{error}</div>
+            </div>
+            <button 
+              className="ml-2 text-yellow-400 hover:text-yellow-600"
+              onClick={handleCloseError}
+            >
+              <ClearIcon />
+            </button>
+          </div>
+        </div>
       )}
       
       {uploadError && (
-        <Snackbar 
-          open={!!uploadError} 
-          autoHideDuration={6000} 
-          onClose={() => setUploadError(null)}
-          sx={{ zIndex: 10100 }} // Higher than SummaryBar (9999)
-          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-        >
-          <Alert 
-            onClose={() => setUploadError(null)} 
-            severity="error" 
-            sx={{ width: '100%', boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.15)' }}
-            elevation={6}
-          >
-            {uploadError}
-          </Alert>
-        </Snackbar>
+        <div className="fixed top-4 right-4 z-[10100] w-96 shadow-lg">
+          <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-md flex items-start">
+            <div className="flex-grow">
+              <div className="text-red-800 font-medium">{uploadError}</div>
+            </div>
+            <button 
+              className="ml-2 text-red-400 hover:text-red-600"
+              onClick={() => setUploadError(null)}
+            >
+              <ClearIcon />
+            </button>
+          </div>
+        </div>
       )}
       
       {uploadSuccess && (
-        <Snackbar 
-          open={uploadSuccess} 
-          autoHideDuration={3000} 
-          onClose={() => setUploadSuccess(false)}
-          sx={{ zIndex: 10100 }} // Higher than SummaryBar (9999)
-          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-        >
-          <Alert 
-            onClose={() => setUploadSuccess(false)} 
-            severity="success" 
-            sx={{ width: '100%', boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.15)' }}
-            elevation={6}
-          >
-            File processed successfully
-          </Alert>
-        </Snackbar>
+        <div className="fixed top-4 right-4 z-[10100] w-96 shadow-lg">
+          <div className="bg-green-50 border-l-4 border-green-400 p-4 rounded-md flex items-start">
+            <div className="flex-grow">
+              <div className="text-green-800 font-medium">File processed successfully</div>
+            </div>
+            <button 
+              className="ml-2 text-green-400 hover:text-green-600"
+              onClick={() => setUploadSuccess(false)}
+            >
+              <ClearIcon />
+            </button>
+          </div>
+        </div>
       )}
 
       {/* File Upload Modal */}
@@ -1159,345 +1198,143 @@ const Dashboard: React.FC = () => {
         acceptedFileTypes=".xlsx,.xls,.csv"
       />
       
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box>
-        <Typography variant="h4" sx={{ fontWeight: 'medium' }}>Dashboard</Typography>
-          <Typography variant="body2" color="text.secondary">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-medium">Dashboard</h1>
+          <p className="text-gray-500 text-sm">
             Welcome back! Here's what's happening with your pharmacy business today.
-          </Typography>
-        </Box>
+          </p>
+        </div>
 
-      </Box>
-
-      <Grid container spacing={3}>
-        {/* Product Catalog */}
-        <Grid size={{ xs: 12 }}>
-          {/* ProductFilter integrato direttamente senza Card */}
-          <ProductFilter
-            values={filterValues}
-            onChange={handleFilterChange}
-            onApplyFilters={handleApplyFilters}
-            categories={categories.map(cat => ({ value: cat, label: cat }))}
-            manufacturers={manufacturers.map(mfr => ({ value: mfr, label: mfr }))}
-            suppliers={suppliers}
-          />
-
-          {/* Table Card */}
-          <Card>
-            <CardHeader 
-              title="Product Catalog" 
-              titleTypographyProps={{ variant: 'h6' }}
-              action={
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  {/* Removed "Using Mock Data" chip */}
-                  
-                  {isAdmin && (
-                    <Button
-                      size="small"
-                      variant="contained"
-                      color="primary"
-                      startIcon={<AddIcon />}
-                      onClick={handleOpenAddProductModal}
-                    >
-                      Add Product
-                    </Button>
+        {/* Buttons moved here from below */}
+        <div className="flex gap-2 items-center">
+          {isAdmin && (
+            <button
+              className="flex items-center gap-1 bg-blue-600 text-white text-sm py-1 px-3 rounded hover:bg-blue-700 transition-colors"
+              onClick={handleOpenAddProductModal}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+              Add Product
+            </button>
                   )}
                   
                   {/* File Upload Button */}
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    startIcon={<UploadIcon />}
+          <button
+            className={`flex items-center gap-1 border text-sm py-1 px-3 rounded 
+              ${loading || fileUploading 
+                ? 'border-gray-300 text-gray-400 cursor-not-allowed' 
+                : 'border-blue-600 text-blue-600 hover:bg-blue-50 transition-colors'}
+            `}
                     onClick={handleUploadButtonClick}
                     disabled={loading || fileUploading}
-                    color="primary"
                   >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+            </svg>
                     {fileUploading ? 'Processing...' : 'Upload Products'}
-                  </Button>
+          </button>
                   
-                  <Button 
-                    size="small" 
-                    variant="outlined"
-                    startIcon={<RefreshIcon />}
+          <button 
+            className={`flex items-center gap-1 border text-sm py-1 px-3 rounded 
+              ${loading || fileUploading 
+                ? 'border-gray-300 text-gray-400 cursor-not-allowed' 
+                : 'border-gray-500 text-gray-700 hover:bg-gray-50 transition-colors'}
+            `}
                     onClick={handleRefresh}
                     disabled={loading || fileUploading}
                   >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+            </svg>
                     Refresh
-                  </Button>
-              </Box>
-              }
+          </button>
+        </div>
+      </div>
+
+      {/* Search and filter controls converted to Tailwind */}
+      <div className="mb-6 bg-gray-50 p-4 rounded-lg max-w-4xl mx-auto">
+        <div className={`grid grid-cols-1 ${isAdmin ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-4`}>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4 text-gray-500">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+              </svg>
+            </div>
+            <input 
+              type="text" 
+              placeholder="Search products by name, code, EAN..." 
+              className="w-full py-2 pl-10 pr-3 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              value={filterValues.searchTerm || ''}
+              onChange={(e) => handleFilterChange({...filterValues, searchTerm: e.target.value})}
             />
-            <Divider />
-            <CardContent sx={{ p: 0 }}>
-              {loading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-                  <CircularProgress />
-                </Box>
-              ) : (
-                <>
-                  <TableContainer 
-                    ref={tableRef}
-                    sx={{ 
-                      height: 600, 
-                      maxHeight: 600, 
-                      overflow: 'auto',
-                      position: 'relative',
-                      width: '100%',
-                      '& .MuiTableCell-root': {
-                        whiteSpace: 'nowrap',
-                        padding: '6px 16px',
-                        fontSize: '0.875rem'
-                      },
-                      '& .MuiTableRow-root': {
-                        height: 'auto'
-                      },
-                      '& .MuiInputBase-root': {
-                        fontSize: '0.875rem'
-                      },
-                      '& .MuiCheckbox-root': {
-                        padding: '3px'
-                      },
-                      '&::-webkit-scrollbar': {
-                        width: '10px',
-                        height: '10px'
-                      },
-                      '&::-webkit-scrollbar-thumb': {
-                        backgroundColor: 'rgba(0,0,0,0.2)',
-                        borderRadius: '10px'
-                      },
-                      '&::-webkit-scrollbar-track': {
-                        backgroundColor: 'rgba(0,0,0,0.05)'
-                      }
-                    }}
-                  >
-                    <Table stickyHeader size="small">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell padding="checkbox" sx={{ 
-                            position: 'sticky', 
-                            left: 0, 
-                            top: 0,
-                            zIndex: 20,
-                            bgcolor: '#f5f5f5',
-                            borderRight: '1px solid rgba(224, 224, 224, 0.7)',
-                            borderBottom: '2px solid rgba(224, 224, 224, 1)',
-                            boxShadow: '0 2px 2px -1px rgba(0,0,0,0.1)'
-                          }}>
-                            <Checkbox
-                              indeterminate={selected.length > 0 && selected.length < filteredProducts.filter(p => p.quantity > 0).length}
-                              checked={filteredProducts.filter(p => p.quantity > 0).length > 0 && selected.length === filteredProducts.filter(p => p.quantity > 0).length}
-                              onChange={handleSelectAllClick}
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell sx={{ 
-                            position: 'sticky', 
-                            left: 50, 
-                            top: 0,
-                            zIndex: 20,
-                            bgcolor: '#f5f5f5',
-                            borderRight: '1px solid rgba(224, 224, 224, 0.7)',
-                            borderBottom: '2px solid rgba(224, 224, 224, 1)',
-                            boxShadow: '0 2px 2px -1px rgba(0,0,0,0.1)'
-                          }}>#</TableCell>
-                          <TableCell sx={{ 
-                            position: 'sticky', 
-                            left: 90, 
-                            top: 0,
-                            zIndex: 20,
-                            bgcolor: '#f5f5f5',
-                            borderRight: '1px solid rgba(224, 224, 224, 0.7)',
-                            borderBottom: '2px solid rgba(224, 224, 224, 1)',
-                            minWidth: 160,
-                            boxShadow: '0 2px 2px -1px rgba(0,0,0,0.1)'
-                          }}>Product Codes</TableCell>
-                          <TableCell sx={{ 
-                            position: 'sticky', 
-                            left: 250, 
-                            top: 0,
-                            zIndex: 20,
-                            bgcolor: '#f5f5f5',
-                            borderRight: '1px solid rgba(224, 224, 224, 0.7)',
-                            borderBottom: '2px solid rgba(224, 224, 224, 1)',
-                            minWidth: 200, 
-                            boxShadow: '0 2px 2px -1px rgba(0,0,0,0.1)'
-                          }}>Product Name</TableCell>
-                          <TableCell sx={{ 
-                            position: 'sticky', 
-                            left: 450, 
-                            top: 0,
-                            zIndex: 20,
-                            bgcolor: '#f5f5f5',
-                            borderRight: '1px solid rgba(224, 224, 224, 0.7)',
-                            borderBottom: '2px solid rgba(224, 224, 224, 1)',
-                            minWidth: 100, 
-                            boxShadow: '0 2px 2px -1px rgba(0,0,0,0.1)'
-                          }}>Public Price</TableCell>
-                          <TableCell sx={{ 
-                            position: 'sticky', 
-                            left: 550, 
-                            top: 0,
-                            zIndex: 20,
-                            bgcolor: '#f5f5f5',
-                            borderRight: '1px solid rgba(224, 224, 224, 0.7)',
-                            borderBottom: '2px solid rgba(224, 224, 224, 1)',
-                            minWidth: 120,
-                            boxShadow: '0 2px 2px -1px rgba(0,0,0,0.1)'
-                          }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              Quantity
-                              <Tooltip title="Enter the quantity you want to order. The system will calculate the best price from available suppliers.">
-                                <IconButton size="small" sx={{ padding: '2px' }}>
-                                  <InfoIcon fontSize="small" sx={{ fontSize: '1rem' }} />
-                                </IconButton>
-                              </Tooltip>
-                            </Box>
-                          </TableCell>
-                          <TableCell sx={{ 
-                            position: 'sticky', 
-                            left: 670, 
-                            top: 0,
-                            zIndex: 20,
-                            bgcolor: '#f5f5f5',
-                            borderRight: '1px solid rgba(224, 224, 224, 0.7)',
-                            borderBottom: '2px solid rgba(224, 224, 224, 1)',
-                            minWidth: 150,
-                            boxShadow: '3px 0 5px -1px rgba(0,0,0,0.15), 0 2px 2px -1px rgba(0,0,0,0.1)'
-                          }}>
-                            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                Target Price
-                                <Tooltip title="Set your desired target price. This helps identify if current supplier prices match your expectations.">
-                                <IconButton size="small" sx={{ padding: '2px' }}>
-                                  <InfoIcon fontSize="small" sx={{ fontSize: '1rem' }} />
-                                </IconButton>
-                              </Tooltip>
-                              </Box>
-                              <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-                                (Avg. Price)
-                              </Typography>
-                            </Box>
-                          </TableCell>
-                          <TableCell sx={{ 
-                            position: 'sticky',
-                            top: 0,
-                            zIndex: 15,
-                            bgcolor: '#e8f5e9', 
-                            minWidth: 120,
-                            borderBottom: '2px solid rgba(224, 224, 224, 1)',
-                            boxShadow: '0 2px 2px -1px rgba(0,0,0,0.1)'
-                          }}>Best Price</TableCell>
-                          <TableCell sx={{ 
-                            position: 'sticky',
-                            top: 0,
-                            zIndex: 15,
-                            bgcolor: '#e3f2fd', 
-                            minWidth: 120,
-                            borderBottom: '2px solid rgba(224, 224, 224, 1)',
-                            boxShadow: '0 2px 2px -1px rgba(0,0,0,0.1)'
-                          }}>2nd Best</TableCell>
-                          <TableCell sx={{ 
-                            position: 'sticky',
-                            top: 0,
-                            zIndex: 15,
-                            bgcolor: '#f3e5f5', 
-                            minWidth: 120,
-                            borderBottom: '2px solid rgba(224, 224, 224, 1)',
-                            boxShadow: '0 2px 2px -1px rgba(0,0,0,0.1)'
-                          }}>3rd Best</TableCell>
-                          <TableCell sx={{ 
-                            position: 'sticky',
-                            top: 0,
-                            zIndex: 15,
-                            bgcolor: '#f5f5f5',
-                            minWidth: 120,
-                            borderBottom: '2px solid rgba(224, 224, 224, 1)',
-                            boxShadow: '0 2px 2px -1px rgba(0,0,0,0.1)'
-                          }}>Other prices</TableCell>
-                          
-                          {/* Dynamic additional price columns in header */}
-                          {filteredProducts.some(p => p.showAllPrices && p.bestPrices.length > 3) && 
-                            Array.from({ length: Math.max(...filteredProducts
-                              .filter(p => p.showAllPrices)
-                              .map(p => p.bestPrices.length > 3 ? p.bestPrices.length - 3 : 0)) }, (_, i) => (
-                              <TableCell key={i} sx={{ 
-                                position: 'sticky',
-                                top: 0,
-                                zIndex: 15,
-                                bgcolor: '#f8f8f8', 
-                                minWidth: 120,
-                                borderBottom: '2px solid rgba(224, 224, 224, 1)',
-                                boxShadow: '0 2px 2px -1px rgba(0,0,0,0.1)'
-                              }}>
-                                Price {i + 4}
-                              </TableCell>
-                            ))
-                          }
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                        {filteredProducts.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={12} align="center" sx={{ py: 6 }}>
-                              <Typography variant="h6" color="text.secondary">
-                                No products found
-                              </Typography>
-                              <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 500, mx: 'auto', mt: 1 }}>
-                                Try adjusting your search or filter criteria to find products.
-                              </Typography>
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          filteredProducts
-                            .slice(usingMockData ? page * rowsPerPage : 0, usingMockData ? page * rowsPerPage + rowsPerPage : rowsPerPage)
-                            .map((product, index) => {
-                              const isItemSelected = isSelected(product.id);
-                              return (
-                                <ProductRow
-                                  key={product.id}
-                                  product={product}
-                                  index={index}
-                                  isSelected={isItemSelected}
-                                  page={page}
-                                  rowsPerPage={rowsPerPage}
-                                  onSelectClick={handleSelectClick}
+          </div>
+
+          <div>
+            <select
+              className="w-full py-2 pl-3 pr-10 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              value={filterValues.category || ''}
+              onChange={(e) => handleFilterChange({...filterValues, category: e.target.value})}
+            >
+              <option value="">Category</option>
+              {categories.map(category => (
+                <option key={category} value={category}>{category}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <select
+              className="w-full py-2 pl-3 pr-10 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              value={filterValues.manufacturer || ''}
+              onChange={(e) => handleFilterChange({...filterValues, manufacturer: e.target.value})}
+            >
+              <option value="">Manufacturer</option>
+              {manufacturers.map(manufacturer => (
+                <option key={manufacturer} value={manufacturer}>{manufacturer}</option>
+              ))}
+            </select>
+          </div>
+
+          {isAdmin && (
+            <div>
+              <select
+                className="w-full py-2 pl-3 pr-10 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                value={filterValues.supplier || ''}
+                onChange={(e) => handleFilterChange({...filterValues, supplier: e.target.value})}
+              >
+                <option value="">Supplier</option>
+                {suppliers.map(sup => (
+                  <option key={sup.value} value={sup.value}>{sup.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ProductTable component (nuova tabella) */}
+      <ProductTable
+        products={filteredProducts}
+        selected={selected}
+        onSelect={(id) => handleSelectClick({} as any, id)}
                                   onQuantityChange={handleQuantityChange}
                                   onTargetPriceChange={handleTargetPriceChange}
+        isSelected={isSelected}
                                   onToggleAllPrices={handleToggleAllPrices}
-                                  usingMockData={usingMockData}
-                                />
-                              );
-                            })
-                        )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-                  
-                  <Box sx={{ borderTop: '1px solid #eee' }}>
-                    <TablePagination
-                      rowsPerPageOptions={[10, 25, 50, 100]}
-                      component="div"
-                      count={usingMockData ? filteredProducts.length : totalCount}
-                      rowsPerPage={rowsPerPage}
-                      page={page}
-                      onPageChange={handleChangePage}
-                      onRowsPerPageChange={handleChangeRowsPerPage}
+        onSelectionWithProblemsChange={handleSelectionWithProblemsChange}
+        userRole={userRole}
                     />
-                  </Box>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
       
       {/* Add the ActionBar component outside the Card */}
-      <ActionBar
+      <ActionBar 
         selectedCount={selected.length}
         totalItems={getTotalQuantity()}
         totalAmount={totalAmount}
         onSaveAsDraft={() => showToast('Draft saved successfully', 'success')}
         onCreateOda={handleCreateOda}
+        hasSelectionProblems={selectionWithProblems}
       />
 
       {/* Order Confirmation Modal */}
@@ -1516,7 +1353,7 @@ const Dashboard: React.FC = () => {
         onClose={handleCloseAddProductModal}
         onAddProduct={handleAddProduct}
       />
-    </Box>
+    </div>
   );
 };
 
