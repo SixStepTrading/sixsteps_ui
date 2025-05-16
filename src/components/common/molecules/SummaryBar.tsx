@@ -1,4 +1,5 @@
 import React from 'react';
+import { Tooltip } from '../../../components/Dashboard/ProductTable';
 
 interface SummaryBarProps {
   selectedCount: number;
@@ -9,6 +10,9 @@ interface SummaryBarProps {
   sidebarWidth: number;
   onSaveForLater?: () => void;
   hasSelectionProblems?: boolean;
+  belowTargetCount?: number;
+  aboveTargetCount?: number;
+  stockIssuesCount?: number;
 }
 
 const SummaryBar: React.FC<SummaryBarProps> = ({
@@ -19,7 +23,10 @@ const SummaryBar: React.FC<SummaryBarProps> = ({
   onCreateOrder,
   sidebarWidth = 0,
   onSaveForLater,
-  hasSelectionProblems = false
+  hasSelectionProblems = false,
+  belowTargetCount = 0,
+  aboveTargetCount = 0,
+  stockIssuesCount = 0
 }) => {
   // Non mostrare la barra se non ci sono elementi selezionati
   if (selectedCount === 0) return null;
@@ -32,7 +39,12 @@ const SummaryBar: React.FC<SummaryBarProps> = ({
         right: '24px' // 24px di padding dal lato destro
       }}
     >
-      <div className="bg-white border border-gray-200 rounded-t-lg shadow-lg px-6 py-4 max-w-5xl mx-auto">
+      <div 
+        className="bg-white border border-gray-200 rounded-t-lg px-6 py-4 max-w-5xl mx-auto"
+        style={{
+          boxShadow: '0 0 30px 10px rgba(0, 0, 0, 0.15), 0 15px 25px -5px rgba(0, 0, 0, 0.2)'
+        }}
+      >
         <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center">
           {/* Selection summary */}
           <div className="flex items-center mb-3 sm:mb-0">
@@ -44,6 +56,30 @@ const SummaryBar: React.FC<SummaryBarProps> = ({
                 {totalItems} items in total
               </p>
             </div>
+          </div>
+
+          {/* Product Statistics */}
+          <div className="flex items-center gap-3 mb-3 sm:mb-0">
+            <Tooltip text="Products with price below your target price - good deals!">
+              <div className="flex items-center bg-green-50 text-green-700 text-xs rounded-full px-2 py-1">
+                <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
+                <span>Below target: <span className="font-bold">{belowTargetCount}</span></span>
+              </div>
+            </Tooltip>
+            
+            <Tooltip text="Products with price above your target price - consider alternatives">
+              <div className="flex items-center bg-red-50 text-red-700 text-xs rounded-full px-2 py-1">
+                <span className="w-2 h-2 bg-red-500 rounded-full mr-1"></span>
+                <span>Above target: <span className="font-bold">{aboveTargetCount}</span></span>
+              </div>
+            </Tooltip>
+            
+            <Tooltip text="Products with insufficient stock that need attention">
+              <div className="flex items-center bg-amber-50 text-amber-700 text-xs rounded-full px-2 py-1">
+                <span className="w-2 h-2 bg-amber-500 rounded-full mr-1"></span>
+                <span>Stock issues: <span className="font-bold">{stockIssuesCount}</span></span>
+              </div>
+            </Tooltip>
           </div>
 
           {/* Total price */}

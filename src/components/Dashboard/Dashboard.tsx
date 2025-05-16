@@ -1254,7 +1254,7 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Search and filter controls converted to Tailwind */}
-      <div className="mb-6 bg-gray-50 p-4 rounded-lg max-w-4xl mx-auto">
+      <div className="mb-6 bg-gray-50 p-4 rounded-lg">
         <div className={`grid grid-cols-1 ${isAdmin ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-4`}>
           <div className="relative">
             <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">

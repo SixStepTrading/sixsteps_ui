@@ -96,18 +96,23 @@ const PriceModal: React.FC<PriceModalProps> = ({ isOpen, onClose, product, userR
 };
 
 // Componente tooltip riutilizzabile
-const Tooltip: React.FC<{text: string, children: React.ReactNode, position?: 'top' | 'left'}> = ({text, children, position = 'top'}) => {
+const Tooltip: React.FC<{text: string, children: React.ReactNode, position?: 'top' | 'left', html?: boolean}> = ({
+  text, 
+  children, 
+  position = 'top',
+  html = false
+}) => {
   return (
     <div className="group relative inline-block">
       {children}
       {position === 'top' ? (
-        <div className="absolute z-50 left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-1.5 text-xs bg-gray-900 text-white rounded-md whitespace-normal opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform scale-90 group-hover:scale-100 pointer-events-none shadow-lg w-max max-w-[160px] text-center">
-          {text}
+        <div className="absolute z-50 left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-1.5 text-xs bg-gray-900 text-white rounded-md whitespace-normal opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform scale-90 group-hover:scale-100 pointer-events-none shadow-lg w-max max-w-[200px]">
+          {html ? <div dangerouslySetInnerHTML={{ __html: text }} /> : text}
           <div className="absolute left-1/2 -translate-x-1/2 -bottom-1 w-2 h-2 bg-gray-900 transform rotate-45"></div>
         </div>
       ) : (
-        <div className="absolute z-50 right-full top-0 mr-2 px-3 py-1.5 text-xs bg-gray-900 text-white rounded-md whitespace-normal opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform scale-90 group-hover:scale-100 pointer-events-none shadow-lg w-max max-w-[160px] text-center">
-          {text}
+        <div className="absolute z-50 right-full top-0 mr-2 px-3 py-1.5 text-xs bg-gray-900 text-white rounded-md whitespace-normal opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform scale-90 group-hover:scale-100 pointer-events-none shadow-lg w-max max-w-[200px]">
+          {html ? <div dangerouslySetInnerHTML={{ __html: text }} /> : text}
           <div className="absolute top-2 -right-1 w-2 h-2 bg-gray-900 transform rotate-45"></div>
         </div>
       )}
@@ -177,10 +182,10 @@ const ProductTable: React.FC<ProductTableProps> = ({
         </div>
       </div>
       
-      {/* Table container with fixed width and horizontal scroll */}
-      <div className="overflow-x-auto">
-        <div className={`${isDrawerCollapsed ? 'min-w-[1000px]' : 'min-w-[1200px]'} transition-all duration-300`}> {/* Fixed minimum width based on sidebar state */}
-          {/* Header columns */}
+      {/* Table container with horizontal scroll only, no extra spacing */}
+      <div className="overflow-x-auto w-full">
+        <div className={`${isDrawerCollapsed ? 'min-w-[1000px]' : 'min-w-[1200px]'}`}>
+          {/* Header columns - making them stick to the top */}
           <div className="flex items-center px-3 py-3 text-xs uppercase text-slate-500 font-semibold tracking-wider bg-gray-50 rounded-t-lg rounded-xl my-1.5 border-b border-gray-200">
             <div className={`${isDrawerCollapsed ? 'w-[3.5%]' : 'w-[4%]'} text-center`}>#</div>
             <div className={`${isDrawerCollapsed ? 'w-[12%]' : 'w-[13%]'}`}>Codes</div>
@@ -193,7 +198,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
             <div className={`${isDrawerCollapsed ? 'w-[7.5%]' : 'w-[8%]'} text-right`}>Stock</div>
           </div>
 
-          {/* Rows */}
+          {/* Rows - simplified with no extra bottom margins */}
           {products.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center bg-white rounded-xl shadow border border-slate-100">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12 text-gray-300 mb-3">
@@ -217,12 +222,13 @@ const ProductTable: React.FC<ProductTableProps> = ({
                 <div
                   key={product.id}
                   className={`
-                    flex items-center px-3 py-3 bg-white border border-gray-100 last:rounded-b-lg
+                    flex items-center px-3 py-3 bg-white border border-gray-100
+                    ${idx === products.length - 1 ? 'rounded-b-lg' : ''}
                     ${isProductSelected ? 'bg-blue-50' : ''}
                     ${isExceeded ? 'bg-amber-50 border-l-4 border-l-amber-500' : ''}
                     hover:bg-blue-50 cursor-pointer
                     relative
-                    rounded-xl my-1.5
+                    rounded-xl my-1
                   `}
                   onClick={() => {
                     if (product.quantity <= 0) {
@@ -451,4 +457,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
   );
 };
 
-export default ProductTable; 
+// Re-export the Tooltip component since it's used in PurchaseOrders
+export { Tooltip };
+
+export default ProductTable;

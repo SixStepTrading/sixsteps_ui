@@ -10,6 +10,9 @@ interface ActionBarProps {
   onCreateOda: () => void;
   onSaveForLater?: () => void;
   hasSelectionProblems?: boolean;
+  belowTargetCount?: number;
+  aboveTargetCount?: number;
+  stockIssuesCount?: number;
 }
 
 const ActionBar: React.FC<ActionBarProps> = (props) => {
@@ -38,6 +41,9 @@ const ActionBar: React.FC<ActionBarProps> = (props) => {
       sidebarWidth={sidebarWidth}
       onSaveForLater={props.onSaveForLater}
       hasSelectionProblems={props.hasSelectionProblems}
+      belowTargetCount={props.belowTargetCount}
+      aboveTargetCount={props.aboveTargetCount}
+      stockIssuesCount={props.stockIssuesCount}
     />
   );
 };
