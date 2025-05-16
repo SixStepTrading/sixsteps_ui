@@ -135,6 +135,10 @@ const ProductTable: React.FC<ProductTableProps> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { isDrawerCollapsed } = useContext(SidebarContext);
   
+  // Sorting state
+  const [sortBy, setSortBy] = useState<string>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
   // Determina se ci sono prodotti selezionati con problemi
   const selectionWithProblems = selected.some(id => {
     const product = products.find(p => p.id === id);
@@ -172,6 +176,50 @@ const ProductTable: React.FC<ProductTableProps> = ({
     };
   };
 
+  // Sorting logic
+  const sortedProducts = [...products].sort((a, b) => {
+    let comparison = 0;
+    switch (sortBy) {
+      case 'codes': // EAN
+        comparison = a.ean.localeCompare(b.ean);
+        break;
+      case 'name':
+        comparison = a.name.localeCompare(b.name);
+        break;
+      case 'publicPrice':
+        comparison = a.publicPrice - b.publicPrice;
+        break;
+      case 'qty':
+        comparison = (a.quantity || 0) - (b.quantity || 0);
+        break;
+      case 'targetPrice':
+        comparison = (a.targetPrice || 0) - (b.targetPrice || 0);
+        break;
+      case 'stock':
+        const stockA = a.bestPrices.reduce((sum, p) => sum + p.stock, 0);
+        const stockB = b.bestPrices.reduce((sum, p) => sum + p.stock, 0);
+        comparison = stockA - stockB;
+        break;
+      case 'prices':
+        // Best Price: il più basso tra i bestPrices
+        const bestA = a.bestPrices.length > 0 ? Math.min(...a.bestPrices.map(p => p.price)) : Infinity;
+        const bestB = b.bestPrices.length > 0 ? Math.min(...b.bestPrices.map(p => p.price)) : Infinity;
+        comparison = bestA - bestB;
+        break;
+      default:
+        comparison = 0;
+    }
+    return sortDirection === 'asc' ? comparison : -comparison;
+  });
+
+  // Sorting icon
+  const renderSortIcon = (column: string) => {
+    if (sortBy !== column) return <span className="ml-1 text-gray-300">↕</span>;
+    return sortDirection === 'asc'
+      ? <span className="ml-1 text-blue-600">↑</span>
+      : <span className="ml-1 text-blue-600">↓</span>;
+  };
+
   return (
     <div className="w-full flex flex-col gap-1 mb-8">
       {/* Header superiore con indicatore numero prodotti a sinistra */}
@@ -185,21 +233,56 @@ const ProductTable: React.FC<ProductTableProps> = ({
       {/* Table container with horizontal scroll only, no extra spacing */}
       <div className="overflow-x-auto w-full">
         <div className={`${isDrawerCollapsed ? 'min-w-[1000px]' : 'min-w-[1200px]'}`}>
-          {/* Header columns - making them stick to the top */}
+          {/* Header columns - sortable */}
           <div className="flex items-center px-3 py-3 text-xs uppercase text-slate-500 font-semibold tracking-wider bg-gray-50 rounded-t-lg rounded-xl my-1.5 border-b border-gray-200">
             <div className={`${isDrawerCollapsed ? 'w-[3.5%]' : 'w-[4%]'} text-center`}>#</div>
-            <div className={`${isDrawerCollapsed ? 'w-[12%]' : 'w-[13%]'}`}>Codes</div>
+            <div className={`${isDrawerCollapsed ? 'w-[12%]' : 'w-[13%]'} cursor-pointer select-none flex items-center`} onClick={() => {
+              if (sortBy === 'codes') setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+              else { setSortBy('codes'); setSortDirection('asc'); }
+            }}>
+              Codes {renderSortIcon('codes')}
+            </div>
             <div className="w-[3%]"></div>
-            <div className={`${isDrawerCollapsed ? 'w-[19%]' : 'w-[20%]'}`}>Product Name</div>
-            <div className={`${isDrawerCollapsed ? 'w-[11%]' : 'w-[12%]'} text-right`}>Public Price</div>
-            <div className={`${isDrawerCollapsed ? 'w-[7.5%]' : 'w-[8%]'} text-center`}>Qty</div>
-            <div className={`${isDrawerCollapsed ? 'w-[9.5%]' : 'w-[10%]'} text-center`}>Target Price</div>
-            <div className={`${isDrawerCollapsed ? 'w-[21%]' : 'w-[22%]'} text-right`}>Prices</div>
-            <div className={`${isDrawerCollapsed ? 'w-[7.5%]' : 'w-[8%]'} text-right`}>Stock</div>
+            <div className={`${isDrawerCollapsed ? 'w-[19%]' : 'w-[20%]'} cursor-pointer select-none flex items-center`} onClick={() => {
+              if (sortBy === 'name') setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+              else { setSortBy('name'); setSortDirection('asc'); }
+            }}>
+              Product Name {renderSortIcon('name')}
+            </div>
+            <div className={`${isDrawerCollapsed ? 'w-[11%]' : 'w-[12%]'} text-right cursor-pointer select-none flex items-center justify-end`} onClick={() => {
+              if (sortBy === 'publicPrice') setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+              else { setSortBy('publicPrice'); setSortDirection('asc'); }
+            }}>
+              Public Price {renderSortIcon('publicPrice')}
+            </div>
+            <div className={`${isDrawerCollapsed ? 'w-[7.5%]' : 'w-[8%]'} text-center cursor-pointer select-none flex items-center justify-center`} onClick={() => {
+              if (sortBy === 'qty') setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+              else { setSortBy('qty'); setSortDirection('asc'); }
+            }}>
+              Qty {renderSortIcon('qty')}
+            </div>
+            <div className={`${isDrawerCollapsed ? 'w-[9.5%]' : 'w-[10%]'} text-center cursor-pointer select-none flex items-center justify-center`} onClick={() => {
+              if (sortBy === 'targetPrice') setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+              else { setSortBy('targetPrice'); setSortDirection('asc'); }
+            }}>
+              Target Price {renderSortIcon('targetPrice')}
+            </div>
+            <div className={`${isDrawerCollapsed ? 'w-[21%]' : 'w-[22%]'} text-right cursor-pointer select-none flex items-center justify-end`} onClick={() => {
+              if (sortBy === 'prices') setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+              else { setSortBy('prices'); setSortDirection('asc'); }
+            }}>
+              Prices {renderSortIcon('prices')}
+            </div>
+            <div className={`${isDrawerCollapsed ? 'w-[7.5%]' : 'w-[8%]'} text-right cursor-pointer select-none flex items-center justify-end`} onClick={() => {
+              if (sortBy === 'stock') setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+              else { setSortBy('stock'); setSortDirection('asc'); }
+            }}>
+              Stock {renderSortIcon('stock')}
+            </div>
           </div>
 
           {/* Rows - simplified with no extra bottom margins */}
-          {products.length === 0 ? (
+          {sortedProducts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center bg-white rounded-xl shadow border border-slate-100">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12 text-gray-300 mb-3">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3 3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
@@ -208,7 +291,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
               <p className="text-gray-500 mt-1 max-w-md">Try adjusting your search or filter criteria to find products.</p>
             </div>
           ) : (
-            products.map((product, idx) => {
+            sortedProducts.map((product, idx) => {
               const isProductSelected = isSelected(product.id);
               const isExceeded = isStockExceeded(product.quantity, product.bestPrices);
               // Calcolo dello stock totale del prodotto

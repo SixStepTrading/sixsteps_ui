@@ -97,6 +97,10 @@ const PurchaseOrders: React.FC = () => {
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<OrderDetailData | null>(null);
 
+  // Sorting state
+  const [sortBy, setSortBy] = useState<string>('date');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
   // Filter orders based on selected criteria
   useEffect(() => {
     let result = [...orders];
@@ -209,6 +213,51 @@ const PurchaseOrders: React.FC = () => {
     }
   };
 
+  // Sorting logic
+  const sortedOrders = [...filteredOrders].sort((a, b) => {
+    let comparison = 0;
+    switch (sortBy) {
+      case 'orderId':
+        comparison = a.id.localeCompare(b.id);
+        break;
+      case 'date':
+        comparison = new Date(a.createdOn).getTime() - new Date(b.createdOn).getTime();
+        break;
+      case 'status':
+        comparison = a.status.localeCompare(b.status);
+        break;
+      case 'products':
+        comparison = a.totalProducts - b.totalProducts;
+        break;
+      case 'amount':
+        comparison = a.amount - b.amount;
+        break;
+      case 'delivery':
+        // Prioritize delivered, then by delivery date
+        if (a.deliveryStatus === b.deliveryStatus) {
+          if (a.deliveryDate && b.deliveryDate) {
+            comparison = new Date(a.deliveryDate).getTime() - new Date(b.deliveryDate).getTime();
+          } else {
+            comparison = 0;
+          }
+        } else {
+          comparison = (a.deliveryStatus || '').localeCompare(b.deliveryStatus || '');
+        }
+        break;
+      default:
+        comparison = 0;
+    }
+    return sortDirection === 'asc' ? comparison : -comparison;
+  });
+
+  // Sorting icon
+  const renderSortIcon = (column: string) => {
+    if (sortBy !== column) return <span className="ml-1 text-gray-300">↕</span>;
+    return sortDirection === 'asc'
+      ? <span className="ml-1 text-blue-600">↑</span>
+      : <span className="ml-1 text-blue-600">↓</span>;
+  };
+
   return (
     <div className="flex-grow p-3 pb-20">
       <div className="flex justify-between items-center mb-6">
@@ -297,20 +346,50 @@ const PurchaseOrders: React.FC = () => {
         {/* Table container with only horizontal scroll, ensuring no max-height is applied anywhere */}
         <div className="overflow-x-auto w-full overflow-y-visible">
           <div className={`${isDrawerCollapsed ? 'min-w-[1000px]' : 'min-w-[1200px]'} transition-all duration-300`}>
-            {/* Header columns */}
+            {/* Header columns - sortable */}
             <div className="flex items-center px-3 py-3 text-xs uppercase text-slate-500 font-semibold tracking-wider bg-gray-50 rounded-t-lg rounded-xl my-1.5 border-b border-gray-200">
               <div className="w-[4%] text-center">#</div>
-              <div className="w-[15%]">Order ID</div>
-              <div className="w-[12%]">Date</div>
-              <div className="w-[10%] text-center">Status</div>
-              <div className="w-[12%] text-center">Products</div>
-              <div className="w-[12%] text-right">Total Amount</div>
-              <div className="w-[15%] text-center">Delivery</div>
+              <div className="w-[15%] cursor-pointer select-none flex items-center" onClick={() => {
+                if (sortBy === 'orderId') setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                else { setSortBy('orderId'); setSortDirection('asc'); }
+              }}>
+                Order ID {renderSortIcon('orderId')}
+              </div>
+              <div className="w-[12%] cursor-pointer select-none flex items-center" onClick={() => {
+                if (sortBy === 'date') setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                else { setSortBy('date'); setSortDirection('desc'); }
+              }}>
+                Date {renderSortIcon('date')}
+              </div>
+              <div className="w-[10%] text-center cursor-pointer select-none flex items-center justify-center" onClick={() => {
+                if (sortBy === 'status') setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                else { setSortBy('status'); setSortDirection('asc'); }
+              }}>
+                Status {renderSortIcon('status')}
+              </div>
+              <div className="w-[12%] text-center cursor-pointer select-none flex items-center justify-center" onClick={() => {
+                if (sortBy === 'products') setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                else { setSortBy('products'); setSortDirection('desc'); }
+              }}>
+                Products {renderSortIcon('products')}
+              </div>
+              <div className="w-[12%] text-right cursor-pointer select-none flex items-center justify-end" onClick={() => {
+                if (sortBy === 'amount') setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                else { setSortBy('amount'); setSortDirection('desc'); }
+              }}>
+                Total Amount {renderSortIcon('amount')}
+              </div>
+              <div className="w-[15%] text-center cursor-pointer select-none flex items-center justify-center" onClick={() => {
+                if (sortBy === 'delivery') setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                else { setSortBy('delivery'); setSortDirection('desc'); }
+              }}>
+                Delivery {renderSortIcon('delivery')}
+              </div>
               <div className="w-[20%] text-right">Actions</div>
             </div>
 
             {/* Rows */}
-            {filteredOrders.length === 0 ? (
+            {sortedOrders.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center bg-white rounded-xl shadow border border-slate-100">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12 text-gray-300 mb-3">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3 3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
@@ -319,7 +398,7 @@ const PurchaseOrders: React.FC = () => {
                 <p className="text-gray-500 mt-1 max-w-md">Try adjusting your search or filter criteria to find orders.</p>
               </div>
             ) : (
-              filteredOrders.map((order, idx) => {
+              sortedOrders.map((order, idx) => {
                 const isOrderSelected = isSelected(order.id);
                 
                 return (
