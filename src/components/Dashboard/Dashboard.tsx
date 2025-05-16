@@ -1139,6 +1139,15 @@ const Dashboard: React.FC = () => {
     setSelectionWithProblems(hasProblems);
   };
 
+  // Calcolo contatori per la summary bar
+  const selectedProducts = filteredProducts.filter(p => selected.includes(p.id));
+  const belowTargetCount = selectedProducts.filter(p => p.targetPrice !== null && p.averagePrice !== null && p.averagePrice <= p.targetPrice).length;
+  const aboveTargetCount = selectedProducts.filter(p => p.targetPrice !== null && p.averagePrice !== null && p.averagePrice > p.targetPrice).length;
+  const stockIssuesCount = selectedProducts.filter(p => {
+    const totalStock = p.bestPrices.reduce((sum, price) => sum + price.stock, 0);
+    return p.quantity > totalStock;
+  }).length;
+
   return (
     <div className="flex-grow p-3 pb-20">
       {/* Error notifications */}
@@ -1335,6 +1344,9 @@ const Dashboard: React.FC = () => {
         onSaveAsDraft={() => showToast('Draft saved successfully', 'success')}
         onCreateOda={handleCreateOda}
         hasSelectionProblems={selectionWithProblems}
+        belowTargetCount={belowTargetCount}
+        aboveTargetCount={aboveTargetCount}
+        stockIssuesCount={stockIssuesCount}
       />
 
       {/* Order Confirmation Modal */}
