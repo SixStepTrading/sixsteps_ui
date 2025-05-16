@@ -472,31 +472,30 @@ const ProductTable: React.FC<ProductTableProps> = ({
                         price.price, 
                         product.vat
                       );
-                      
                       const priceLabels = ["Best price", "Second best price", "Third best price"];
-                      const grossDiscountTooltip = `${grossDiscountPercent.toFixed(0)}% off public price`;
-                      const netDiscountTooltip = `${netDiscountPercent.toFixed(0)}% off net price (VAT excl.)`;
-                      
+                      // Tooltip unico con tutte le info
+                      const tooltipContent = `
+                        <div><strong>${priceLabels[i]}</strong></div>
+                        <div>Gross discount: <span style='color:#ef4444'>${grossDiscountPercent.toFixed(0)}%</span></div>
+                        <div>Net discount: <span style='color:#f59e42'>${netDiscountPercent.toFixed(0)}%</span></div>
+                        <div>Stock: <span style='color:#2563eb'>${price.stock}</span></div>
+                      `;
                       return (
-                        <div key={i} className={`rounded px-2 py-1 text-xs transition-all duration-150 hover:shadow-md
-                          ${i === 0 ? 'bg-green-50 text-green-700 hover:bg-green-100' : 
-                            i === 1 ? 'bg-blue-50 text-blue-700 hover:bg-blue-100' : 
-                            'bg-purple-50 text-purple-700 hover:bg-purple-100'}`}
-                        >
-                          <Tooltip text={priceLabels[i]} position="left">
-                            <div className="font-semibold text-sm">€{price.price.toFixed(2)}</div>
-                          </Tooltip>
-                          <div className="text-xs flex gap-1 items-center">
-                            <Tooltip text={grossDiscountTooltip} position="left">
-                              <span className="text-red-500 hover:font-medium cursor-help" title="Gross discount">{grossDiscountPercent.toFixed(0)}%</span>
-                            </Tooltip>
-                            <span className="text-slate-400">|</span>
-                            <Tooltip text={netDiscountTooltip} position="left">
-                              <span className="text-orange-500 hover:font-medium cursor-help" title="Net discount">{netDiscountPercent.toFixed(0)}%</span>
-                            </Tooltip>
+                        <Tooltip text={tooltipContent} position="left" html>
+                          <div key={i} className={`rounded px-2 py-1 text-xs transition-all duration-150 hover:shadow-md
+                            ${i === 0 ? 'bg-green-50 text-green-700 hover:bg-green-100' : 
+                              i === 1 ? 'bg-blue-50 text-blue-700 hover:bg-blue-100' : 
+                              'bg-purple-50 text-purple-700 hover:bg-purple-100'}`}
+                          >
+                            <div className="font-semibold text-sm cursor-help">€{price.price.toFixed(2)}</div>
+                            <div className="text-xs flex gap-1 items-center">
+                              <span className="text-red-500" title="Gross discount">{grossDiscountPercent.toFixed(0)}%</span>
+                              <span className="text-slate-400">|</span>
+                              <span className="text-orange-500" title="Net discount">{netDiscountPercent.toFixed(0)}%</span>
+                            </div>
+                            <div className="text-xs">Stock: {price.stock}</div>
                           </div>
-                          <div className="text-xs">Stock: {price.stock}</div>
-                        </div>
+                        </Tooltip>
                       );
                     })}
                   </div>

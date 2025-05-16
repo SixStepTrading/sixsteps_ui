@@ -6,6 +6,7 @@ import ActivitiesTable from './ActivitiesTable';
 import { User } from './UserTableRow';
 import { UserActivity } from './ActivityTableRow';
 import { SearchIcon, PlusIcon, FilterIcon } from '@heroicons/react/outline';
+import { MOCK_USERS } from '../../data/mockUsers';
 
 // Custom icon components
 const RefreshIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
@@ -25,60 +26,6 @@ const ActivityIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
   </svg>
 );
-
-// Mock data for users
-const MOCK_USERS: User[] = [
-  {
-    id: '1',
-    firstName: 'Marco',
-    lastName: 'Rossi',
-    email: 'm.rossi@farmaciasammarco.it',
-    role: 'Administrator',
-    associatedEntity: 'Farmacia San Marco',
-    status: 'Active',
-    lastLogin: 'May 9, 2025 - 10:42'
-  },
-  {
-    id: '2',
-    firstName: 'Laura',
-    lastName: 'Bianchi',
-    email: 'l.bianchi@farmaciacentrale.it',
-    role: 'Manager',
-    associatedEntity: 'Farmacia Centrale',
-    status: 'Active',
-    lastLogin: 'May 8, 2025 - 15:23'
-  },
-  {
-    id: '3',
-    firstName: 'Giuseppe',
-    lastName: 'Verdi',
-    email: 'g.verdi@medifarma.com',
-    role: 'Supplier',
-    associatedEntity: 'MediFarma Supplies',
-    status: 'Active',
-    lastLogin: 'May 7, 2025 - 09:11'
-  },
-  {
-    id: '4',
-    firstName: 'Elena',
-    lastName: 'Ferrari',
-    email: 'e.ferrari@pharmatech.it',
-    role: 'Supplier',
-    associatedEntity: 'PharmaTech Solutions',
-    status: 'Active',
-    lastLogin: 'May 6, 2025 - 14:05'
-  },
-  {
-    id: '5',
-    firstName: 'Paolo',
-    lastName: 'Colombo',
-    email: 'p.colombo@farmaciarossi.it',
-    role: 'Pharmacy',
-    associatedEntity: 'Farmacia Rossi',
-    status: 'Inactive',
-    lastLogin: 'Apr 28, 2025 - 11:30'
-  }
-];
 
 // Mock data for recent activities
 const MOCK_ACTIVITIES: UserActivity[] = [
