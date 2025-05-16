@@ -260,147 +260,43 @@ const ActivitiesTable: React.FC<ActivitiesTableProps> = ({
     return <TableRow key={activity.id} cells={cells} />;
   };
 
-  // Filters panel
-  const FiltersPanel = () => (
-    <div className={`mb-6 rounded-lg border border-gray-200 bg-white shadow-sm ${showFiltersPanel ? '' : 'hidden'}`}>
-      <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* User filter */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Filter by User</label>
-          <div className="relative rounded-md shadow-sm">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <SearchIcon className="h-4 w-4 text-gray-400" />
-            </div>
-            <input
-              type="text"
-              value={filters.userName}
-              onChange={(e) => handleFilterChange('userName', e.target.value)}
-              className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 pr-12 py-2 sm:text-sm border-gray-300 rounded-md"
-              placeholder="Search users..."
-            />
-            {filters.userName && (
-              <button
-                type="button"
-                onClick={() => handleFilterChange('userName', '')}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center"
-              >
-                <CloseIcon />
-              </button>
-            )}
-          </div>
-          {uniqueUsers.length > 0 && filters.userName && (
-            <div className="mt-1 bg-white border border-gray-300 rounded-md shadow-sm max-h-48 overflow-y-auto">
-              {uniqueUsers
-                .filter(user => user.toLowerCase().includes(filters.userName.toLowerCase()))
-                .map(user => (
-                  <div
-                    key={user}
-                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
-                    onClick={() => handleFilterChange('userName', user)}
-                  >
-                    {user}
-                  </div>
-                ))
-              }
-            </div>
-          )}
-        </div>
-
-        {/* Action Type filter */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Activity Type</label>
-          <div className="border border-gray-300 rounded-md p-2 max-h-32 overflow-y-auto">
-            {actionTypes.map(actionType => {
-              const isSelected = filters.actionTypes.includes(actionType);
-              const actionClasses = getActionColorClasses(actionType);
-              
-              return (
-                <div 
-                  key={actionType}
-                  className={`flex items-center justify-between p-1 my-1 rounded ${isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'} cursor-pointer`}
-                  onClick={() => toggleActionType(actionType)}
-                >
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => {}} // Handled by the div click
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <span className={`${actionClasses.text} ml-2 text-xs font-medium`}>
-                      {actionType}
-                    </span>
-                  </div>
-                  <span className="text-xs text-gray-500">
-                    {activities.filter(a => a.action === actionType).length}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Date Range filter */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
-          <select
-            value={filters.dateRange}
-            onChange={(e) => handleFilterChange('dateRange', e.target.value)}
-            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-          >
-            <option value="all">All Time</option>
-            <option value="today">Today</option>
-            <option value="yesterday">Yesterday</option>
-            <option value="last7days">Last 7 Days</option>
-            <option value="last30days">Last 30 Days</option>
-            <option value="custom">Custom Range</option>
-          </select>
-          
-          {filters.dateRange === 'custom' && (
-            <div className="grid grid-cols-2 gap-2 mt-2">
-              <div>
-                <label className="block text-xs text-gray-700 mb-1">Start Date</label>
-                <input
-                  type="date"
-                  value={filters.startDate || ''}
-                  onChange={(e) => handleFilterChange('startDate', e.target.value)}
-                  className="focus:ring-blue-500 focus:border-blue-500 block w-full px-3 py-1.5 sm:text-sm border-gray-300 rounded-md"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-700 mb-1">End Date</label>
-                <input
-                  type="date"
-                  value={filters.endDate || ''}
-                  onChange={(e) => handleFilterChange('endDate', e.target.value)}
-                  className="focus:ring-blue-500 focus:border-blue-500 block w-full px-3 py-1.5 sm:text-sm border-gray-300 rounded-md"
-                />
-              </div>
-            </div>
-          )}
+  // Nuova barra filtri stile ProductTable
+  const ActivityFiltersBar: React.FC<{
+    filters: ActivityFilters;
+    onFilterChange: (name: string, value: any) => void;
+    actionTypes: string[];
+    uniqueUsers: string[];
+    onReset: () => void;
+  }> = ({ filters, onFilterChange, actionTypes, uniqueUsers, onReset }) => (
+    <div className="flex flex-wrap gap-2 items-center mb-6">
+      <div className="relative max-w-xs w-full">
+        <input
+          type="text"
+          placeholder="Search user..."
+          value={filters.userName}
+          onChange={e => onFilterChange('userName', e.target.value)}
+          className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+        />
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4-4m0 0A7 7 0 1010 17a7 7 0 004-4z" /></svg>
         </div>
       </div>
-      
-      {/* Actions */}
-      <div className="bg-gray-50 px-4 py-3 flex justify-between rounded-b-lg">
-        <button
-          type="button"
-          onClick={resetFilters}
-          className="text-sm text-gray-700 hover:text-gray-900"
-        >
-          Reset filters
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowFiltersPanel(false)}
-          className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
-          Apply Filters
-        </button>
-      </div>
+      <select value={filters.actionTypes[0] || ''} onChange={e => onFilterChange('actionTypes', e.target.value ? [e.target.value] : [])} className="border border-gray-300 rounded-md px-2 py-2 text-sm">
+        <option value="">All Actions</option>
+        {actionTypes.map(type => <option key={type} value={type}>{type}</option>)}
+      </select>
+      <select value={filters.dateRange} onChange={e => onFilterChange('dateRange', e.target.value)} className="border border-gray-300 rounded-md px-2 py-2 text-sm">
+        <option value="all">All Time</option>
+        <option value="today">Today</option>
+        <option value="yesterday">Yesterday</option>
+        <option value="last7days">Last 7 Days</option>
+        <option value="last30days">Last 30 Days</option>
+        <option value="custom">Custom Range</option>
+      </select>
+      <button onClick={onReset} className="text-xs text-gray-500 hover:text-blue-600 px-2 py-1">Reset</button>
     </div>
   );
-  
+
   // Title action with filter button and view all button
   const titleAction = (
     <div className="flex items-center space-x-4">
@@ -413,11 +309,11 @@ const ActivitiesTable: React.FC<ActivitiesTableProps> = ({
           ? `Filters (${activeFiltersCount})` 
           : 'Filter Activities'}
       </button>
-      <button className="text-blue-600 flex items-center text-sm hover:text-blue-800 transition-colors">
-        View Full Activity Log
-        <ChevronDownIcon className="h-4 w-4 ml-1" />
-      </button>
-    </div>
+        <button className="text-blue-600 flex items-center text-sm hover:text-blue-800 transition-colors">
+          View Full Activity Log
+          <ChevronDownIcon className="h-4 w-4 ml-1" />
+        </button>
+      </div>
   );
 
   // Use onPageChange if provided, or create a default handler
@@ -427,27 +323,59 @@ const ActivitiesTable: React.FC<ActivitiesTableProps> = ({
     }
   };
 
+  // Sorting icon
+  const renderSortIcon = (column: string) => {
+    if (sortBy !== column) return <span className="ml-1 text-gray-300">↕</span>;
+    return sortDirection === 'asc'
+      ? <span className="ml-1 text-blue-600">↑</span>
+      : <span className="ml-1 text-blue-600">↓</span>;
+  };
+
   return (
     <>
-      <FiltersPanel />
-      <ReusableTable
-        title="Recent User Activity"
-        titleAction={titleAction}
-        columns={columns}
-        data={filteredActivities}
-        renderRow={renderRow}
-        page={page}
-        rowsPerPage={rowsPerPage}
-        onPageChange={handlePageChange}
-        headerBadge={{ 
-          label: activeFiltersCount > 0 ? 'Filtered Activities' : 'Total Activities', 
-          value: filteredActivities.length 
-        }}
-        sortBy={sortBy}
-        sortDirection={sortDirection}
-        onSort={handleSort}
-        emptyMessage={activeFiltersCount > 0 ? "No activities match the current filters" : "No activities found"}
+      <ActivityFiltersBar
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        actionTypes={actionTypes}
+        uniqueUsers={uniqueUsers}
+        onReset={resetFilters}
       />
+      <div className="overflow-x-auto w-full">
+        <div className="min-w-[1000px]">
+          <div className="flex items-center px-4 py-3 text-xs uppercase text-slate-500 font-semibold tracking-wider bg-gray-50 rounded-t-lg rounded-xl my-1.5 border-b border-gray-200">
+          {columns.map((column) => (
+            <div 
+              key={column.id} 
+                className={`${column.width} ${column.align === 'center' ? 'text-center' : column.align === 'right' ? 'text-right' : ''} cursor-pointer select-none flex items-center`}
+                onClick={() => {
+                  if (!column.sortable) return;
+                  if (sortBy === column.id) setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                  else { setSortBy(column.id); setSortDirection('asc'); }
+                }}
+              >
+                <div className="flex items-center">
+                  {column.info ? (
+                    <span title={column.info}>{column.label}</span>
+                  ) : (
+                    <span>{column.label}</span>
+                  )}
+                  {column.sortable && renderSortIcon(column.id)}
+                </div>
+      </div>
+            ))}
+          </div>
+          {/* Rows */}
+          {filteredActivities.length > 0 ? (
+            filteredActivities.map((activity, idx) => (
+              <div key={activity.id} className="bg-white rounded-xl my-1 hover:bg-blue-50 transition-colors duration-150">
+                {renderRow(activity, idx + 1 + (page - 1) * rowsPerPage)}
+              </div>
+            ))
+          ) : (
+            <div className="py-6 text-center text-gray-500">No activities to display</div>
+          )}
+        </div>
+    </div>
     </>
   );
 };

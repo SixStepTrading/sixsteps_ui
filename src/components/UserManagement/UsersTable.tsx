@@ -27,8 +27,6 @@ const UsersTable: React.FC<UsersTableProps> = ({
 
   // Apply sorting
   const sortedUsers = [...users].sort((a, b) => {
-    if (!sortBy) return 0;
-    
     let comparison = 0;
     switch (sortBy) {
       case 'name':
@@ -47,7 +45,6 @@ const UsersTable: React.FC<UsersTableProps> = ({
         comparison = a.status.localeCompare(b.status);
         break;
       case 'lastLogin':
-        // Since lastLogin is a string in format May 9, 2025 - 10:42, we need to parse it
         const dateA = new Date(a.lastLogin.split(' - ')[0]);
         const dateB = new Date(b.lastLogin.split(' - ')[0]);
         comparison = dateA.getTime() - dateB.getTime();
@@ -55,7 +52,6 @@ const UsersTable: React.FC<UsersTableProps> = ({
       default:
         comparison = 0;
     }
-    
     return sortDirection === 'asc' ? comparison : -comparison;
   });
 
@@ -63,6 +59,14 @@ const UsersTable: React.FC<UsersTableProps> = ({
   const handleSort = (column: string, direction: 'asc' | 'desc' | null) => {
     setSortBy(column);
     setSortDirection(direction);
+  };
+
+  // Sorting icon
+  const renderSortIcon = (column: string) => {
+    if (sortBy !== column) return <span className="ml-1 text-gray-300">↕</span>;
+    return sortDirection === 'asc'
+      ? <span className="ml-1 text-blue-600">↑</span>
+      : <span className="ml-1 text-blue-600">↓</span>;
   };
 
   // Define columns for the table
@@ -215,27 +219,50 @@ const UsersTable: React.FC<UsersTableProps> = ({
     ];
 
     return (
-      <TableRow 
-        key={user.id} 
-        cells={cells} 
-        onClick={() => onUserSelect && onUserSelect(user)} 
-      />
+      <div className="bg-white rounded-xl my-1 hover:bg-blue-50 transition-colors duration-150">
+        <TableRow 
+          key={user.id} 
+          cells={cells} 
+          onClick={() => onUserSelect && onUserSelect(user)} 
+        />
+      </div>
     );
   };
 
   return (
-    <ReusableTable
-      columns={columns}
-      data={sortedUsers}
-      renderRow={renderRow}
-      page={page}
-      rowsPerPage={rowsPerPage}
-      onPageChange={onPageChange}
-      headerBadge={{ label: 'Total Users', value: users.length }}
-      sortBy={sortBy}
-      sortDirection={sortDirection}
-      onSort={handleSort}
-    />
+    <div className="overflow-x-auto w-full">
+      <div className="min-w-[1000px]">
+        {/* Header columns - stile ProductTable */}
+        <div className="flex items-center px-4 py-3 text-xs uppercase text-slate-500 font-semibold tracking-wider bg-gray-50 rounded-t-lg rounded-xl my-1.5 border-b border-gray-200">
+          {columns.map((column) => (
+            <div
+              key={column.id}
+              className={`${column.width} ${column.align === 'center' ? 'text-center' : column.align === 'right' ? 'text-right' : ''} cursor-pointer select-none flex items-center`}
+              onClick={() => {
+                if (!column.sortable) return;
+                if (sortBy === column.id) setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                else { setSortBy(column.id); setSortDirection('asc'); }
+              }}
+            >
+              <div className="flex items-center">
+                {column.info ? (
+                  <span title={column.info}>{column.label}</span>
+                ) : (
+                  <span>{column.label}</span>
+                )}
+                {column.sortable && renderSortIcon(column.id)}
+              </div>
+            </div>
+          ))}
+        </div>
+        {/* Rows */}
+        {sortedUsers.length > 0 ? (
+          sortedUsers.map((user, idx) => renderRow(user, idx + 1 + (page - 1) * rowsPerPage))
+        ) : (
+          <div className="py-6 text-center text-gray-500">No users to display</div>
+        )}
+      </div>
+    </div>
   );
 };
 

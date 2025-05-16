@@ -132,6 +132,13 @@ const ROLE_INFO = {
   Supplier: { count: 53, description: 'Can manage product listings and fulfill orders' }
 };
 
+// Definizione tipo filtri utente
+type UserFilterValues = {
+  search: string;
+  role: string;
+  status: string;
+};
+
 // Tab component for navigation
 interface TabProps {
   id: string;
@@ -259,15 +266,12 @@ const CreateUserForm: React.FC<{
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 max-w-4xl mx-auto">
-      <h2 className="text-xl font-medium mb-4">Create New User</h2>
-      <p className="text-sm text-gray-600 mb-6">Add a new user to the FarmaBooster platform</p>
-      
+    <div className="bg-white rounded-lg shadow-none p-0 max-w-2xl w-full">
       <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* User Information Section */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-medium text-gray-700">User Information</h3>
+          <div className="space-y-3">
+            <h3 className="text-xs font-semibold text-gray-700 mb-2">User Information</h3>
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
@@ -354,8 +358,8 @@ const CreateUserForm: React.FC<{
           </div>
           
           {/* Role & Permissions Section */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-medium text-gray-700">Role & Permissions</h3>
+          <div className="space-y-3">
+            <h3 className="text-xs font-semibold text-gray-700 mb-2">Role & Permissions</h3>
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">User Role *</label>
@@ -512,9 +516,7 @@ const RoleCard: React.FC<{
       default: return { bg: 'bg-gray-50', text: 'text-gray-600', icon: 'bg-gray-100' };
     }
   };
-  
   const colorClass = getRoleColorClass(role);
-  
   const getRoleIcon = (role: string) => {
     switch(role) {
       case 'Administrator':
@@ -549,48 +551,80 @@ const RoleCard: React.FC<{
         );
     }
   };
-  
   return (
-    <div className={`${colorClass.bg} rounded-lg p-4`}>
-      <div className="flex justify-between items-start">
-        <div className="flex-grow">
-          <div className={`${colorClass.text} text-lg font-medium`}>{role}</div>
-          <div className="text-sm text-gray-500 mt-1">{description}</div>
-        </div>
-        <div className={`${colorClass.icon} ${colorClass.text} p-2 rounded-full`}>
-          {getRoleIcon(role)}
+    <div className={`${colorClass.bg} rounded-lg p-3 flex items-center justify-between min-h-[60px]`}>
+      <div className="flex items-center gap-2">
+        <div className={`${colorClass.icon} ${colorClass.text} p-2 rounded-full`}>{getRoleIcon(role)}</div>
+        <div>
+          <div className={`${colorClass.text} text-base font-semibold`}>{role}</div>
+          {/* Tooltip per la descrizione */}
+          <div className="text-xs text-gray-400" title={description}></div>
         </div>
       </div>
-      <div className="mt-4">
-        <div className="text-3xl font-bold">{count}</div>
-        <div className="text-xs text-gray-500">Users</div>
-      </div>
+      <div className="text-2xl font-bold">{count}</div>
     </div>
   );
 };
+
+// Nuovo UserFilterBar stile Dashboard
+const UserFilterBar: React.FC<{
+  values: UserFilterValues;
+  onChange: (v: UserFilterValues) => void;
+  onReset: () => void;
+}> = ({ values, onChange, onReset }) => (
+  <div className="flex flex-wrap items-center mb-6 gap-2 justify-between bg-gray-50 p-4 rounded-lg">
+    <div className="relative max-w-xs w-full flex-1">
+      <input
+        type="text"
+        placeholder="Search users by name, email..."
+        value={values.search}
+        onChange={e => onChange({ ...values, search: e.target.value })}
+        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+      />
+      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+        <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4-4m0 0A7 7 0 1010 17a7 7 0 004-4z" /></svg>
+      </div>
+    </div>
+    <select value={values.role} onChange={e => onChange({ ...values, role: e.target.value })} className="border border-gray-300 rounded-md px-2 py-2 text-sm">
+      <option value="">All Roles</option>
+      <option value="Administrator">Administrator</option>
+      <option value="Manager">Manager</option>
+      <option value="Pharmacy">Pharmacy</option>
+      <option value="Supplier">Supplier</option>
+    </select>
+    <select value={values.status} onChange={e => onChange({ ...values, status: e.target.value })} className="border border-gray-300 rounded-md px-2 py-2 text-sm">
+      <option value="">All Status</option>
+      <option value="Active">Active</option>
+      <option value="Inactive">Inactive</option>
+    </select>
+    <button onClick={onReset} className="text-xs text-gray-500 hover:text-blue-600 px-2 py-1 ml-2">Reset</button>
+  </div>
+);
 
 // Main Component
 const UserManagement: React.FC = () => {
   const { userRole, userName } = useUser();
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState('users');
-  const [searchQuery, setSearchQuery] = useState('');
   const [usersPage, setUsersPage] = useState(1);
   const [activitiesPage, setActivitiesPage] = useState(1);
   const [orderBy, setOrderBy] = useState('recentActivity');
+  const [userFilterValues, setUserFilterValues] = useState<UserFilterValues>({
+    search: '',
+    role: '',
+    status: ''
+  });
   
   // Filter users based on search query
   const filteredUsers = MOCK_USERS.filter(user => {
-    if (!searchQuery) return true;
+    if (userFilterValues.role && user.role !== userFilterValues.role) return false;
+    if (userFilterValues.status && user.status !== userFilterValues.status) return false;
+    if (!userFilterValues.search) return true;
     const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
-    return fullName.includes(searchQuery.toLowerCase()) || 
-           user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           user.role.toLowerCase().includes(searchQuery.toLowerCase());
+    return fullName.includes(userFilterValues.search.toLowerCase()) || 
+           user.email.toLowerCase().includes(userFilterValues.search.toLowerCase()) ||
+           user.role.toLowerCase().includes(userFilterValues.search.toLowerCase());
   });
-  
-  const handleSearch = (value: string) => {
-    setSearchQuery(value);
-  };
   
   const handlePageChange = (page: number) => {
     setUsersPage(page);
@@ -654,37 +688,21 @@ const UserManagement: React.FC = () => {
           
           {/* Action Bar */}
           <div className="flex justify-between mb-6">
-            <div className="relative max-w-xs w-full">
-              <input
-                type="text"
-                placeholder="Search users..."
-                value={searchQuery}
-                onChange={(e) => handleSearch(e.target.value)}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              />
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <SearchIcon className="h-5 w-5 text-gray-400" />
-              </div>
-            </div>
+            <UserFilterBar
+              values={userFilterValues}
+              onChange={setUserFilterValues}
+              onReset={() => setUserFilterValues({ search: '', role: '', status: '' })}
+            />
             
             <div className="flex space-x-3">
-              <select
-                value={orderBy}
-                onChange={(e) => handleOrderChange(e.target.value)}
-                className="block pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-              >
-                <option value="recentActivity">Sort by: Recent Activity</option>
-                <option value="name">Sort by: Name</option>
-                <option value="role">Sort by: Role</option>
-                <option value="status">Sort by: Status</option>
-              </select>
-              
-              <button 
+              <button
+                type="button"
                 onClick={() => setActiveTab('create')}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="inline-flex items-center gap-2 px-3 py-1.5 h-8 rounded-md bg-blue-600 text-white font-semibold shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 transition-colors text-xs"
+                aria-label="Create new user"
               >
-                <PlusIcon className="h-4 w-4 mr-2" />
-                New User
+                <PlusIcon className="h-4 w-4" />
+                <span>New User</span>
               </button>
             </div>
           </div>
@@ -703,9 +721,12 @@ const UserManagement: React.FC = () => {
       )}
       
       {activeTab === 'create' && (
-        <div className="bg-white rounded-lg shadow-sm p-6 max-w-3xl mx-auto">
-          <h2 className="text-xl font-semibold text-gray-800 mb-6">Create New User</h2>
-          <CreateUserForm onCreateUser={handleCreateUser} />
+        <div className="w-full flex justify-center">
+          <div className="bg-white rounded-xl shadow-md p-8 max-w-2xl w-full border border-gray-100">
+            <h2 className="text-xl font-semibold text-gray-800 mb-2">Create New User</h2>
+            <p className="text-sm text-gray-500 mb-6">Add a new user to the FarmaBooster platform</p>
+            <CreateUserForm onCreateUser={handleCreateUser} />
+          </div>
         </div>
       )}
       
