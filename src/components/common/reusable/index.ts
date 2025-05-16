@@ -16,4 +16,14 @@ export { default as ProductCodes } from './ProductCodes';
 export { default as PublicPriceDisplay } from './PublicPriceDisplay';
 export { default as AveragePriceDisplay } from './AveragePriceDisplay';
 export { default as ShowMorePricesButton } from './ShowMorePricesButton';
-export { default as ActionBar } from './ActionBar'; 
+export { default as ActionBar } from './ActionBar';
+
+// Import the components and interfaces
+import ReusableTable from './ReusableTable';
+import TableRow from './TableRow';
+// Re-export the named types from the original files
+import { Column, Tooltip } from './ReusableTable';
+import { TableCellProps } from './TableRow';
+
+// Export all of them
+export { ReusableTable, Column, Tooltip, TableRow, TableCellProps }; 
