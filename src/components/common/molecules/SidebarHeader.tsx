@@ -135,23 +135,24 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
             rounded-lg
             hover:bg-blue-50
             ${isCollapsed ? 'justify-center' : 'justify-start'}
+            min-h-[64px]
           `}
         >
-          <div className={`relative ${isCollapsed ? 'flex flex-col items-center' : 'flex items-center'}`}>
-            {/* Avatar */}
-            <div className={`${isCollapsed ? 'w-10 h-10' : 'w-12 h-12'} rounded-full bg-blue-100 flex items-center justify-center overflow-hidden text-blue-600 font-medium border-2 border-white shadow-sm`}>
+          <div className={`relative ${isCollapsed ? 'flex flex-col items-center' : 'flex items-center w-full'}`}>
+            {/* Avatar - standardized size */}
+            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden text-blue-600 font-medium border-2 border-white shadow-sm">
               {avatarSrc ? (
                 <img src={avatarSrc} alt={userName} className="w-full h-full object-cover" />
               ) : (
-                <span className={`${isCollapsed ? 'text-sm' : 'text-lg'}`}>{userName?.charAt(0)}</span>
+                <span className="text-sm">{userName?.charAt(0)}</span>
               )}
             </div>
             
             {/* User info (only when sidebar is expanded) */}
             {!isCollapsed && (
-              <div className="ml-3 flex-grow">
-                <div className="font-medium text-gray-800 text-sm">{userName}</div>
-                <div className="text-xs text-gray-500">{userDescription}</div>
+              <div className="ml-3 flex-grow min-w-[120px]">
+                <div className="font-medium text-gray-800 text-sm truncate">{userName}</div>
+                <div className="text-xs text-gray-500 truncate">{userDescription}</div>
               </div>
             )}
             
@@ -178,13 +179,13 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
           </div>
         </div>
 
-        {/* Role selector popup */}
+        {/* Role selector popup - standardize size for both roles */}
         {menuOpen && (
           <div 
             ref={menuRef}
             className={`
               absolute z-50 bg-white rounded-lg shadow-lg p-4 mt-2
-              border border-gray-200 min-w-[240px]
+              border border-gray-200 min-w-[240px] w-[240px]
               ${isCollapsed ? 'left-full ml-4' : 'left-0 top-full'}
             `}
           >
@@ -201,9 +202,10 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
                   className={`
                     flex items-center p-2 rounded-md text-left
                     ${userRole === 'Admin' ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50'}
+                    h-[60px]
                   `}
                 >
-                  <div className={`w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center mr-2`}>
+                  <div className={`w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center mr-2 flex-shrink-0`}>
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
@@ -219,9 +221,10 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
                   className={`
                     flex items-center p-2 rounded-md text-left
                     ${userRole === 'Buyer' ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50'}
+                    h-[60px]
                   `}
                 >
-                  <div className={`w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center mr-2`}>
+                  <div className={`w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center mr-2 flex-shrink-0`}>
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                     </svg>

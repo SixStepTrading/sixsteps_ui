@@ -1,5 +1,8 @@
 import { v4 as uuidv4 } from 'uuid';
 
+// Definizione dei tipi di dato
+export type OrderStatus = 'Draft' | 'Pending Approval' | 'Processing' | 'Approved' | 'Rejected' | 'Counter Offer Sent';
+
 // Interface for order product details
 export interface OrderProductDetail {
   id: string;
@@ -22,15 +25,21 @@ export interface OrderAdditionalInfo {
 export interface OrderWithDetails {
   id: string;
   createdOn: string;
+  status: OrderStatus;
   totalProducts: number;
   items: number;
   amount: number;
-  status: 'Approved' | 'Pending Approval' | 'Processing' | 'Draft';
   deliveryStatus?: string;
   deliveryDate?: string;
   estimatedDelivery?: string;
   completion?: number;
-  selected?: boolean;
+  buyerId?: string;
+  buyerName?: string;
+  counterOffer?: {
+    amount: number;
+    message: string;
+    date: string;
+  }
 }
 
 // Interface for order detail data used in the modal
@@ -149,8 +158,7 @@ export const MOCK_ORDERS: OrderWithDetails[] = [
     amount: 124580.80,
     status: 'Approved',
     deliveryStatus: 'Delivered',
-    deliveryDate: 'May 15, 2025',
-    selected: false
+    deliveryDate: 'May 15, 2025'
   },
   {
     id: 'ODA-2586',
@@ -159,8 +167,7 @@ export const MOCK_ORDERS: OrderWithDetails[] = [
     items: 1452,
     amount: 184550.50,
     status: 'Pending Approval',
-    estimatedDelivery: 'Awaiting approval',
-    selected: false
+    estimatedDelivery: 'Awaiting approval'
   },
   {
     id: 'ODA-2585',
@@ -169,8 +176,7 @@ export const MOCK_ORDERS: OrderWithDetails[] = [
     items: 1037,
     amount: 189230.30,
     status: 'Processing',
-    estimatedDelivery: 'May 20, 2025',
-    selected: false
+    estimatedDelivery: 'May 20, 2025'
   },
   {
     id: 'ODA-2584-DRAFT',
@@ -179,8 +185,7 @@ export const MOCK_ORDERS: OrderWithDetails[] = [
     items: 722,
     amount: 132075.75,
     status: 'Draft',
-    completion: 60,
-    selected: false
+    completion: 60
   },
   {
     id: 'ODA-2583-DRAFT',
@@ -189,8 +194,7 @@ export const MOCK_ORDERS: OrderWithDetails[] = [
     items: 490,
     amount: 100000.00,
     status: 'Draft',
-    completion: 10,
-    selected: false
+    completion: 10
   }
 ];
 
@@ -227,7 +231,7 @@ export const generateMockOrders = (count: number = 20): OrderWithDetails[] => {
   }
   
   // Statuses for new orders
-  const statuses: ('Approved' | 'Pending Approval' | 'Processing' | 'Draft')[] = [
+  const statuses: OrderStatus[] = [
     'Approved', 'Pending Approval', 'Processing', 'Draft'
   ];
   
@@ -254,8 +258,7 @@ export const generateMockOrders = (count: number = 20): OrderWithDetails[] => {
       totalProducts,
       items,
       amount,
-      status,
-      selected: false
+      status
     };
     
     // Add status-specific fields

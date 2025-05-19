@@ -42,7 +42,7 @@ interface UserProviderProps {
 }
 
 export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
-  const [currentProfile, setCurrentProfile] = useState<UserProfile>(userProfiles.Buyer);
+  const [currentProfile, setCurrentProfile] = useState<UserProfile>(userProfiles.Admin);
 
   // Toggle between Buyer and Admin roles
   const toggleUserRole = () => {
