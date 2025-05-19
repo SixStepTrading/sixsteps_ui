@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { UserAvatar } from '../atoms';
 import { useUser } from '../../../contexts/UserContext';
 
 interface SidebarHeaderProps {
@@ -98,9 +97,9 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
       {/* Logo and collapse control */}
       <div className={`p-2 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
         {!isCollapsed && (
-          <h2 className="font-bold text-blue-600 text-base truncate">
-            {logo}
-          </h2>
+          <div className="h-16 pl-1">
+            <img src="/sixsteps_logo.png" alt="Six Steps Logo" className="h-full object-contain" />
+          </div>
         )}
         
         <button

@@ -118,7 +118,7 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({
   const drawer = (
     <div className="flex flex-col h-full">
       <SidebarHeader 
-        logo="Six Steps"
+        logo=""
         isCollapsed={isCollapsed}
         onToggleCollapse={onToggleCollapse}
       />
