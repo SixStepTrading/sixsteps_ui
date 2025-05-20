@@ -259,11 +259,10 @@ const PurchaseOrders: React.FC = () => {
   };
 
   return (
-    <div className="flex-grow p-3 pb-20">
+    <div>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-medium">Purchase Orders</h1>
-          <p className="text-gray-500 text-sm">Manage and track your purchase orders</p>
+          <p className="text-gray-500 text-sm">View and track your purchase orders</p>
         </div>
         <div className="flex gap-2 items-center">
         <button

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useToast } from '../../contexts/ToastContext';
 import { mockOrders, OrderWithDetails, OrderStatus } from '../../data/mockOrders';
-import StatCard from '../../components/common/StatCard';
+import OrderStatCard from '../common/OrderStatCard';
 import { SidebarContext } from '../../contexts/SidebarContext';
 
 // Status constants for Admin actions
@@ -83,7 +83,7 @@ const ManageOrders: React.FC = () => {
     
     // Calculate stats
     updateOrderStats(buyersData);
-  }, []);
+  }, [buyers]);
   
   // Calculate and update order statistics
   const updateOrderStats = (orders: OrderWithDetails[]) => {
@@ -310,10 +310,10 @@ const ManageOrders: React.FC = () => {
     <div>
       {/* Stats summary cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard 
+        <OrderStatCard 
           title="Total Orders" 
           value={orderStats.totalOrders}
-          color="#3b82f6"
+          color="blue"
           icon={
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
@@ -321,10 +321,10 @@ const ManageOrders: React.FC = () => {
           }
         />
         
-        <StatCard 
+        <OrderStatCard 
           title="Pending Approval" 
           value={orderStats.pendingApproval}
-          color="#eab308"
+          color="yellow"
           icon={
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -332,10 +332,10 @@ const ManageOrders: React.FC = () => {
           }
         />
         
-        <StatCard 
+        <OrderStatCard 
           title="Approval Rate" 
           value={`${orderStats.approvalRate}%`}
-          color="#16a34a"
+          color="green"
           icon={
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -343,10 +343,10 @@ const ManageOrders: React.FC = () => {
           }
         />
         
-        <StatCard 
+        <OrderStatCard 
           title="Avg. Processing Time" 
           value={orderStats.processingTime}
-          color="#a855f7"
+          color="purple"
           icon={
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
