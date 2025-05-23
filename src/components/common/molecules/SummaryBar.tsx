@@ -13,6 +13,17 @@ interface SummaryBarProps {
   belowTargetCount?: number;
   aboveTargetCount?: number;
   stockIssuesCount?: number;
+  selectedProducts?: Array<{
+    id: string;
+    ean: string;
+    minsan: string;
+    name: string;
+    manufacturer: string;
+    publicPrice: number;
+    bestPrices: Array<{ price: number; stock: number; supplier?: string }>;
+    vat: number;
+    quantity: number;
+  }>;
 }
 
 const SummaryBar: React.FC<SummaryBarProps> = ({
@@ -26,10 +37,15 @@ const SummaryBar: React.FC<SummaryBarProps> = ({
   hasSelectionProblems = false,
   belowTargetCount = 0,
   aboveTargetCount = 0,
-  stockIssuesCount = 0
+  stockIssuesCount = 0,
+  selectedProducts = []
 }) => {
   // Non mostrare la barra se non ci sono elementi selezionati
   if (selectedCount === 0) return null;
+  
+  // Count products without quantity
+  const productsWithoutQtyCount = selectedProducts.filter(p => !p.quantity).length;
+  const hasProductsWithoutQty = productsWithoutQtyCount > 0;
   
   return (
     <div 
@@ -55,6 +71,11 @@ const SummaryBar: React.FC<SummaryBarProps> = ({
               <p className="text-xs text-gray-500">
                 {totalItems} items in total
               </p>
+              {hasProductsWithoutQty && (
+                <p className="text-xs text-red-500 font-semibold mt-1">
+                  Set the QTY to continue!
+                </p>
+              )}
             </div>
           </div>
 
@@ -80,6 +101,15 @@ const SummaryBar: React.FC<SummaryBarProps> = ({
                 <span>Stock issues: <span className="font-bold">{stockIssuesCount}</span></span>
               </div>
             </Tooltip>
+            
+            {hasProductsWithoutQty && (
+              <Tooltip text="Products with no quantity specified - set a quantity to proceed">
+                <div className="flex items-center bg-red-50 text-red-700 text-xs rounded-full px-2 py-1">
+                  <span className="w-2 h-2 bg-red-500 rounded-full mr-1"></span>
+                  <span>Missing QTY: <span className="font-bold">{productsWithoutQtyCount}</span></span>
+                </div>
+              </Tooltip>
+            )}
           </div>
 
           {/* Total price */}
@@ -91,8 +121,12 @@ const SummaryBar: React.FC<SummaryBarProps> = ({
           {/* Action buttons */}
           <div className="flex justify-between sm:justify-end gap-3">
             <button
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors duration-200 flex items-center"
+              className={`px-4 py-2 text-sm font-medium text-gray-700 rounded-md transition-colors duration-200 flex items-center
+                ${hasProductsWithoutQty || hasSelectionProblems 
+                  ? 'bg-gray-200 cursor-not-allowed' 
+                  : 'bg-gray-100 hover:bg-gray-200'}`}
               onClick={onSaveAsDraft}
+              disabled={hasProductsWithoutQty || hasSelectionProblems}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6h5a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2h5v5.586l-1.293-1.293zM9 4a1 1 0 012 0v2H9V4z" />
@@ -102,11 +136,11 @@ const SummaryBar: React.FC<SummaryBarProps> = ({
             
             <button
               className={`px-4 py-2 text-sm font-medium text-white rounded-md transition-colors duration-200 flex items-center
-                ${hasSelectionProblems 
+                ${hasProductsWithoutQty || hasSelectionProblems 
                   ? 'bg-gray-400 cursor-not-allowed' 
                   : 'bg-blue-600 hover:bg-blue-700'}`}
               onClick={onCreateOrder}
-              disabled={hasSelectionProblems}
+              disabled={hasProductsWithoutQty || hasSelectionProblems}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />

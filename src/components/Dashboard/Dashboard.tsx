@@ -566,11 +566,7 @@ const Dashboard: React.FC = () => {
   const handleSelectClick = (event: React.MouseEvent<unknown>, id: string) => {
     const product = filteredProducts.find(p => p.id === id);
     
-    // Only allow selection if quantity > 0
-    if (!product || product.quantity <= 0) {
-      return;
-    }
-    
+    // Remove the condition that prevents selection if quantity <= 0
     const selectedIndex = selected.indexOf(id);
     let newSelected: string[] = [];
 
@@ -1347,6 +1343,7 @@ const Dashboard: React.FC = () => {
         belowTargetCount={belowTargetCount}
         aboveTargetCount={aboveTargetCount}
         stockIssuesCount={stockIssuesCount}
+        selectedProducts={selectedProducts}
       />
 
       {/* Order Confirmation Modal */}

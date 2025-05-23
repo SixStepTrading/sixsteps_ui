@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from "react";
 import { isStockExceeded } from '../common/utils/priceCalculations';
 import { Product } from '../../data/mockProducts';
 import { SidebarContext } from '../../contexts/SidebarContext';
+import ExportButton from '../common/molecules/ExportButton';
 
 export interface ProductWithQuantity extends Product {
   quantity: number;
@@ -145,6 +146,9 @@ const ProductTable: React.FC<ProductTableProps> = ({
     return product && isStockExceeded(product.quantity, product.bestPrices);
   });
 
+  // Get the selected products
+  const selectedProducts = products.filter(p => selected.includes(p.id));
+
   // Effetto per notificare quando cambia lo stato dei problemi nella selezione
   useEffect(() => {
     if (onSelectionWithProblemsChange) {
@@ -222,12 +226,17 @@ const ProductTable: React.FC<ProductTableProps> = ({
 
   return (
     <div className="w-full flex flex-col gap-1 mb-8">
-      {/* Header superiore con indicatore numero prodotti a sinistra */}
-      <div className="flex items-center mb-1 px-2">
+      {/* Header superiore con indicatore numero prodotti a sinistra e ExportButton a destra */}
+      <div className="flex items-center justify-between mb-1 px-2">
         <div className="text-xs text-slate-600 bg-blue-50 px-3 py-1 rounded flex items-center">
           <span className="font-medium">Total Products:</span>
           <span className="ml-1 font-semibold text-blue-600">{totalProductCount}</span>
         </div>
+        
+        <ExportButton 
+          selectedProducts={selectedProducts}
+          isVisible={true}
+        />
       </div>
       
       {/* Table container with horizontal scroll only, no extra spacing */}
@@ -314,12 +323,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
                     rounded-xl my-1
                   `}
                   onClick={() => {
-                    if (product.quantity <= 0) {
-                      // Mostra messaggio di errore per quantità non impostata
-                      alert("Please set a quantity before selecting this product.");
-                    } else if (!isExceeded) {
-                      onSelect(product.id);
-                    }
+                    onSelect(product.id);
                   }}
                 >
                   {/* Row number and Checkbox combined */}
@@ -336,14 +340,11 @@ const ProductTable: React.FC<ProductTableProps> = ({
                         <input
                           type="checkbox"
                           checked={isProductSelected}
-                          disabled={product.quantity === 0}
                           className="w-4 h-4 rounded border-gray-300 text-blue-600"
                           onChange={e => e.stopPropagation()}
                           onClick={e => {
                             e.stopPropagation();
-                            if (product.quantity > 0) {
-                              onSelect(product.id);
-                            }
+                            onSelect(product.id);
                           }}
                         />
                       )}
@@ -404,7 +405,9 @@ const ProductTable: React.FC<ProductTableProps> = ({
                           onQuantityChange(product.id, isNaN(value) ? 0 : value);
                         }}
                         className={`w-full h-9 text-sm px-2 py-1 text-center rounded border ${
-                          isExceeded ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-gray-300 bg-white'
+                          isExceeded ? 'border-amber-500 bg-amber-50 text-amber-700' : 
+                          (isProductSelected && !product.quantity) ? 'border-red-300 bg-red-50 text-red-700' :
+                          'border-gray-300 bg-white'
                         } focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-sm`}
                       />
                       {isExceeded && (
