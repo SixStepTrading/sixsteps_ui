@@ -482,6 +482,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
                         <div>Gross discount: <span style='color:#ef4444'>${grossDiscountPercent.toFixed(0)}%</span></div>
                         <div>Net discount: <span style='color:#f59e42'>${netDiscountPercent.toFixed(0)}%</span></div>
                         <div>Stock: <span style='color:#2563eb'>${price.stock}</span></div>
+                        ${userRole === 'Admin' && price.supplier ? `<div>Supplier: <span style='color:#047857'>${price.supplier}</span></div>` : ''}
                       `;
                       return (
                         <Tooltip text={tooltipContent} position="left" html>
@@ -504,24 +505,24 @@ const ProductTable: React.FC<ProductTableProps> = ({
                   </div>
                   
                   {/* Total Stock + Show more prices */}
-                  <div className={`${isDrawerCollapsed ? 'w-[7.5%]' : 'w-[8%]'} flex flex-col items-end text-xs`}>
+                  <div 
+                    className={`${isDrawerCollapsed ? 'w-[7.5%]' : 'w-[8%]'} flex flex-col items-end text-xs cursor-pointer hover:bg-gray-50 p-1 rounded transition-colors`}
+                    onClick={e => {
+                      e.stopPropagation();
+                      openPriceModal(product);
+                    }}
+                  >
                     <div className="text-slate-600 whitespace-nowrap">
                       Stock: <span className="font-medium text-blue-600">{totalProductStock}</span>
                     </div>
                     
                     {product.bestPrices.length > 3 && (
-                      <button
-                        className="text-blue-500 text-xs flex items-center mt-1 whitespace-nowrap"
-                        onClick={e => {
-                          e.stopPropagation();
-                          openPriceModal(product);
-                        }}
-                      >
+                      <div className="text-blue-500 text-xs flex items-center mt-1 whitespace-nowrap">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3 mr-1">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 21v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21m0 0h4.5V3.545M12.75 21h7.5V10.75M2.25 21h1.5m18 0h-18M2.25 9l4.5-1.636M18.75 3l-1.5.545m0 6.205l3 1m1.5.5l-1.5-.5M6.75 7.364V3h-3v18m3-13.636l10.5-3.819" />
                         </svg>
                         Show more
-                      </button>
+                      </div>
                     )}
                   </div>
                 </div>
