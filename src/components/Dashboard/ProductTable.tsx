@@ -323,7 +323,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
                     rounded-xl my-1
                   `}
                   onClick={() => {
-                    onSelect(product.id);
+                      onSelect(product.id);
                   }}
                 >
                   {/* Row number and Checkbox combined */}
@@ -344,7 +344,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
                           onChange={e => e.stopPropagation()}
                           onClick={e => {
                             e.stopPropagation();
-                            onSelect(product.id);
+                              onSelect(product.id);
                           }}
                         />
                       )}

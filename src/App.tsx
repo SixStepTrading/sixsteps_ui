@@ -6,6 +6,7 @@ import { UserProvider } from './contexts/UserContext';
 import MainLayout from './layouts/MainLayout';
 import Dashboard from './components/Dashboard/Dashboard';
 import PurchaseOrdersLayout from './components/PurchaseOrders/PurchaseOrdersLayout';
+import OrderDetailPage from './components/PurchaseOrders/OrderDetailPage';
 import UserManagement from './components/UserManagement/UserManagement';
 import PrivateRoute from './components/common/PrivateRoute';
 
@@ -20,6 +21,10 @@ function App() {
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/purchase-orders" element={<PurchaseOrdersLayout />} />
+                <Route 
+                  path="/purchase-orders/order/:orderId" 
+                  element={<OrderDetailPage />} 
+                />
                   <Route 
                     path="/user-management" 
                     element={<PrivateRoute element={<UserManagement />} requiredRole="Admin" />} 

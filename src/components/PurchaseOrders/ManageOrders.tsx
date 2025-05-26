@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
-import { mockOrders, OrderWithDetails, OrderStatus } from '../../data/mockOrders';
+import { mockOrders, OrderWithDetails, OrderStatus, CounterOfferDetail } from '../../data/mockOrders';
 import OrderStatCard from '../common/OrderStatCard';
 import { SidebarContext } from '../../contexts/SidebarContext';
+import { v4 as uuidv4 } from 'uuid';
 
 // Status constants for Admin actions
 enum AdminAction {
@@ -24,6 +26,7 @@ interface OrderStats {
 const ManageOrders: React.FC = () => {
   const { showToast } = useToast();
   const { isDrawerCollapsed } = useContext(SidebarContext);
+  const navigate = useNavigate();
   
   // State for buyers' orders
   const [buyerOrders, setBuyerOrders] = useState<OrderWithDetails[]>([]);
@@ -72,7 +75,10 @@ const ManageOrders: React.FC = () => {
   useEffect(() => {
     // In a real app, this would fetch only buyers' orders
     // For now, filter mock orders to simulate buyer orders
-    const buyersData = mockOrders.map(order => ({
+    // Admin should not see Draft orders as they haven't been submitted yet
+    const buyersData = mockOrders
+      .filter(order => order.status !== 'Draft') // Admin doesn't see draft orders
+      .map(order => ({
       ...order,
       buyerId: buyers[Math.floor(Math.random() * buyers.length)].id,
       buyerName: buyers[Math.floor(Math.random() * buyers.length)].name,
@@ -227,17 +233,29 @@ const ManageOrders: React.FC = () => {
   const submitCounterOffer = () => {
     if (!selectedOrderForCounter) return;
     
+    const selectedOrder = buyerOrders.find(order => order.id === selectedOrderForCounter);
+    if (!selectedOrder) return;
+    
+    // Create a proper counter offer object
+    const counterOffer: CounterOfferDetail = {
+      id: uuidv4(),
+      originalAmount: selectedOrder.amount,
+      proposedAmount: counterOfferDetails.newAmount,
+      message: counterOfferDetails.message,
+      createdDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+      expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }), // 7 days from now
+      status: 'Pending',
+      adminId: 'ADM-001', // This would come from the current admin user
+      adminName: 'Admin User' // This would come from the current admin user
+    };
+    
     // Update the order with counter offer flag
     const updatedOrders = buyerOrders.map(order => 
       order.id === selectedOrderForCounter
         ? {
             ...order, 
-            status: 'Counter Offer Sent' as OrderStatus,
-            counterOffer: {
-              amount: counterOfferDetails.newAmount,
-              message: counterOfferDetails.message,
-              date: new Date().toLocaleDateString()
-            }
+            status: 'Counter Offer' as OrderStatus,
+            counterOffer: counterOffer
           }
         : order
     );
@@ -262,7 +280,7 @@ const ManageOrders: React.FC = () => {
         return 'bg-blue-100 text-blue-800';
       case 'Rejected':
         return 'bg-red-100 text-red-800';
-      case 'Counter Offer Sent':
+      case 'Counter Offer':
         return 'bg-purple-100 text-purple-800';
       case 'Draft':
         return 'bg-gray-100 text-gray-800';
@@ -384,7 +402,7 @@ const ManageOrders: React.FC = () => {
                 <option value="Pending Approval">Pending Approval</option>
                 <option value="Approved">Approved</option>
                 <option value="Rejected">Rejected</option>
-                <option value="Counter Offer Sent">Counter Offer Sent</option>
+                <option value="Counter Offer">Counter Offer</option>
                 <option value="Processing">Processing</option>
               </select>
             </div>
@@ -597,13 +615,16 @@ const ManageOrders: React.FC = () => {
                     <div className="text-slate-600">
                       <span className="font-medium">{order.items}</span> Items
                     </div>
+                    <div className="text-slate-600">
+                      <span className="font-medium">{order.suppliers?.length || 0}</span> Suppliers
+                    </div>
                   </div>
                   
                   {/* Amount */}
                   <div className="w-[14%] text-right">
                     <span className="font-semibold text-sm text-slate-700">€{order.amount.toFixed(2)}</span>
                     {order.counterOffer && (
-                      <div className="text-xs text-purple-600">Counter: €{order.counterOffer.amount.toFixed(2)}</div>
+                      <div className="text-xs text-purple-600">Counter: €{order.counterOffer.proposedAmount.toFixed(2)}</div>
                     )}
                   </div>
                   
@@ -644,6 +665,10 @@ const ManageOrders: React.FC = () => {
                       </>
                     )}
                     <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/purchase-orders/order/${order.id}`);
+                      }}
                       className="px-2 py-1 text-xs font-medium text-blue-700 bg-blue-100 rounded hover:bg-blue-200"
                     >
                       View Details

@@ -5,20 +5,15 @@ import { SidebarContext } from '../../contexts/SidebarContext';
 
 // Import Tooltip component from ProductTable
 import { Tooltip } from '../Dashboard/ProductTable';
-import OrderDetailsModal from '../common/molecules/OrderDetailsModal';
-
-// Import the OrderDetailData type from the OrderDetailsModal
-import type { OrderDetailData } from '../common/molecules/OrderDetailsModal';
 
 // Import order data from mock data file
 import { 
   mockOrders, 
-  ORDER_DETAILS, 
-  ORDER_ADDITIONAL_INFO, 
-  getOrderDetails,
   OrderWithDetails,
-  OrderDetailData as MockOrderDetailData
+  acceptCounterOffer,
+  rejectCounterOffer
 } from '../../data/mockOrders';
+import CounterOfferModal from '../common/molecules/CounterOfferModal';
 
 // Dati dei prodotti che simulano quelli della dashboard
 const DASHBOARD_PRODUCTS = [
@@ -93,9 +88,11 @@ const PurchaseOrders: React.FC = () => {
     { value: 'custom', label: 'Custom Range' }
   ]);
   
-  // State for the details modal
-  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
-  const [selectedOrderDetails, setSelectedOrderDetails] = useState<OrderDetailData | null>(null);
+
+
+  // State for counter offer modal
+  const [counterOfferModalOpen, setCounterOfferModalOpen] = useState(false);
+  const [selectedCounterOffer, setSelectedCounterOffer] = useState<{orderId: string, counterOffer: any} | null>(null);
 
   // Sorting state
   const [sortBy, setSortBy] = useState<string>('date');
@@ -143,28 +140,11 @@ const PurchaseOrders: React.FC = () => {
     showToast('Creating new purchase order...', 'info');
   };
 
-  // Convert MockOrderDetailData to OrderDetailData (compatible with OrderDetailsModal)
-  const convertOrderDetailData = (data: MockOrderDetailData): OrderDetailData => {
-    return {
-      ...data,
-      status: data.status as "Approved" | "Pending Approval" | "Processing" | "Draft"
-    };
-  };
 
-  // Handle opening the details modal
+
+  // Handle opening the details page
   const handleViewDetails = (id: string) => {
-    try {
-      const details = getOrderDetails(id);
-      if (details) {
-        // Convert to the expected type
-        setSelectedOrderDetails(convertOrderDetailData(details));
-      setDetailsModalOpen(true);
-      } else {
-        showToast(`Failed to load order details: Order not found`, 'error');
-      }
-    } catch (error) {
-      showToast(`Failed to load order details: ${error}`, 'error');
-    }
+    navigate(`/purchase-orders/order/${id}`);
   };
 
   // Handle item selection
@@ -197,6 +177,54 @@ const PurchaseOrders: React.FC = () => {
   const handlePrintOrder = () => showToast('Printing order...', 'info');
   const handleDownloadOrder = () => showToast('Order downloaded as PDF', 'success');
 
+  // Counter offer handlers
+  const handleViewCounterOffer = (order: OrderWithDetails) => {
+    if (order.counterOffer) {
+      setSelectedCounterOffer({ orderId: order.id, counterOffer: order.counterOffer });
+      setCounterOfferModalOpen(true);
+    }
+  };
+
+  const handleAcceptCounterOffer = async (orderId: string) => {
+    try {
+      const success = acceptCounterOffer(orderId);
+      if (success) {
+        // Update local state
+        const updatedOrders = orders.map(order => 
+          order.id === orderId 
+            ? { ...order, status: 'Approved' as any, amount: order.counterOffer?.proposedAmount || order.amount }
+            : order
+        );
+        setOrders(updatedOrders);
+        showToast('Counter offer accepted successfully', 'success');
+      } else {
+        showToast('Failed to accept counter offer', 'error');
+      }
+    } catch (error) {
+      showToast('Error accepting counter offer', 'error');
+    }
+  };
+
+  const handleRejectCounterOffer = async (orderId: string) => {
+    try {
+      const success = rejectCounterOffer(orderId);
+      if (success) {
+        // Update local state
+        const updatedOrders = orders.map(order => 
+          order.id === orderId 
+            ? { ...order, status: 'Rejected' as any }
+            : order
+        );
+        setOrders(updatedOrders);
+        showToast('Counter offer rejected', 'success');
+      } else {
+        showToast('Failed to reject counter offer', 'error');
+      }
+    } catch (error) {
+      showToast('Error rejecting counter offer', 'error');
+    }
+  };
+
   // Get status chip style and text
   const getStatusClass = (status: string) => {
     switch (status) {
@@ -206,6 +234,10 @@ const PurchaseOrders: React.FC = () => {
         return 'bg-yellow-100 text-yellow-800';
       case 'Processing':
         return 'bg-blue-100 text-blue-800';
+      case 'Counter Offer':
+        return 'bg-purple-100 text-purple-800';
+      case 'Rejected':
+        return 'bg-red-100 text-red-800';
       case 'Draft':
         return 'bg-gray-100 text-gray-800';
       default:
@@ -524,6 +556,18 @@ const PurchaseOrders: React.FC = () => {
                         </button>
                       )}
                       
+                      {order.status === 'Counter Offer' && (
+                        <button
+                          className="px-2 py-1 text-xs font-medium text-purple-700 bg-purple-100 rounded hover:bg-purple-200"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewCounterOffer(order);
+                          }}
+                        >
+                          View Offer
+                        </button>
+                      )}
+                      
                       {order.status === 'Draft' && (
                         <>
                           <button
@@ -555,14 +599,18 @@ const PurchaseOrders: React.FC = () => {
         </div>
       </div>
       
-      {/* Order Details Modal */}
-      {selectedOrderDetails && (
-        <OrderDetailsModal
-          open={detailsModalOpen}
-          onClose={() => setDetailsModalOpen(false)}
-          orderDetails={selectedOrderDetails}
-          onPrint={handlePrintOrder}
-          onDownload={handleDownloadOrder}
+      {/* Counter Offer Modal */}
+      {selectedCounterOffer && (
+        <CounterOfferModal
+          open={counterOfferModalOpen}
+          onClose={() => {
+            setCounterOfferModalOpen(false);
+            setSelectedCounterOffer(null);
+          }}
+          counterOffer={selectedCounterOffer.counterOffer}
+          orderId={selectedCounterOffer.orderId}
+          onAccept={handleAcceptCounterOffer}
+          onReject={handleRejectCounterOffer}
         />
       )}
     </div>
