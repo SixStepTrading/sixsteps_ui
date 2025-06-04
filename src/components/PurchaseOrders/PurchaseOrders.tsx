@@ -11,9 +11,15 @@ import {
   mockOrders, 
   OrderWithDetails,
   acceptCounterOffer,
-  rejectCounterOffer
+  rejectCounterOffer,
+  BuyerPickingPreferences,
+  PickingNotification,
+  MOCK_BUYER_PREFERENCES,
+  MOCK_PICKING_NOTIFICATIONS
 } from '../../data/mockOrders';
 import CounterOfferModal from '../common/molecules/CounterOfferModal';
+import PickingPreferencesModal from './PickingPreferencesModal';
+import PickingNotificationModal from './PickingNotificationModal';
 
 // Dati dei prodotti che simulano quelli della dashboard
 const DASHBOARD_PRODUCTS = [
@@ -93,6 +99,13 @@ const PurchaseOrders: React.FC = () => {
   // State for counter offer modal
   const [counterOfferModalOpen, setCounterOfferModalOpen] = useState(false);
   const [selectedCounterOffer, setSelectedCounterOffer] = useState<{orderId: string, counterOffer: any} | null>(null);
+
+  // New state for picking functionality
+  const [buyerPreferences, setBuyerPreferences] = useState<BuyerPickingPreferences>(MOCK_BUYER_PREFERENCES);
+  const [pickingPreferencesModalOpen, setPickingPreferencesModalOpen] = useState(false);
+  const [pickingNotificationModalOpen, setPickingNotificationModalOpen] = useState(false);
+  const [selectedPickingNotification, setSelectedPickingNotification] = useState<PickingNotification | null>(null);
+  const [pickingNotifications, setPickingNotifications] = useState<PickingNotification[]>(MOCK_PICKING_NOTIFICATIONS);
 
   // Sorting state
   const [sortBy, setSortBy] = useState<string>('date');
@@ -216,32 +229,86 @@ const PurchaseOrders: React.FC = () => {
             : order
         );
         setOrders(updatedOrders);
-        showToast('Counter offer rejected', 'success');
+        showToast('Counter offer rejected', 'info');
       } else {
         showToast('Failed to reject counter offer', 'error');
       }
     } catch (error) {
+      console.error('Error rejecting counter offer:', error);
       showToast('Error rejecting counter offer', 'error');
     }
+    setCounterOfferModalOpen(false);
+    setSelectedCounterOffer(null);
+  };
+
+  // New picking-related handlers
+  const handleOpenPickingPreferences = () => {
+    setPickingPreferencesModalOpen(true);
+  };
+
+  const handlePickingPreferencesUpdated = (preferences: BuyerPickingPreferences) => {
+    setBuyerPreferences(preferences);
+  };
+
+  const handleViewPickingNotification = (notification: PickingNotification) => {
+    setSelectedPickingNotification(notification);
+    setPickingNotificationModalOpen(true);
+  };
+
+  const handlePickingDecisionMade = (decision: 'accept' | 'reject' | 'request_alternatives') => {
+    // Update order status based on decision
+    if (selectedPickingNotification) {
+      const updatedOrders = orders.map(order => {
+        if (order.id === selectedPickingNotification.orderId) {
+          let newStatus: OrderWithDetails['status'] = order.status;
+          if (decision === 'accept') {
+            newStatus = 'Partial Approved';
+          } else if (decision === 'reject') {
+            newStatus = 'Rejected';
+          } else if (decision === 'request_alternatives') {
+            newStatus = 'Counter Offer';
+          }
+          return { ...order, status: newStatus, hasPartialPickingApproval: decision === 'accept' };
+        }
+        return order;
+      });
+      setOrders(updatedOrders);
+
+      // Mark notification as acknowledged
+      const updatedNotifications = pickingNotifications.map(notif =>
+        notif.id === selectedPickingNotification.id
+          ? { ...notif, acknowledged: true }
+          : notif
+      );
+      setPickingNotifications(updatedNotifications);
+    }
+  };
+
+  const getUnacknowledgedPickingCount = () => {
+    return pickingNotifications.filter(notif => !notif.acknowledged).length;
   };
 
   // Get status chip style and text
   const getStatusClass = (status: string) => {
     switch (status) {
-      case 'Approved':
-        return 'bg-green-100 text-green-800';
+      case 'Draft':
+        return 'bg-gray-100 text-gray-800';
       case 'Pending Approval':
         return 'bg-yellow-100 text-yellow-800';
       case 'Processing':
         return 'bg-blue-100 text-blue-800';
-      case 'Counter Offer':
-        return 'bg-purple-100 text-purple-800';
+      case 'Approved':
+        return 'bg-green-100 text-green-800';
       case 'Rejected':
         return 'bg-red-100 text-red-800';
-      case 'Draft':
-        return 'bg-gray-100 text-gray-800';
+      case 'Counter Offer':
+        return 'bg-purple-100 text-purple-800';
+      case 'Picking Required':
+        return 'bg-orange-100 text-orange-800';
+      case 'Partial Approved':
+        return 'bg-emerald-100 text-emerald-800';
       default:
-        return 'bg-gray-100 text-gray-600';
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
@@ -297,6 +364,37 @@ const PurchaseOrders: React.FC = () => {
           <p className="text-gray-500 text-sm">View and track your purchase orders</p>
         </div>
         <div className="flex gap-2 items-center">
+          {/* Picking Notifications Badge */}
+          {getUnacknowledgedPickingCount() > 0 && (
+            <button
+              onClick={() => {
+                const unacknowledged = pickingNotifications.find(n => !n.acknowledged);
+                if (unacknowledged) handleViewPickingNotification(unacknowledged);
+              }}
+              className="relative flex items-center gap-1 bg-orange-600 text-white text-sm py-1 px-3 rounded hover:bg-orange-700 transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+              </svg>
+              Picking Alert
+              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                {getUnacknowledgedPickingCount()}
+              </span>
+            </button>
+          )}
+          
+          {/* Picking Preferences Button */}
+          <button
+            onClick={handleOpenPickingPreferences}
+            className="flex items-center gap-1 border border-gray-500 text-gray-700 text-sm py-1 px-3 rounded hover:bg-gray-50 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Picking Settings
+          </button>
+
         <button
             className="flex items-center gap-1 bg-blue-600 text-white text-sm py-1 px-3 rounded hover:bg-blue-700 transition-colors"
           onClick={handleCreateOda}
@@ -568,6 +666,31 @@ const PurchaseOrders: React.FC = () => {
                         </button>
                       )}
                       
+                      {order.status === 'Picking Required' && (
+                        <button
+                          className="px-2 py-1 text-xs font-medium text-orange-700 bg-orange-100 rounded hover:bg-orange-200"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const notification = pickingNotifications.find(n => n.orderId === order.id && !n.acknowledged);
+                            if (notification) handleViewPickingNotification(notification);
+                          }}
+                        >
+                          Review Picking
+                        </button>
+                      )}
+                      
+                      {order.status === 'Partial Approved' && (
+                        <button
+                          className="px-2 py-1 text-xs font-medium text-emerald-700 bg-emerald-100 rounded hover:bg-emerald-200"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleTrack(order.id);
+                          }}
+                        >
+                          Track Partial
+                        </button>
+                      )}
+                      
                       {order.status === 'Draft' && (
                         <>
                           <button
@@ -611,6 +734,45 @@ const PurchaseOrders: React.FC = () => {
           orderId={selectedCounterOffer.orderId}
           onAccept={handleAcceptCounterOffer}
           onReject={handleRejectCounterOffer}
+        />
+      )}
+
+      {/* Picking Preferences Modal */}
+      <PickingPreferencesModal
+        open={pickingPreferencesModalOpen}
+        onClose={() => setPickingPreferencesModalOpen(false)}
+        currentPreferences={buyerPreferences}
+        buyerId="current-buyer-id" // In a real app, this would come from user context
+        onPreferencesUpdated={handlePickingPreferencesUpdated}
+      />
+
+      {/* Picking Notification Modal */}
+      {selectedPickingNotification && (
+        <PickingNotificationModal
+          open={pickingNotificationModalOpen}
+          onClose={() => {
+            setPickingNotificationModalOpen(false);
+            setSelectedPickingNotification(null);
+          }}
+          notification={selectedPickingNotification}
+          pickingDetails={selectedPickingNotification.orderId === 'ODA-2594' ? {
+            id: 'PD-001',
+            originalQuantity: 100,
+            availableQuantity: 65,
+            allocatedQuantity: 65,
+            reason: 'Current stock limitation - high demand product',
+            alternativeProducts: [
+              {
+                productId: 'P003-ALT',
+                productName: 'VOLTAREN GEL 50g (Alternative)',
+                quantity: 35,
+                unitPrice: 11.80
+              }
+            ],
+            estimatedRestockDate: 'May 22, 2025',
+            supplierComment: 'Premium alternative available with similar efficacy'
+          } : undefined}
+          onDecisionMade={handlePickingDecisionMade}
         />
       )}
     </div>
