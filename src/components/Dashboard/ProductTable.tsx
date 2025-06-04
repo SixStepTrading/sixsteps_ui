@@ -303,10 +303,15 @@ const ProductTable: React.FC<ProductTableProps> = ({
       </div>
       
       {/* Table container with horizontal scroll only, no extra spacing */}
-      <div className="overflow-x-auto w-full">
-        <div className={`${isDrawerCollapsed ? 'min-w-[1000px]' : 'min-w-[1200px]'}`}>
+      <div className="overflow-x-auto overflow-y-hidden w-full overscroll-x-contain">
+        <div 
+          className={`${isDrawerCollapsed ? 'min-w-[1000px]' : 'min-w-[1200px]'}`}
+          style={{ 
+            overscrollBehaviorX: 'contain'
+          }}
+        >
           {/* Header columns - sortable */}
-          <div className="flex items-center px-3 py-3 text-xs uppercase text-slate-500 font-semibold tracking-wider bg-gray-50 rounded-t-lg rounded-xl my-1.5 border-b border-gray-200">
+          <div className="flex items-center px-3 py-2 text-xs uppercase text-slate-500 font-semibold tracking-wider bg-gray-50 rounded-t-lg rounded-xl my-1.5 border-b border-gray-200">
             <div className={`${isDrawerCollapsed ? 'w-[3.5%]' : 'w-[4%]'} text-center`}>#</div>
             <div className={`${isDrawerCollapsed ? 'w-[12%]' : 'w-[13%]'} cursor-pointer select-none flex items-center`} onClick={() => {
               if (sortBy === 'codes') setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -327,7 +332,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
             }}>
               Public Price {renderSortIcon('publicPrice')}
             </div>
-            <div className={`${isDrawerCollapsed ? 'w-[9%]' : 'w-[10%]'} text-center cursor-pointer select-none flex items-center justify-center`} onClick={() => {
+            <div className={`${isDrawerCollapsed ? 'w-[9%]' : 'w-[10%]'} text-right cursor-pointer select-none flex items-center justify-end`} onClick={() => {
               if (sortBy === 'qty') setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
               else { setSortBy('qty'); setSortDirection('asc'); }
             }}>
@@ -377,21 +382,21 @@ const ProductTable: React.FC<ProductTableProps> = ({
                 <div
                   key={product.id}
                   className={`
-                    flex items-center px-3 py-4 bg-white border border-gray-100
+                    flex items-center px-3 py-2 bg-white border border-gray-100
                     ${idx === products.length - 1 ? 'rounded-b-lg' : ''}
                     ${isProductSelected ? 'bg-blue-50' : ''}
                     ${isExceeded ? 'bg-amber-50 border-l-4 border-l-amber-500' : ''}
                     hover:bg-blue-50 cursor-pointer
                     relative
                     rounded-xl my-1
-                    min-h-[80px]
+                    min-h-[60px]
                   `}
                   onClick={() => {
                       onSelect(product.id);
                   }}
                 >
                   {/* Row number and Checkbox combined */}
-                  <div className={`${isDrawerCollapsed ? 'w-[3.5%]' : 'w-[4%]'} flex items-start pt-2`}>
+                  <div className={`${isDrawerCollapsed ? 'w-[3.5%]' : 'w-[4%]'} flex items-start pt-1`}>
                     <div className="flex items-center">
                       <span className="w-5 text-xs text-gray-600 font-medium text-center">{idx + 1}</span>
                       {isExceeded ? (
@@ -416,7 +421,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
                   </div>
 
                   {/* Codes */}
-                  <div className={`${isDrawerCollapsed ? 'w-[12%]' : 'w-[13%]'} flex flex-col text-xs text-slate-500 pt-2`}>
+                  <div className={`${isDrawerCollapsed ? 'w-[12%]' : 'w-[13%]'} flex flex-col text-xs text-slate-500 pt-1`}>
                     <div className="flex mb-1">
                       <span className="font-semibold text-slate-700 w-14">EAN:</span> {product.ean}
                     </div>
@@ -426,7 +431,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
                   </div>
 
                   {/* Product Image */}
-                  <div className="w-[3%] flex justify-center items-start pt-2 mr-2">
+                  <div className="w-[3%] flex justify-center items-start pt-1 mr-2">
                     <img 
                       src={product.image || getMedicineImage(product.id)} 
                       alt={product.name}
@@ -440,20 +445,20 @@ const ProductTable: React.FC<ProductTableProps> = ({
                   </div>
 
                   {/* Name */}
-                  <div className={`${isDrawerCollapsed ? 'w-[19%]' : 'w-[20%]'} flex flex-col pt-2`}>
+                  <div className={`${isDrawerCollapsed ? 'w-[19%]' : 'w-[20%]'} flex flex-col pt-1`}>
                     <span className="font-medium text-sm text-slate-800 truncate">{product.name}</span>
                     <span className="text-xs text-slate-400 mt-1">{product.manufacturer}</span>
                   </div>
 
                   {/* Price */}
-                  <div className={`${isDrawerCollapsed ? 'w-[11%]' : 'w-[12%]'} text-right pt-2 pr-4`}>
+                  <div className={`${isDrawerCollapsed ? 'w-[11%]' : 'w-[12%]'} text-right pt-1 pr-4`}>
                     <span className="font-semibold text-sm text-slate-700">€{product.publicPrice.toFixed(2)}</span>
                     <div className="text-xs text-slate-400 mt-1">VAT {product.vat}%</div>
                   </div>
 
-                  {/* Quantity with enhanced spacing */}
-                  <div className={`${isDrawerCollapsed ? 'w-[9%]' : 'w-[10%]'} flex flex-col justify-start items-center pl-4`} onClick={e => e.stopPropagation()}>
-                    <div className="relative w-full max-w-[70px]">
+                  {/* Quantity with compact layout aligned right */}
+                  <div className={`${isDrawerCollapsed ? 'w-[9%]' : 'w-[10%]'} flex flex-col justify-start items-end pl-2 pr-2`} onClick={e => e.stopPropagation()}>
+                    <div className="relative w-full max-w-[60px] ml-auto">
                       <input
                         type="number"
                         min="0"
@@ -463,7 +468,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
                           const value = parseInt(e.target.value);
                           onQuantityChange(product.id, isNaN(value) ? 0 : value);
                         }}
-                        className={`w-full h-9 text-sm px-2 py-1 text-center rounded border ${
+                        className={`w-full h-7 text-xs px-2 py-1 text-center rounded border ${
                           isExceeded ? 'border-amber-500 bg-amber-50 text-amber-700' : 
                           (isProductSelected && !product.quantity) ? 'border-red-300 bg-red-50 text-red-700' :
                           'border-gray-300 bg-white'
@@ -471,14 +476,14 @@ const ProductTable: React.FC<ProductTableProps> = ({
                       />
                       {isExceeded && (
                         <Tooltip text={errorMessage} position="top">
-                          <span className="absolute -top-2 -right-2 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white">!</span>
+                          <span className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-red-500 text-xs text-white">!</span>
                         </Tooltip>
                       )}
                     </div>
                     
-                    {/* Average Price and Total with improved spacing */}
+                    {/* Average Price and Total with compact spacing aligned right */}
                     {product.quantity > 0 && product.averagePrice !== null ? (
-                      <div className="mt-2 text-xs w-full">
+                      <div className="mt-1 text-xs w-full text-right">
                         <Tooltip 
                           text={`
                             <div><strong>Price Analysis</strong></div>
@@ -489,7 +494,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
                           position="top" 
                           html
                         >
-                          <div className={`font-semibold flex items-center justify-between cursor-help mb-1 ${
+                          <div className={`font-semibold cursor-help text-xs ${
                             isExceeded
                               ? 'text-amber-500'
                               : product.targetPrice !== null
@@ -498,28 +503,32 @@ const ProductTable: React.FC<ProductTableProps> = ({
                                 : 'text-red-600'
                               : 'text-slate-600'
                           }`}>
-                            <span>Avg:</span> 
-                            <span>€{product.averagePrice.toFixed(2)}
-                            {product.targetPrice !== null && product.averagePrice <= product.targetPrice && (
-                              <span className="ml-1 text-green-500">✓</span>
-                            )}</span>
+                            <div className="flex items-center justify-between">
+                              <span>Avg:</span>
+                              <span>€{product.averagePrice.toFixed(2)}
+                              {product.targetPrice !== null && product.averagePrice <= product.targetPrice && (
+                                <span className="ml-1 text-green-500">✓</span>
+                              )}</span>
+                            </div>
                           </div>
-                          <div className="text-slate-500 flex items-center justify-between cursor-help">
-                            <span>Tot:</span>
-                            <span>€{(product.averagePrice * product.quantity).toFixed(2)}</span>
+                          <div className="text-slate-500 cursor-help text-xs">
+                            <div className="flex items-center justify-between">
+                              <span>Tot:</span>
+                              <span>€{(product.averagePrice * product.quantity).toFixed(2)}</span>
+                            </div>
                           </div>
                         </Tooltip>
                       </div>
                     ) : (
-                      <div className="text-xs text-slate-400 mt-2 text-center">--</div>
+                      <div className="text-xs text-slate-400 mt-1 text-right">--</div>
                     )}
                   </div>
 
-                  {/* Target price with discounts and enhanced spacing */}
-                  <div className={`${isDrawerCollapsed ? 'w-[9%]' : 'w-[9%]'} flex flex-col justify-start items-center pl-3`} onClick={e => e.stopPropagation()}>
-                    <div className="w-full max-w-[80px]">
+                  {/* Target price with compact layout */}
+                  <div className={`${isDrawerCollapsed ? 'w-[9%]' : 'w-[9%]'} flex flex-col justify-start items-center pl-2`} onClick={e => e.stopPropagation()}>
+                    <div className="w-full max-w-[70px]">
                       <div className="relative">
-                        <span className="absolute left-2 top-2 text-xs text-slate-400">€</span>
+                        <span className="absolute left-2 top-1 text-xs text-slate-400">€</span>
                         <input
                           type="number"
                           min="0"
@@ -527,7 +536,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
                           placeholder="Target"
                           value={product.targetPrice !== null ? product.targetPrice : ''}
                           onChange={e => onTargetPriceChange(product.id, e.target.value)}
-                          className={`w-full h-9 text-sm pl-6 pr-2 py-1 text-right rounded border bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-sm
+                          className={`w-full h-7 text-xs pl-5 pr-2 py-1 text-right rounded border bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-sm
                             ${product.quantity > 0 && product.averagePrice !== null && product.targetPrice !== null
                               ? product.averagePrice <= product.targetPrice
                                 ? 'border-green-500 bg-green-50 text-green-700'
@@ -536,9 +545,9 @@ const ProductTable: React.FC<ProductTableProps> = ({
                         />
                       </div>
                       
-                      {/* Discount calculations with improved spacing */}
+                      {/* Discount calculations with compact spacing */}
                       {product.targetPrice !== null && product.targetPrice > 0 ? (
-                        <div className="mt-2 text-xs">
+                        <div className="mt-1 text-xs">
                           <Tooltip 
                             text={`
                               <div><strong>Discount Analysis</strong></div>
@@ -557,13 +566,13 @@ const ProductTable: React.FC<ProductTableProps> = ({
                               );
                               return (
                                 <>
-                                  <div className={`font-semibold flex items-center justify-between cursor-help mb-1 ${
+                                  <div className={`font-semibold flex items-center justify-between cursor-help text-xs ${
                                     grossDiscountPercent > 0 ? 'text-green-600' : 'text-red-600'
                                   }`}>
                                     <span>Gross:</span> 
                                     <span>{grossDiscountPercent > 0 ? '+' : ''}{grossDiscountPercent.toFixed(1)}%</span>
                                   </div>
-                                  <div className={`flex items-center justify-between cursor-help ${
+                                  <div className={`flex items-center justify-between cursor-help text-xs ${
                                     netDiscountPercent > 0 ? 'text-orange-600' : 'text-red-600'
                                   }`}>
                                     <span>Net:</span>
@@ -575,13 +584,13 @@ const ProductTable: React.FC<ProductTableProps> = ({
                           </Tooltip>
                         </div>
                       ) : (
-                        <div className="text-xs text-slate-400 mt-2 text-center">--</div>
+                        <div className="text-xs text-slate-400 mt-1 text-center">--</div>
                       )}
                     </div>
                   </div>
 
                   {/* Prices */}
-                  <div className={`${isDrawerCollapsed ? 'w-[20%]' : 'w-[21%]'} flex flex-wrap justify-end gap-1 pt-2 pl-3`}>
+                  <div className={`${isDrawerCollapsed ? 'w-[20%]' : 'w-[21%]'} flex flex-wrap justify-end gap-1 pt-1 pl-3`}>
                     {product.bestPrices.slice(0, 3).map((price, i) => {
                       const { grossDiscountPercent, netDiscountPercent } = calculateDiscounts(
                         product.publicPrice, 
@@ -618,7 +627,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
                   
                   {/* Total Stock + Show more prices */}
                   <div 
-                    className={`${isDrawerCollapsed ? 'w-[7.5%]' : 'w-[8%]'} flex flex-col items-end text-xs cursor-pointer hover:bg-gray-50 p-1 rounded transition-colors pt-2`}
+                    className={`${isDrawerCollapsed ? 'w-[7.5%]' : 'w-[8%]'} flex flex-col items-end text-xs cursor-pointer hover:bg-gray-50 p-1 rounded transition-colors pt-1`}
                     onClick={e => {
                       e.stopPropagation();
                       openPriceModal(product);
