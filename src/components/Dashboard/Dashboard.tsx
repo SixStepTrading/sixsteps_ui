@@ -1218,52 +1218,6 @@ const Dashboard: React.FC = () => {
             Welcome back! Here's what's happening with your pharmacy business today.
           </p>
         </div>
-
-        {/* Buttons moved here from below */}
-        <div className="flex gap-2 items-center">
-          {isAdmin && (
-            <button
-              className="flex items-center gap-1 bg-blue-600 text-white text-sm py-1 px-3 rounded hover:bg-blue-700 transition-colors"
-              onClick={handleOpenAddProductModal}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-              </svg>
-              Add Product
-            </button>
-                  )}
-                  
-                  {/* File Upload Button */}
-          <button
-            className={`flex items-center gap-1 border text-sm py-1 px-3 rounded 
-              ${loading || fileUploading 
-                ? 'border-gray-300 text-gray-400 cursor-not-allowed' 
-                : 'border-blue-600 text-blue-600 hover:bg-blue-50 transition-colors'}
-            `}
-                    onClick={handleUploadButtonClick}
-                    disabled={loading || fileUploading}
-                  >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
-            </svg>
-                    {fileUploading ? 'Processing...' : 'Upload Products'}
-          </button>
-                  
-          <button 
-            className={`flex items-center gap-1 border text-sm py-1 px-3 rounded 
-              ${loading || fileUploading 
-                ? 'border-gray-300 text-gray-400 cursor-not-allowed' 
-                : 'border-gray-500 text-gray-700 hover:bg-gray-50 transition-colors'}
-            `}
-                    onClick={handleRefresh}
-                    disabled={loading || fileUploading}
-                  >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-            </svg>
-                    Refresh
-          </button>
-        </div>
       </div>
 
       {/* Search and filter controls converted to Tailwind */}
@@ -1339,6 +1293,11 @@ const Dashboard: React.FC = () => {
         onSelectionWithProblemsChange={handleSelectionWithProblemsChange}
         userRole={userRole}
         resetFilters={resetFilters}
+        loading={loading}
+        fileUploading={fileUploading}
+        onAddProduct={handleOpenAddProductModal}
+        onUploadProduct={handleUploadButtonClick}
+        onRefresh={handleRefresh}
       />
       
       {/* Add the ActionBar component outside the Card */}
