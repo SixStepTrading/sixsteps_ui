@@ -21,6 +21,7 @@ type ProductTableProps = {
   onToggleAllPrices: (id: string) => void;
   onSelectionWithProblemsChange?: (hasProblems: boolean) => void;
   userRole?: string;
+  resetFilters?: number; // Trigger to reset filters
 };
 
 interface PriceModalProps {
@@ -131,14 +132,39 @@ const ProductTable: React.FC<ProductTableProps> = ({
   onToggleAllPrices,
   onSelectionWithProblemsChange,
   userRole = 'Buyer',
+  resetFilters,
 }) => {
   const [modalProduct, setModalProduct] = useState<ProductWithQuantity | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showSelectedOnly, setShowSelectedOnly] = useState(false);
   const { isDrawerCollapsed } = useContext(SidebarContext);
   
   // Sorting state
   const [sortBy, setSortBy] = useState<string>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  // Medicine placeholder images array
+  const medicineImages = [
+    'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=100&h=100&fit=crop&crop=center', // Pills
+    'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=100&h=100&fit=crop&crop=center', // Medicine bottles
+    'https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=100&h=100&fit=crop&crop=center', // Capsules
+    'https://images.unsplash.com/photo-1576671081837-49000212a370?w=100&h=100&fit=crop&crop=center', // Tablets
+    'https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=100&h=100&fit=crop&crop=center', // Medicine packaging
+    'https://images.unsplash.com/photo-1559757175-0eb30cd8c063?w=100&h=100&fit=crop&crop=center', // Pills in blister pack
+    'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=100&h=100&fit=crop&crop=center', // Medicine vials
+    'https://images.unsplash.com/photo-1550572017-edd951b55104?w=100&h=100&fit=crop&crop=center', // Pharmacy bottles
+  ];
+
+  // Function to get medicine image for a product
+  const getMedicineImage = (productId: string) => {
+    const index = productId.charCodeAt(0) % medicineImages.length;
+    return medicineImages[index];
+  };
+
+  // Filter products based on selection
+  const filteredProducts = showSelectedOnly 
+    ? products.filter(product => selected.includes(product.id))
+    : products;
 
   // Determina se ci sono prodotti selezionati con problemi
   const selectionWithProblems = selected.some(id => {
@@ -148,6 +174,9 @@ const ProductTable: React.FC<ProductTableProps> = ({
 
   // Get the selected products
   const selectedProducts = products.filter(p => selected.includes(p.id));
+
+  // Check if there are any selected products to enable the filter
+  const hasSelectedProducts = selected.length > 0;
 
   // Effetto per notificare quando cambia lo stato dei problemi nella selezione
   useEffect(() => {
@@ -161,7 +190,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
     setIsModalOpen(true);
   };
 
-  const totalProductCount = products.length;
+  const totalProductCount = filteredProducts.length;
 
   const calculateDiscounts = (publicPrice: number, supplierPrice: number, vatPercentage: number) => {
     const grossDiscount = publicPrice - supplierPrice;
@@ -181,7 +210,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
   };
 
   // Sorting logic
-  const sortedProducts = [...products].sort((a, b) => {
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
     let comparison = 0;
     switch (sortBy) {
       case 'codes': // EAN
@@ -224,13 +253,46 @@ const ProductTable: React.FC<ProductTableProps> = ({
       : <span className="ml-1 text-blue-600">↓</span>;
   };
 
+  // Reset showSelectedOnly filter when resetFilters prop is triggered
+  useEffect(() => {
+    if (resetFilters) {
+      setShowSelectedOnly(false);
+    }
+  }, [resetFilters]);
+
   return (
     <div className="w-full flex flex-col gap-1 mb-8">
       {/* Header superiore con indicatore numero prodotti a sinistra e ExportButton a destra */}
       <div className="flex items-center justify-between mb-1 px-2">
-        <div className="text-xs text-slate-600 bg-blue-50 px-3 py-1 rounded flex items-center">
-          <span className="font-medium">Total Products:</span>
-          <span className="ml-1 font-semibold text-blue-600">{totalProductCount}</span>
+        <div className="flex items-center gap-3">
+          <div className="text-xs text-slate-600 bg-blue-50 px-3 py-1 rounded flex items-center">
+            <span className="font-medium">Total Products:</span>
+            <span className="ml-1 font-semibold text-blue-600">{totalProductCount}</span>
+            {showSelectedOnly && (
+              <span className="ml-1 text-xs text-green-600">(filtered)</span>
+            )}
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="showSelectedOnly"
+              checked={showSelectedOnly}
+              onChange={(e) => setShowSelectedOnly(e.target.checked)}
+              disabled={!hasSelectedProducts}
+              className={`w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 ${
+                !hasSelectedProducts ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+              }`}
+            />
+            <label 
+              htmlFor="showSelectedOnly" 
+              className={`text-xs font-medium ${
+                hasSelectedProducts ? 'text-slate-700 cursor-pointer' : 'text-slate-400 cursor-not-allowed'
+              }`}
+            >
+              Show selected only ({selected.length})
+            </label>
+          </div>
         </div>
         
         <ExportButton 
@@ -265,19 +327,19 @@ const ProductTable: React.FC<ProductTableProps> = ({
             }}>
               Public Price {renderSortIcon('publicPrice')}
             </div>
-            <div className={`${isDrawerCollapsed ? 'w-[7.5%]' : 'w-[8%]'} text-center cursor-pointer select-none flex items-center justify-center`} onClick={() => {
+            <div className={`${isDrawerCollapsed ? 'w-[9%]' : 'w-[10%]'} text-center cursor-pointer select-none flex items-center justify-center`} onClick={() => {
               if (sortBy === 'qty') setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
               else { setSortBy('qty'); setSortDirection('asc'); }
             }}>
               Qty {renderSortIcon('qty')}
             </div>
-            <div className={`${isDrawerCollapsed ? 'w-[9.5%]' : 'w-[10%]'} text-center cursor-pointer select-none flex items-center justify-center`} onClick={() => {
+            <div className={`${isDrawerCollapsed ? 'w-[9%]' : 'w-[9%]'} text-center cursor-pointer select-none flex items-center justify-center`} onClick={() => {
               if (sortBy === 'targetPrice') setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
               else { setSortBy('targetPrice'); setSortDirection('asc'); }
             }}>
               Target Price {renderSortIcon('targetPrice')}
             </div>
-            <div className={`${isDrawerCollapsed ? 'w-[21%]' : 'w-[22%]'} text-right cursor-pointer select-none flex items-center justify-end`} onClick={() => {
+            <div className={`${isDrawerCollapsed ? 'w-[20%]' : 'w-[21%]'} text-right cursor-pointer select-none flex items-center justify-end`} onClick={() => {
               if (sortBy === 'prices') setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
               else { setSortBy('prices'); setSortDirection('asc'); }
             }}>
@@ -315,20 +377,21 @@ const ProductTable: React.FC<ProductTableProps> = ({
                 <div
                   key={product.id}
                   className={`
-                    flex items-center px-3 py-3 bg-white border border-gray-100
+                    flex items-center px-3 py-4 bg-white border border-gray-100
                     ${idx === products.length - 1 ? 'rounded-b-lg' : ''}
                     ${isProductSelected ? 'bg-blue-50' : ''}
                     ${isExceeded ? 'bg-amber-50 border-l-4 border-l-amber-500' : ''}
                     hover:bg-blue-50 cursor-pointer
                     relative
                     rounded-xl my-1
+                    min-h-[80px]
                   `}
                   onClick={() => {
                       onSelect(product.id);
                   }}
                 >
                   {/* Row number and Checkbox combined */}
-                  <div className={`${isDrawerCollapsed ? 'w-[3.5%]' : 'w-[4%]'} flex items-center`}>
+                  <div className={`${isDrawerCollapsed ? 'w-[3.5%]' : 'w-[4%]'} flex items-start pt-2`}>
                     <div className="flex items-center">
                       <span className="w-5 text-xs text-gray-600 font-medium text-center">{idx + 1}</span>
                       {isExceeded ? (
@@ -353,8 +416,8 @@ const ProductTable: React.FC<ProductTableProps> = ({
                   </div>
 
                   {/* Codes */}
-                  <div className={`${isDrawerCollapsed ? 'w-[12%]' : 'w-[13%]'} flex flex-col text-xs text-slate-500`}>
-                    <div className="flex">
+                  <div className={`${isDrawerCollapsed ? 'w-[12%]' : 'w-[13%]'} flex flex-col text-xs text-slate-500 pt-2`}>
+                    <div className="flex mb-1">
                       <span className="font-semibold text-slate-700 w-14">EAN:</span> {product.ean}
                     </div>
                     <div className="flex">
@@ -362,39 +425,34 @@ const ProductTable: React.FC<ProductTableProps> = ({
                     </div>
                   </div>
 
-                  {/* Product Image - Add a small thumbnail */}
-                  <div className="w-[3%] flex justify-center items-center mr-2">
-                    {product.image ? (
-                      <img 
-                        src={product.image} 
-                        alt={product.name}
-                        className="w-[40px] h-[40px] object-cover rounded-md shadow-sm border border-gray-200 hover:scale-150 transition-transform duration-200"
-                        onError={(e) => {
-                          // If image fails to load, use a fallback
-                          (e.target as HTMLImageElement).src = 'https://via.placeholder.com/40?text=N/A';
-                        }}
-                      />
-                    ) : (
-                      <div className="w-[40px] h-[40px] flex items-center justify-center bg-gray-100 rounded-md border border-gray-200 text-gray-400 text-xs">
-                        N/A
-                      </div>
-                    )}
+                  {/* Product Image */}
+                  <div className="w-[3%] flex justify-center items-start pt-2 mr-2">
+                    <img 
+                      src={product.image || getMedicineImage(product.id)} 
+                      alt={product.name}
+                      className="w-[40px] h-[40px] object-cover rounded-md shadow-sm border border-gray-200 hover:scale-110 transition-transform duration-200"
+                      onError={(e) => {
+                        // If image fails to load, use a different medicine placeholder
+                        const fallbackIndex = (product.id.charCodeAt(1) || 0) % medicineImages.length;
+                        (e.target as HTMLImageElement).src = medicineImages[fallbackIndex];
+                      }}
+                    />
                   </div>
 
                   {/* Name */}
-                  <div className={`${isDrawerCollapsed ? 'w-[19%]' : 'w-[20%]'} flex flex-col`}>
+                  <div className={`${isDrawerCollapsed ? 'w-[19%]' : 'w-[20%]'} flex flex-col pt-2`}>
                     <span className="font-medium text-sm text-slate-800 truncate">{product.name}</span>
-                    <span className="text-xs text-slate-400">{product.manufacturer}</span>
+                    <span className="text-xs text-slate-400 mt-1">{product.manufacturer}</span>
                   </div>
 
                   {/* Price */}
-                  <div className={`${isDrawerCollapsed ? 'w-[11%]' : 'w-[12%]'} text-right`}>
+                  <div className={`${isDrawerCollapsed ? 'w-[11%]' : 'w-[12%]'} text-right pt-2 pr-4`}>
                     <span className="font-semibold text-sm text-slate-700">€{product.publicPrice.toFixed(2)}</span>
-                    <div className="text-xs text-slate-400">VAT {product.vat}%</div>
+                    <div className="text-xs text-slate-400 mt-1">VAT {product.vat}%</div>
                   </div>
 
-                  {/* Quantity */}
-                  <div className={`${isDrawerCollapsed ? 'w-[7.5%]' : 'w-[8%]'} flex flex-col justify-center items-center`} onClick={e => e.stopPropagation()}>
+                  {/* Quantity with enhanced spacing */}
+                  <div className={`${isDrawerCollapsed ? 'w-[9%]' : 'w-[10%]'} flex flex-col justify-start items-center pl-4`} onClick={e => e.stopPropagation()}>
                     <div className="relative w-full max-w-[70px]">
                       <input
                         type="number"
@@ -418,9 +476,9 @@ const ProductTable: React.FC<ProductTableProps> = ({
                       )}
                     </div>
                     
-                    {/* Average Price and Total moved here from Target Price section */}
+                    {/* Average Price and Total with improved spacing */}
                     {product.quantity > 0 && product.averagePrice !== null ? (
-                      <div className="mt-1 text-xs w-full">
+                      <div className="mt-2 text-xs w-full">
                         <Tooltip 
                           text={`
                             <div><strong>Price Analysis</strong></div>
@@ -431,7 +489,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
                           position="top" 
                           html
                         >
-                          <div className={`font-semibold flex items-center justify-between cursor-help ${
+                          <div className={`font-semibold flex items-center justify-between cursor-help mb-1 ${
                             isExceeded
                               ? 'text-amber-500'
                               : product.targetPrice !== null
@@ -453,12 +511,12 @@ const ProductTable: React.FC<ProductTableProps> = ({
                         </Tooltip>
                       </div>
                     ) : (
-                      <div className="text-xs text-slate-400 mt-1 text-center">--</div>
+                      <div className="text-xs text-slate-400 mt-2 text-center">--</div>
                     )}
                   </div>
 
-                  {/* Target price with discounts */}
-                  <div className={`${isDrawerCollapsed ? 'w-[9.5%]' : 'w-[10%]'} flex justify-center`} onClick={e => e.stopPropagation()}>
+                  {/* Target price with discounts and enhanced spacing */}
+                  <div className={`${isDrawerCollapsed ? 'w-[9%]' : 'w-[9%]'} flex flex-col justify-start items-center pl-3`} onClick={e => e.stopPropagation()}>
                     <div className="w-full max-w-[80px]">
                       <div className="relative">
                         <span className="absolute left-2 top-2 text-xs text-slate-400">€</span>
@@ -478,9 +536,9 @@ const ProductTable: React.FC<ProductTableProps> = ({
                         />
                       </div>
                       
-                      {/* Discount calculations for target price */}
+                      {/* Discount calculations with improved spacing */}
                       {product.targetPrice !== null && product.targetPrice > 0 ? (
-                        <div className="mt-1 text-xs">
+                        <div className="mt-2 text-xs">
                           <Tooltip 
                             text={`
                               <div><strong>Discount Analysis</strong></div>
@@ -499,7 +557,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
                               );
                               return (
                                 <>
-                                  <div className={`font-semibold flex items-center justify-between cursor-help ${
+                                  <div className={`font-semibold flex items-center justify-between cursor-help mb-1 ${
                                     grossDiscountPercent > 0 ? 'text-green-600' : 'text-red-600'
                                   }`}>
                                     <span>Gross:</span> 
@@ -517,13 +575,13 @@ const ProductTable: React.FC<ProductTableProps> = ({
                           </Tooltip>
                         </div>
                       ) : (
-                        <div className="text-xs text-slate-400 mt-1 text-center">--</div>
+                        <div className="text-xs text-slate-400 mt-2 text-center">--</div>
                       )}
                     </div>
                   </div>
 
                   {/* Prices */}
-                  <div className={`${isDrawerCollapsed ? 'w-[21%]' : 'w-[22%]'} flex flex-wrap justify-end gap-1`}>
+                  <div className={`${isDrawerCollapsed ? 'w-[20%]' : 'w-[21%]'} flex flex-wrap justify-end gap-1 pt-2 pl-3`}>
                     {product.bestPrices.slice(0, 3).map((price, i) => {
                       const { grossDiscountPercent, netDiscountPercent } = calculateDiscounts(
                         product.publicPrice, 
@@ -531,7 +589,6 @@ const ProductTable: React.FC<ProductTableProps> = ({
                         product.vat
                       );
                       const priceLabels = ["Best price", "Second best price", "Third best price"];
-                      // Tooltip unico con tutte le info
                       const tooltipContent = `
                         <div><strong>${priceLabels[i]}</strong></div>
                         <div>Gross discount: <span style='color:#ef4444'>${grossDiscountPercent.toFixed(0)}%</span></div>
@@ -561,7 +618,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
                   
                   {/* Total Stock + Show more prices */}
                   <div 
-                    className={`${isDrawerCollapsed ? 'w-[7.5%]' : 'w-[8%]'} flex flex-col items-end text-xs cursor-pointer hover:bg-gray-50 p-1 rounded transition-colors`}
+                    className={`${isDrawerCollapsed ? 'w-[7.5%]' : 'w-[8%]'} flex flex-col items-end text-xs cursor-pointer hover:bg-gray-50 p-1 rounded transition-colors pt-2`}
                     onClick={e => {
                       e.stopPropagation();
                       openPriceModal(product);

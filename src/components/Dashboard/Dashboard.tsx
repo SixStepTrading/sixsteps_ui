@@ -188,6 +188,9 @@ const Dashboard: React.FC = () => {
   // New state for selection problems
   const [selectionWithProblems, setSelectionWithProblems] = useState(false);
 
+  // State for triggering filter reset in ProductTable
+  const [resetFilters, setResetFilters] = useState(0);
+
   // Funzione per gestire l'apertura/chiusura della visualizzazione di tutti i prezzi
   const handleToggleAllPrices = (productId: string) => {
     // Find product and toggle showAllPrices property
@@ -709,6 +712,9 @@ const Dashboard: React.FC = () => {
       targetPrice: null,
       showAllPrices: false
     })));
+    
+    // Trigger ProductTable filter reset
+    setResetFilters(prev => prev + 1);
     
     // Load fresh data
     loadProducts(true);
@@ -1326,13 +1332,14 @@ const Dashboard: React.FC = () => {
         products={filteredProducts}
         selected={selected}
         onSelect={(id) => handleSelectClick({} as any, id)}
-                                  onQuantityChange={handleQuantityChange}
-                                  onTargetPriceChange={handleTargetPriceChange}
+        onQuantityChange={handleQuantityChange}
+        onTargetPriceChange={handleTargetPriceChange}
         isSelected={isSelected}
-                                  onToggleAllPrices={handleToggleAllPrices}
+        onToggleAllPrices={handleToggleAllPrices}
         onSelectionWithProblemsChange={handleSelectionWithProblemsChange}
         userRole={userRole}
-                    />
+        resetFilters={resetFilters}
+      />
       
       {/* Add the ActionBar component outside the Card */}
       <ActionBar 
