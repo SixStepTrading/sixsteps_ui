@@ -35,14 +35,13 @@ import {
 } from '@mui/material';
 import { 
   Close as CloseIcon, 
-  InfoOutlined as InfoIcon,
-  ShoppingBag as ShoppingBagIcon,
-  EventNote as EventNoteIcon,
-  Save as SaveIcon,
-  Send as SendIcon,
   KeyboardArrowDown as KeyboardArrowDownIcon,
-  KeyboardArrowUp as KeyboardArrowUpIcon
+  KeyboardArrowUp as KeyboardArrowUpIcon,
+  Download as DownloadIcon,
+  Save as SaveIcon,
+  Send as SendIcon
 } from '@mui/icons-material';
+import { exportOrderSummary, OrderExportProduct } from '../../../utils/exportUtils';
 
 export interface PriceBreakdown {
   quantity: number;
@@ -60,6 +59,8 @@ export interface ProductItem {
   unitPrice: number;
   priceBreakdowns?: PriceBreakdown[];
   averagePrice?: number;
+  publicPrice?: number;
+  vat?: number;
 }
 
 export interface OrderData {
@@ -79,6 +80,7 @@ interface OrderConfirmationModalProps {
   onSubmitOrder: (orderData: OrderData) => void;
   products: ProductItem[];
   totalAmount: number;
+  userRole?: string;
 }
 
 const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
@@ -87,10 +89,12 @@ const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
   onSaveAsDraft,
   onSubmitOrder,
   products,
-  totalAmount
+  totalAmount,
+  userRole = 'Buyer'
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isAdmin = userRole === 'Admin';
 
   const [orderData, setOrderData] = useState<OrderData>({
     orderName: '',
@@ -130,11 +134,61 @@ const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
   // Calculate total quantity
   const totalQuantity = products.reduce((sum, product) => sum + product.quantity, 0);
 
+  // Calculate additional statistics
+  const totalSavingsVsAverage = products.reduce((sum, product) => {
+    if (product.averagePrice) {
+      return sum + ((product.averagePrice - product.unitPrice) * product.quantity);
+    }
+    return sum;
+  }, 0);
+
+  const averageDiscountPercent = products.reduce((sum, product) => {
+    if (product.publicPrice) {
+      const discount = ((product.publicPrice - product.unitPrice) / product.publicPrice) * 100;
+      return sum + discount;
+    }
+    return sum;
+  }, 0) / products.filter(p => p.publicPrice).length;
+
+  // Handle export
+  const handleExport = (format: 'csv' | 'xlsx') => {
+    const orderName = orderData.orderName || 'Untitled Order';
+    
+    const exportProducts: OrderExportProduct[] = products.map(product => ({
+      id: product.id,
+      name: product.name,
+      code: product.code,
+      quantity: product.quantity,
+      unitPrice: product.unitPrice,
+      averagePrice: product.averagePrice,
+      priceBreakdowns: product.priceBreakdowns,
+      publicPrice: product.publicPrice,
+      vat: product.vat
+    }));
+
+    exportOrderSummary(orderName, exportProducts, format, userRole);
+  };
+
   const ProductRow = ({ product }: { product: ProductItem }) => {
     const [expanded, setExpanded] = useState(false);
     
     // Total price calculation
     const totalPrice = product.quantity * product.unitPrice;
+    
+    // Calculate savings and discounts
+    const savingsVsAverage = product.averagePrice ? 
+      (product.averagePrice - product.unitPrice) * product.quantity : 0;
+    
+    const grossDiscount = product.publicPrice ? 
+      product.publicPrice - product.unitPrice : 0;
+    const grossDiscountPercent = product.publicPrice ? 
+      ((grossDiscount / product.publicPrice) * 100) : 0;
+
+    const netPublicPrice = product.publicPrice && product.vat ? 
+      product.publicPrice / (1 + product.vat / 100) : 0;
+    const netDiscount = netPublicPrice ? netPublicPrice - product.unitPrice : 0;
+    const netDiscountPercent = netPublicPrice ? 
+      ((netDiscount / netPublicPrice) * 100) : 0;
     
     return (
       <>
@@ -149,11 +203,49 @@ const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
             <Box sx={{ display: 'flex', flexDirection: 'column' }}>
               <Typography variant="body2" fontWeight="medium">{product.name}</Typography>
               <Typography variant="caption" color="text.secondary">{product.code}</Typography>
+              {/* Technical information preview */}
+              {product.publicPrice && (
+                <Box sx={{ mt: 0.5 }}>
+                  <Chip 
+                    label={`${grossDiscountPercent.toFixed(1)}% discount`} 
+                    size="small" 
+                    color="success"
+                    variant="outlined"
+                    sx={{ fontSize: '0.6rem', height: '16px' }}
+                  />
+                  {product.vat && (
+                    <Chip 
+                      label={`VAT ${product.vat}%`} 
+                      size="small" 
+                      variant="outlined"
+                      sx={{ fontSize: '0.6rem', height: '16px', ml: 0.5 }}
+                    />
+                  )}
+                </Box>
+              )}
             </Box>
           </TableCell>
           <TableCell align="center">{product.quantity}</TableCell>
-          <TableCell align="right">€{product.unitPrice.toFixed(2)}</TableCell>
-          <TableCell align="right">€{totalPrice.toFixed(2)}</TableCell>
+          <TableCell align="right">
+            <Box>
+              <Typography variant="body2" fontWeight="medium">€{product.unitPrice.toFixed(2)}</Typography>
+              {product.averagePrice && product.averagePrice !== product.unitPrice && (
+                <Typography variant="caption" color="text.secondary">
+                  Avg: €{product.averagePrice.toFixed(2)}
+                </Typography>
+              )}
+            </Box>
+          </TableCell>
+          <TableCell align="right">
+            <Box>
+              <Typography variant="body2" fontWeight="medium">€{totalPrice.toFixed(2)}</Typography>
+              {savingsVsAverage > 0 && (
+                <Typography variant="caption" color="success.main">
+                  Save: €{savingsVsAverage.toFixed(2)}
+                </Typography>
+              )}
+            </Box>
+          </TableCell>
           <TableCell padding="checkbox" sx={{ width: 40 }}>
             <IconButton 
               size="small"
@@ -175,8 +267,68 @@ const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
           }}>
             <TableCell colSpan={5}>
               <Box sx={{ p: 1.5 }}>
+                {/* Technical Details Section */}
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontWeight: 'bold' }}>
+                    📊 Technical Details
+                  </Typography>
+                  
+                  <Grid container spacing={1} sx={{ mb: 1.5 }}>
+                    {product.publicPrice && (
+                      <>
+                        <Grid size={{ xs: 6 }}>
+                          <Typography variant="caption" color="text.secondary">Public Price (VAT incl.):</Typography>
+                          <Typography variant="caption" sx={{ display: 'block', fontWeight: 'medium' }}>
+                            €{product.publicPrice.toFixed(2)}
+                          </Typography>
+                        </Grid>
+                        {product.vat && (
+                          <Grid size={{ xs: 6 }}>
+                            <Typography variant="caption" color="text.secondary">Public Price (VAT excl.):</Typography>
+                            <Typography variant="caption" sx={{ display: 'block', fontWeight: 'medium' }}>
+                              €{netPublicPrice.toFixed(2)}
+                            </Typography>
+                          </Grid>
+                        )}
+                      </>
+                    )}
+                    
+                    {grossDiscount > 0 && (
+                      <>
+                        <Grid size={{ xs: 6 }}>
+                          <Typography variant="caption" color="text.secondary">Gross Discount:</Typography>
+                          <Typography variant="caption" sx={{ display: 'block', fontWeight: 'medium', color: 'success.main' }}>
+                            €{grossDiscount.toFixed(2)} ({grossDiscountPercent.toFixed(1)}%)
+                          </Typography>
+                        </Grid>
+                        {netDiscount > 0 && (
+                          <Grid size={{ xs: 6 }}>
+                            <Typography variant="caption" color="text.secondary">Net Discount:</Typography>
+                            <Typography variant="caption" sx={{ display: 'block', fontWeight: 'medium', color: 'warning.main' }}>
+                              €{netDiscount.toFixed(2)} ({netDiscountPercent.toFixed(1)}%)
+                            </Typography>
+                          </Grid>
+                        )}
+                      </>
+                    )}
+                    
+                    {product.averagePrice && (
+                      <Grid size={{ xs: 6 }}>
+                        <Typography variant="caption" color="text.secondary">Savings vs Average:</Typography>
+                        <Typography variant="caption" sx={{ 
+                          display: 'block', 
+                          fontWeight: 'medium',
+                          color: savingsVsAverage > 0 ? 'success.main' : 'error.main'
+                        }}>
+                          €{savingsVsAverage.toFixed(2)}
+                        </Typography>
+                      </Grid>
+                    )}
+                  </Grid>
+                </Box>
+
                 <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-                  Price Tiers (optimized distribution)
+                  💰 Price Tiers (optimized distribution)
                 </Typography>
                 
                 <Table size="small" sx={{ mb: 1 }}>
@@ -185,6 +337,7 @@ const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
                       <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>Qty</TableCell>
                       <TableCell align="right" sx={{ fontSize: '0.75rem', py: 1 }}>Unit Price</TableCell>
                       <TableCell align="right" sx={{ fontSize: '0.75rem', py: 1 }}>Available</TableCell>
+                      {isAdmin && <TableCell align="right" sx={{ fontSize: '0.75rem', py: 1 }}>Supplier</TableCell>}
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -201,6 +354,11 @@ const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
                           €{breakdown.unitPrice.toFixed(2)}
                         </TableCell>
                         <TableCell align="right">{breakdown.stock}</TableCell>
+                        {isAdmin && (
+                          <TableCell align="right" sx={{ fontSize: '0.7rem' }}>
+                            {breakdown.supplier}
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -248,7 +406,7 @@ const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
     <Dialog 
       open={open} 
       onClose={onClose}
-      maxWidth="sm"
+      maxWidth="lg"
       fullWidth
       sx={{
         zIndex: 10000,
@@ -343,6 +501,25 @@ const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
                   <Typography variant="body2" color="text.secondary">Suppliers</Typography>
                   <Typography variant="body2">{uniqueSuppliers}</Typography>
                 </Box>
+
+                {/* Technical Information */}
+                {totalSavingsVsAverage > 0 && (
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75 }}>
+                    <Typography variant="body2" color="text.secondary">Savings vs Avg</Typography>
+                    <Typography variant="body2" color="success.main" fontWeight="medium">
+                      €{totalSavingsVsAverage.toFixed(2)}
+                    </Typography>
+                  </Box>
+                )}
+
+                {!isNaN(averageDiscountPercent) && averageDiscountPercent > 0 && (
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75 }}>
+                    <Typography variant="body2" color="text.secondary">Avg Discount</Typography>
+                    <Typography variant="body2" color="success.main" fontWeight="medium">
+                      {averageDiscountPercent.toFixed(1)}%
+                    </Typography>
+                  </Box>
+                )}
                 
                 <Divider sx={{ my: 1.5 }} />
                 
@@ -370,7 +547,7 @@ const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
           <Table 
             size="small"
             sx={{
-              minWidth: '800px'
+              minWidth: '1000px'
             }}
           >
             <TableHead>
@@ -510,6 +687,38 @@ const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
           spacing={1.5} 
           justifyContent="flex-end"
         >
+          {/* Export Button with Dropdown */}
+          <Stack direction="row" spacing={0.5}>
+            <Button 
+              variant="outlined"
+              onClick={() => handleExport('xlsx')}
+              startIcon={<DownloadIcon />}
+              size="medium"
+              sx={{ 
+                borderRadius: '4px 0 0 4px',
+                textTransform: 'none',
+                minWidth: '100px',
+                borderRight: 'none'
+              }}
+            >
+              Export Excel
+            </Button>
+            
+            <Button 
+              variant="outlined"
+              onClick={() => handleExport('csv')}
+              size="medium"
+              sx={{ 
+                borderRadius: '0 4px 4px 0',
+                textTransform: 'none',
+                minWidth: '80px',
+                borderLeft: 'none'
+              }}
+            >
+              CSV
+            </Button>
+          </Stack>
+
           <Button 
             variant="outlined" 
             onClick={() => {

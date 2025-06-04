@@ -642,7 +642,9 @@ const Dashboard: React.FC = () => {
         quantity: product.quantity,
         unitPrice: product.averagePrice || product.bestPrices[0]?.price || product.publicPrice,
         averagePrice: product.averagePrice || undefined,
-        priceBreakdowns: priceBreakdowns
+        priceBreakdowns: priceBreakdowns,
+        publicPrice: product.publicPrice,
+        vat: product.vat
       };
     });
     
@@ -1354,6 +1356,7 @@ const Dashboard: React.FC = () => {
         onSubmitOrder={handleSubmitOrder}
         products={selectedProductsForOrder}
         totalAmount={totalAmount}
+        userRole={userRole}
       />
 
       {/* Add Product Modal */}

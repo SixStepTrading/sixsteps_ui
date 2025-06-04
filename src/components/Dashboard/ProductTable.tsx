@@ -236,6 +236,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
         <ExportButton 
           selectedProducts={selectedProducts}
           isVisible={true}
+          userRole={userRole}
         />
       </div>
       
@@ -393,7 +394,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
                   </div>
 
                   {/* Quantity */}
-                  <div className={`${isDrawerCollapsed ? 'w-[7.5%]' : 'w-[8%]'} flex justify-center`} onClick={e => e.stopPropagation()}>
+                  <div className={`${isDrawerCollapsed ? 'w-[7.5%]' : 'w-[8%]'} flex flex-col justify-center items-center`} onClick={e => e.stopPropagation()}>
                     <div className="relative w-full max-w-[70px]">
                       <input
                         type="number"
@@ -416,9 +417,47 @@ const ProductTable: React.FC<ProductTableProps> = ({
                         </Tooltip>
                       )}
                     </div>
+                    
+                    {/* Average Price and Total moved here from Target Price section */}
+                    {product.quantity > 0 && product.averagePrice !== null ? (
+                      <div className="mt-1 text-xs w-full">
+                        <Tooltip 
+                          text={`
+                            <div><strong>Price Analysis</strong></div>
+                            <div>Avg: Average purchase price from historical data</div>
+                            <div>Tot: Total cost based on average price</div>
+                            <div>Used for budget planning and price comparison</div>
+                          `} 
+                          position="top" 
+                          html
+                        >
+                          <div className={`font-semibold flex items-center justify-between cursor-help ${
+                            isExceeded
+                              ? 'text-amber-500'
+                              : product.targetPrice !== null
+                              ? product.averagePrice <= product.targetPrice
+                                ? 'text-green-600'
+                                : 'text-red-600'
+                              : 'text-slate-600'
+                          }`}>
+                            <span>Avg:</span> 
+                            <span>€{product.averagePrice.toFixed(2)}
+                            {product.targetPrice !== null && product.averagePrice <= product.targetPrice && (
+                              <span className="ml-1 text-green-500">✓</span>
+                            )}</span>
+                          </div>
+                          <div className="text-slate-500 flex items-center justify-between cursor-help">
+                            <span>Tot:</span>
+                            <span>€{(product.averagePrice * product.quantity).toFixed(2)}</span>
+                          </div>
+                        </Tooltip>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-slate-400 mt-1 text-center">--</div>
+                    )}
                   </div>
 
-                  {/* Target price + avg */}
+                  {/* Target price with discounts */}
                   <div className={`${isDrawerCollapsed ? 'w-[9.5%]' : 'w-[10%]'} flex justify-center`} onClick={e => e.stopPropagation()}>
                     <div className="w-full max-w-[80px]">
                       <div className="relative">
@@ -438,28 +477,44 @@ const ProductTable: React.FC<ProductTableProps> = ({
                               : 'border-gray-300'}`}
                         />
                       </div>
-                      {/* Avg price */}
-                      {product.quantity > 0 && product.averagePrice !== null ? (
+                      
+                      {/* Discount calculations for target price */}
+                      {product.targetPrice !== null && product.targetPrice > 0 ? (
                         <div className="mt-1 text-xs">
-                          <div className={`font-semibold flex items-center justify-between ${
-                            isExceeded
-                              ? 'text-amber-500'
-                              : product.targetPrice !== null
-                              ? product.averagePrice <= product.targetPrice
-                                ? 'text-green-600'
-                                : 'text-red-600'
-                              : 'text-slate-600'
-                          }`}>
-                            <span>Avg:</span> 
-                            <span>€{product.averagePrice.toFixed(2)}
-                            {product.targetPrice !== null && product.averagePrice <= product.targetPrice && (
-                              <span className="ml-1 text-green-500">✓</span>
-                            )}</span>
-                          </div>
-                          <div className="text-slate-500 flex items-center justify-between">
-                            <span>Tot:</span>
-                            <span>€{(product.averagePrice * product.quantity).toFixed(2)}</span>
-                          </div>
+                          <Tooltip 
+                            text={`
+                              <div><strong>Discount Analysis</strong></div>
+                              <div>Gross: Discount vs public price (VAT included)</div>
+                              <div>Net: Discount vs public price (VAT excluded)</div>
+                              <div>Based on your target price input</div>
+                            `} 
+                            position="top" 
+                            html
+                          >
+                            {(() => {
+                              const { grossDiscountPercent, netDiscountPercent } = calculateDiscounts(
+                                product.publicPrice, 
+                                product.targetPrice, 
+                                product.vat
+                              );
+                              return (
+                                <>
+                                  <div className={`font-semibold flex items-center justify-between cursor-help ${
+                                    grossDiscountPercent > 0 ? 'text-green-600' : 'text-red-600'
+                                  }`}>
+                                    <span>Gross:</span> 
+                                    <span>{grossDiscountPercent > 0 ? '+' : ''}{grossDiscountPercent.toFixed(1)}%</span>
+                                  </div>
+                                  <div className={`flex items-center justify-between cursor-help ${
+                                    netDiscountPercent > 0 ? 'text-orange-600' : 'text-red-600'
+                                  }`}>
+                                    <span>Net:</span>
+                                    <span>{netDiscountPercent > 0 ? '+' : ''}{netDiscountPercent.toFixed(1)}%</span>
+                                  </div>
+                                </>
+                              );
+                            })()}
+                          </Tooltip>
                         </div>
                       ) : (
                         <div className="text-xs text-slate-400 mt-1 text-center">--</div>

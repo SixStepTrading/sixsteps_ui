@@ -14,9 +14,10 @@ interface ExportButtonProps {
     vat: number;
   }>;
   isVisible: boolean;
+  userRole?: string;
 }
 
-const ExportButton: React.FC<ExportButtonProps> = ({ selectedProducts, isVisible }) => {
+const ExportButton: React.FC<ExportButtonProps> = ({ selectedProducts, isVisible, userRole = 'Buyer' }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const hasSelectedProducts = selectedProducts.length > 0;
@@ -35,7 +36,7 @@ const ExportButton: React.FC<ExportButtonProps> = ({ selectedProducts, isVisible
   }, []);
 
   const handleExport = (format: 'csv' | 'xlsx') => {
-    exportSelectedProducts(selectedProducts, format);
+    exportSelectedProducts(selectedProducts, format, userRole);
     setIsDropdownOpen(false);
   };
 
