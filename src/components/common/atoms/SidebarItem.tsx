@@ -34,8 +34,8 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
     transition-colors
     duration-150
     ${isSelected 
-      ? 'bg-blue-100 text-blue-800 hover:bg-blue-100' 
-      : 'hover:bg-gray-100 text-gray-700'
+      ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30' 
+      : 'hover:bg-gray-100 dark:hover:bg-dark-bg-hover text-gray-700 dark:text-dark-text-secondary'
     }
     ${isCollapsed ? 'justify-center mx-1' : 'justify-start mx-2'}
   `;
@@ -43,7 +43,7 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
   // Classes for the icon
   const iconClasses = `
     ${isCollapsed ? '' : 'mr-3'}
-    ${isSelected ? 'text-blue-600' : 'text-gray-500'}
+    ${isSelected ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-dark-text-muted'}
     flex-shrink-0
   `;
 
@@ -55,7 +55,7 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
     >
       {/* Indicator for selected item */}
       {isSelected && (
-        <div className="absolute left-0 top-1/4 h-1/2 w-1 bg-blue-600 rounded-r"></div>
+        <div className="absolute left-0 top-1/4 h-1/2 w-1 bg-blue-600 dark:bg-blue-400 rounded-r"></div>
       )}
       
       {/* Icon with badge */}
@@ -63,7 +63,7 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
         {badgeContent !== undefined && badgeContent > 0 ? (
           <div className="relative">
             {icon}
-            <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-4 h-4 bg-red-500 text-white text-xs font-bold rounded-full">
+            <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-4 h-4 bg-red-500 dark:bg-red-600 text-white text-xs font-bold rounded-full">
               {badgeContent > 99 ? '99+' : badgeContent}
             </span>
           </div>
@@ -83,11 +83,11 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
   const wrappedContent = isCollapsed ? (
     <div className="group relative">
       {content}
-      <div className="absolute left-full ml-2 py-1 px-2 bg-gray-800 text-white text-xs rounded 
+      <div className="absolute left-full ml-2 py-1 px-2 bg-gray-800 dark:bg-gray-700 text-white text-xs rounded 
                       invisible opacity-0 group-hover:visible group-hover:opacity-100 
                       transition-opacity duration-300 whitespace-nowrap z-50">
         {text}
-        <div className="absolute top-1/2 -left-1 -translate-y-1/2 w-2 h-2 bg-gray-800 rotate-45"></div>
+        <div className="absolute top-1/2 -left-1 -translate-y-1/2 w-2 h-2 bg-gray-800 dark:bg-gray-700 rotate-45"></div>
       </div>
     </div>
   ) : content;

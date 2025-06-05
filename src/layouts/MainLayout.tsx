@@ -37,13 +37,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const currentWidth = isDrawerCollapsed ? COLLAPSED_WIDTH : DRAWER_WIDTH;
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
+    <div className="flex min-h-screen bg-gray-100 dark:bg-dark-bg-primary">
       {/* Mobile hamburger button */}
       {isMobile && (
         <button
           aria-label="open drawer"
           onClick={handleDrawerToggle}
-          className="fixed top-4 left-4 z-50 p-2 bg-white rounded-full shadow-md hover:bg-gray-100"
+          className="fixed top-4 left-4 z-50 p-2 bg-white dark:bg-dark-bg-secondary rounded-full shadow-md dark:shadow-dark-md hover:bg-gray-100 dark:hover:bg-dark-bg-hover text-gray-900 dark:text-dark-text-primary"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />

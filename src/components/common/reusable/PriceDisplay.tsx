@@ -31,26 +31,26 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({
 
   return (
     <div className={`${backgroundColor ? '' : 'bg-transparent'}`}>
-      <p className={`font-medium ${compact ? 'text-[0.75rem] leading-tight' : 'text-[0.875rem] leading-normal'}`}>
+      <p className={`font-medium text-gray-900 dark:text-dark-text-primary ${compact ? 'text-[0.75rem] leading-tight' : 'text-[0.875rem] leading-normal'}`}>
         €{supplierPrice.toFixed(2)}
       </p>
       
-      <p className={`text-red-600 ${compact ? 'text-[0.65rem] leading-tight' : 'text-[0.75rem] leading-snug'} block`}>
+      <p className={`text-red-600 dark:text-red-400 ${compact ? 'text-[0.65rem] leading-tight' : 'text-[0.75rem] leading-snug'} block`}>
         -€{priceDifference.toFixed(2)} 
-        <span className="text-red-600 font-bold">
+        <span className="text-red-600 dark:text-red-400 font-bold">
           ({percentDifference.toFixed(1)}%)
         </span>
       </p>
       
       {showNetVAT && !compact && (
-        <p className="text-gray-500 text-[0.7rem] block">
-          Sconto Netto: <span className="text-red-600 font-bold">
+        <p className="text-gray-500 dark:text-dark-text-muted text-[0.7rem] block">
+          Sconto Netto: <span className="text-red-600 dark:text-red-400 font-bold">
             {netPercentDifference.toFixed(1)}%
           </span>
         </p>
       )}
       
-      <p className={`${compact ? 'text-[0.7rem] leading-tight' : 'text-[0.8rem] leading-snug'}`}>
+      <p className={`text-gray-600 dark:text-dark-text-secondary ${compact ? 'text-[0.7rem] leading-tight' : 'text-[0.8rem] leading-snug'}`}>
         Stock: {stock}
       </p>
     </div>

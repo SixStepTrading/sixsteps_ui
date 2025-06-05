@@ -123,34 +123,34 @@ const OrderDetailPage: React.FC = () => {
   const getStatusClass = (status: string) => {
     switch (status) {
       case 'Approved':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300';
       case 'Pending Approval':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300';
       case 'Processing':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300';
       case 'Counter Offer':
-        return 'bg-purple-100 text-purple-800';
+        return 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300';
       case 'Rejected':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300';
       case 'Draft':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300';
       default:
-        return 'bg-gray-100 text-gray-600';
+        return 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400';
     }
   };
 
   const getPriorityClass = (priority?: string) => {
     switch (priority) {
       case 'Urgent':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300';
       case 'High':
-        return 'bg-orange-100 text-orange-800';
+        return 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300';
       case 'Medium':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300';
       case 'Low':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300';
       default:
-        return 'bg-gray-100 text-gray-600';
+        return 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400';
     }
   };
 
@@ -172,8 +172,8 @@ const OrderDetailPage: React.FC = () => {
     return (
       <div className="flex-grow p-6 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading order details...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-dark-text-muted">Loading order details...</p>
         </div>
       </div>
     );
@@ -183,11 +183,11 @@ const OrderDetailPage: React.FC = () => {
     return (
       <div className="flex-grow p-6 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Order Not Found</h2>
-          <p className="text-gray-600 mb-4">The requested order could not be found.</p>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-dark-text-primary mb-2">Order Not Found</h2>
+          <p className="text-gray-600 dark:text-dark-text-muted mb-4">The requested order could not be found.</p>
           <button
             onClick={() => navigate('/purchase-orders')}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            className="px-4 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-800"
           >
             Back to Orders
           </button>
@@ -205,15 +205,15 @@ const OrderDetailPage: React.FC = () => {
         <div className="flex items-center">
           <button
             onClick={() => navigate('/purchase-orders')}
-            className="mr-4 p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md"
+            className="mr-4 p-2 text-gray-600 dark:text-dark-text-muted hover:text-gray-900 dark:hover:text-dark-text-primary hover:bg-gray-100 dark:hover:bg-dark-bg-hover rounded-md"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Order Details</h1>
-            <p className="text-gray-600">Order ID: {orderDetails.id}</p>
+            <h1 className="text-2xl font-semibold text-gray-900 dark:text-dark-text-primary">Order Details</h1>
+            <p className="text-gray-600 dark:text-dark-text-muted">Order ID: {orderDetails.id}</p>
           </div>
         </div>
         
@@ -231,14 +231,14 @@ const OrderDetailPage: React.FC = () => {
 
       {/* Order Summary - Compact for Admin */}
       {userRole === 'Admin' ? (
-        <div className="bg-white rounded-lg shadow p-4 mb-6">
+        <div className="bg-white dark:bg-dark-bg-card rounded-lg shadow dark:shadow-dark-md p-4 mb-6 border dark:border-dark-border-primary">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Order Information</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary">Order Information</h2>
             <div className="flex items-center space-x-3">
               <button
                 onClick={handleSendToSelectedSuppliers}
                 disabled={selectedSuppliers.length === 0 || sendingToSuppliers.length > 0}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center text-sm"
+                className="px-4 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center text-sm"
               >
                 {sendingToSuppliers.length > 0 ? (
                   <>
@@ -251,7 +251,7 @@ const OrderDetailPage: React.FC = () => {
               </button>
               <button
                 onClick={() => navigate(`/purchase-orders`)}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 text-sm"
+                className="px-4 py-2 border border-gray-300 dark:border-dark-border-primary text-gray-700 dark:text-dark-text-secondary rounded-md hover:bg-gray-50 dark:hover:bg-dark-bg-hover text-sm"
               >
                 Back to Orders
               </button>
@@ -259,87 +259,87 @@ const OrderDetailPage: React.FC = () => {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 text-sm">
             <div>
-              <p className="text-gray-600">Created</p>
-              <p className="font-medium">{orderDetails.createdOn}</p>
+              <p className="text-gray-600 dark:text-dark-text-muted">Created</p>
+              <p className="font-medium text-gray-900 dark:text-dark-text-primary">{orderDetails.createdOn}</p>
             </div>
             <div>
-              <p className="text-gray-600">Type</p>
-              <p className="font-medium">{orderDetails.orderType || 'Standard'}</p>
+              <p className="text-gray-600 dark:text-dark-text-muted">Type</p>
+              <p className="font-medium text-gray-900 dark:text-dark-text-primary">{orderDetails.orderType || 'Standard'}</p>
             </div>
             <div>
-              <p className="text-gray-600">Products</p>
-              <p className="font-medium">{orderDetails.totalProducts}</p>
+              <p className="text-gray-600 dark:text-dark-text-muted">Products</p>
+              <p className="font-medium text-gray-900 dark:text-dark-text-primary">{orderDetails.totalProducts}</p>
             </div>
             <div>
-              <p className="text-gray-600">Total</p>
-              <p className="font-medium text-lg">€{orderDetails.totalAmount.toLocaleString()}</p>
+              <p className="text-gray-600 dark:text-dark-text-muted">Total</p>
+              <p className="font-medium text-lg text-gray-900 dark:text-dark-text-primary">€{orderDetails.totalAmount.toLocaleString()}</p>
             </div>
             <div>
-              <p className="text-gray-600">Payment</p>
-              <p className="font-medium">{orderDetails.paymentMethod || 'Not specified'}</p>
+              <p className="text-gray-600 dark:text-dark-text-muted">Payment</p>
+              <p className="font-medium text-gray-900 dark:text-dark-text-primary">{orderDetails.paymentMethod || 'Not specified'}</p>
             </div>
             <div>
-              <p className="text-gray-600">Priority</p>
+              <p className="text-gray-600 dark:text-dark-text-muted">Priority</p>
               <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityClass(orderDetails.priority)}`}>
                 {orderDetails.priority || 'Medium'}
               </span>
             </div>
           </div>
           {orderDetails.notes && (
-            <div className="mt-3 pt-3 border-t">
-              <p className="text-sm text-gray-600">Notes: <span className="text-gray-900">{orderDetails.notes}</span></p>
+            <div className="mt-3 pt-3 border-t border-gray-200 dark:border-dark-border-primary">
+              <p className="text-sm text-gray-600 dark:text-dark-text-muted">Notes: <span className="text-gray-900 dark:text-dark-text-primary">{orderDetails.notes}</span></p>
             </div>
           )}
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold mb-4">Order Information</h2>
+            <div className="bg-white dark:bg-dark-bg-card rounded-lg shadow dark:shadow-dark-md p-6 border dark:border-dark-border-primary">
+              <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-dark-text-primary">Order Information</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-gray-600">Created On</p>
-                  <p className="font-medium">{orderDetails.createdOn}</p>
+                  <p className="text-sm text-gray-600 dark:text-dark-text-muted">Created On</p>
+                  <p className="font-medium text-gray-900 dark:text-dark-text-primary">{orderDetails.createdOn}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Order Type</p>
-                  <p className="font-medium">{orderDetails.orderType || 'Standard'}</p>
+                  <p className="text-sm text-gray-600 dark:text-dark-text-muted">Order Type</p>
+                  <p className="font-medium text-gray-900 dark:text-dark-text-primary">{orderDetails.orderType || 'Standard'}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Total Products</p>
-                  <p className="font-medium">{orderDetails.totalProducts}</p>
+                  <p className="text-sm text-gray-600 dark:text-dark-text-muted">Total Products</p>
+                  <p className="font-medium text-gray-900 dark:text-dark-text-primary">{orderDetails.totalProducts}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Total Amount</p>
-                  <p className="font-medium text-lg">€{orderDetails.totalAmount.toLocaleString()}</p>
+                  <p className="text-sm text-gray-600 dark:text-dark-text-muted">Total Amount</p>
+                  <p className="font-medium text-lg text-gray-900 dark:text-dark-text-primary">€{orderDetails.totalAmount.toLocaleString()}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Delivery Address</p>
-                  <p className="font-medium">{orderDetails.deliveryAddress || 'Not specified'}</p>
+                  <p className="text-sm text-gray-600 dark:text-dark-text-muted">Delivery Address</p>
+                  <p className="font-medium text-gray-900 dark:text-dark-text-primary">{orderDetails.deliveryAddress || 'Not specified'}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Payment Method</p>
-                  <p className="font-medium">{orderDetails.paymentMethod || 'Not specified'}</p>
+                  <p className="text-sm text-gray-600 dark:text-dark-text-muted">Payment Method</p>
+                  <p className="font-medium text-gray-900 dark:text-dark-text-primary">{orderDetails.paymentMethod || 'Not specified'}</p>
                 </div>
               </div>
               {orderDetails.notes && (
                 <div className="mt-4">
-                  <p className="text-sm text-gray-600">Notes</p>
-                  <p className="font-medium">{orderDetails.notes}</p>
+                  <p className="text-sm text-gray-600 dark:text-dark-text-muted">Notes</p>
+                  <p className="font-medium text-gray-900 dark:text-dark-text-primary">{orderDetails.notes}</p>
                 </div>
               )}
             </div>
           </div>
 
           <div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
+            <div className="bg-white dark:bg-dark-bg-card rounded-lg shadow dark:shadow-dark-md p-6 border dark:border-dark-border-primary">
+              <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-dark-text-primary">Quick Actions</h2>
               <div className="space-y-3">
                 {/* Actions for regular users */}
                 {orderDetails?.status === 'Approved' && (
                   <button
                     onClick={() => showToast('Reorder functionality coming soon', 'info')}
-                    className="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center justify-center"
+                    className="w-full px-4 py-2 bg-green-600 dark:bg-green-700 text-white rounded-md hover:bg-green-700 dark:hover:bg-green-800 flex items-center justify-center"
                   >
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -351,7 +351,7 @@ const OrderDetailPage: React.FC = () => {
                 {orderDetails?.status === 'Processing' && (
                   <button
                     onClick={() => showToast('Tracking information will be available soon', 'info')}
-                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center justify-center"
+                    className="w-full px-4 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-800 flex items-center justify-center"
                   >
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -363,7 +363,7 @@ const OrderDetailPage: React.FC = () => {
                 
                 <button
                   onClick={() => navigate(`/purchase-orders`)}
-                  className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-dark-border-primary text-gray-700 dark:text-dark-text-secondary rounded-md hover:bg-gray-50 dark:hover:bg-dark-bg-hover"
                 >
                   Back to Orders
                 </button>
@@ -375,25 +375,25 @@ const OrderDetailPage: React.FC = () => {
 
       {/* Counter Offer Section */}
       {orderDetails.counterOffer && (
-        <div className="bg-purple-50 border border-purple-200 rounded-lg p-6 mb-8">
-          <h2 className="text-lg font-semibold text-purple-900 mb-4">Counter Offer Details</h2>
+        <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800/30 rounded-lg p-6 mb-8">
+          <h2 className="text-lg font-semibold text-purple-900 dark:text-purple-300 mb-4">Counter Offer Details</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <p className="text-sm text-purple-600">Original Amount</p>
-              <p className="font-semibold text-purple-900">€{orderDetails.counterOffer.originalAmount.toLocaleString()}</p>
+              <p className="text-sm text-purple-600 dark:text-purple-400">Original Amount</p>
+              <p className="font-semibold text-purple-900 dark:text-purple-300">€{orderDetails.counterOffer.originalAmount.toLocaleString()}</p>
             </div>
             <div>
-              <p className="text-sm text-purple-600">Proposed Amount</p>
-              <p className="font-semibold text-green-600">€{orderDetails.counterOffer.proposedAmount.toLocaleString()}</p>
+              <p className="text-sm text-purple-600 dark:text-purple-400">Proposed Amount</p>
+              <p className="font-semibold text-green-600 dark:text-green-400">€{orderDetails.counterOffer.proposedAmount.toLocaleString()}</p>
             </div>
             <div>
-              <p className="text-sm text-purple-600">Status</p>
-              <p className="font-semibold text-purple-900">{orderDetails.counterOffer.status}</p>
+              <p className="text-sm text-purple-600 dark:text-purple-400">Status</p>
+              <p className="font-semibold text-purple-900 dark:text-purple-300">{orderDetails.counterOffer.status}</p>
             </div>
           </div>
           <div className="mt-4">
-            <p className="text-sm text-purple-600">Message</p>
-            <p className="text-purple-900">{orderDetails.counterOffer.message}</p>
+            <p className="text-sm text-purple-600 dark:text-purple-400">Message</p>
+            <p className="text-purple-900 dark:text-purple-300">{orderDetails.counterOffer.message}</p>
           </div>
         </div>
       )}

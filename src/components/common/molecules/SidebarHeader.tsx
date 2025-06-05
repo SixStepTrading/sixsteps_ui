@@ -106,10 +106,10 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
             onClick={onToggleCollapse}
           className={`
             p-1.5
-            text-blue-600
-            border border-blue-200
-            bg-blue-50
-            hover:bg-blue-100
+            text-blue-600 dark:text-blue-400
+            border border-blue-200 dark:border-blue-600
+            bg-blue-50 dark:bg-blue-900/30
+            hover:bg-blue-100 dark:hover:bg-blue-900/50
             rounded-full
             transition-transform duration-300
             ${isCollapsed ? 'rotate-180' : 'rotate-0'}
@@ -133,14 +133,14 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
             transition-all duration-200
             p-2
             rounded-lg
-            hover:bg-blue-50
+            hover:bg-blue-50 dark:hover:bg-dark-bg-hover
             ${isCollapsed ? 'justify-center' : 'justify-start'}
             min-h-[64px]
           `}
         >
           <div className={`relative ${isCollapsed ? 'flex flex-col items-center' : 'flex items-center w-full'}`}>
             {/* Avatar - standardized size */}
-            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden text-blue-600 font-medium border-2 border-white shadow-sm">
+            <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center overflow-hidden text-blue-600 dark:text-blue-400 font-medium border-2 border-white dark:border-dark-border-primary shadow-sm">
               {avatarSrc ? (
                 <img src={avatarSrc} alt={userName} className="w-full h-full object-cover" />
               ) : (
@@ -151,14 +151,14 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
             {/* User info (only when sidebar is expanded) */}
             {!isCollapsed && (
               <div className="ml-3 flex-grow min-w-[120px]">
-                <div className="font-medium text-gray-800 text-sm truncate">{userName}</div>
-                <div className="text-xs text-gray-500 truncate">{userDescription}</div>
+                <div className="font-medium text-gray-800 dark:text-dark-text-primary text-sm truncate">{userName}</div>
+                <div className="text-xs text-gray-500 dark:text-dark-text-muted truncate">{userDescription}</div>
               </div>
             )}
             
             {/* Role indicator */}
             {!isCollapsed ? (
-              <div className="ml-auto flex items-center text-gray-500">
+              <div className="ml-auto flex items-center text-gray-500 dark:text-dark-text-muted">
                 <div className={`w-2 h-2 rounded-full mr-1 transition-all duration-200 ${userRole === 'Admin' ? 'bg-red-500' : 'bg-green-500'}`}></div>
                 <svg 
                   xmlns="http://www.w3.org/2000/svg" 
@@ -172,7 +172,7 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
               </div>
             ) : (
               <div 
-                className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${userRole === 'Admin' ? 'bg-red-500' : 'bg-green-500'}`}
+                className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white dark:border-dark-bg-secondary ${userRole === 'Admin' ? 'bg-red-500' : 'bg-green-500'}`}
                 title="Click to change role"
               ></div>
             )}
@@ -184,35 +184,35 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
           <div 
             ref={menuRef}
             className={`
-              absolute z-50 bg-white rounded-lg shadow-lg p-4 mt-2
-              border border-gray-200 min-w-[240px] w-[240px]
+              absolute z-50 bg-white dark:bg-dark-bg-card rounded-lg shadow-lg dark:shadow-dark-lg p-4 mt-2
+              border border-gray-200 dark:border-dark-border-primary min-w-[240px] w-[240px]
               ${isCollapsed ? 'left-full ml-4' : 'left-0 top-full'}
             `}
           >
-            <div className="text-sm font-medium text-gray-900 border-b pb-2 mb-2">
+            <div className="text-sm font-medium text-gray-900 dark:text-dark-text-primary border-b dark:border-dark-border-primary pb-2 mb-2">
               User Profile
             </div>
             
             <div className="flex flex-col space-y-2">
-              <div className="text-xs text-gray-500">SWITCH ROLE</div>
+              <div className="text-xs text-gray-500 dark:text-dark-text-muted">SWITCH ROLE</div>
               
               <div className="flex flex-col space-y-2">
                 <button
                   onClick={(e) => handleRoleSwitch('Admin', e)}
                   className={`
                     flex items-center p-2 rounded-md text-left
-                    ${userRole === 'Admin' ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50'}
+                    ${userRole === 'Admin' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : 'hover:bg-gray-50 dark:hover:bg-dark-bg-hover'}
                     h-[60px]
                   `}
                 >
-                  <div className={`w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center mr-2 flex-shrink-0`}>
+                  <div className={`w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 flex items-center justify-center mr-2 flex-shrink-0`}>
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
                   <div>
                     <div className="font-medium text-sm">Admin</div>
-                    <div className="text-xs text-gray-500">Full access to all features</div>
+                    <div className="text-xs text-gray-500 dark:text-dark-text-muted">Full access to all features</div>
                   </div>
                 </button>
                 
@@ -220,18 +220,18 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
                   onClick={(e) => handleRoleSwitch('Buyer', e)}
                   className={`
                     flex items-center p-2 rounded-md text-left
-                    ${userRole === 'Buyer' ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50'}
+                    ${userRole === 'Buyer' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : 'hover:bg-gray-50 dark:hover:bg-dark-bg-hover'}
                     h-[60px]
                   `}
                 >
-                  <div className={`w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center mr-2 flex-shrink-0`}>
+                  <div className={`w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center mr-2 flex-shrink-0`}>
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                     </svg>
                   </div>
                   <div>
                     <div className="font-medium text-sm">Buyer</div>
-                    <div className="text-xs text-gray-500">Limited to purchase functions</div>
+                    <div className="text-xs text-gray-500 dark:text-dark-text-muted">Limited to purchase functions</div>
                   </div>
                 </button>
               </div>

@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 
 // Definizione dei tipi di dato
-export type OrderStatus = 'Draft' | 'Pending Approval' | 'Processing' | 'Approved' | 'Rejected' | 'Counter Offer';
+export type OrderStatus = 'Draft' | 'Pending Approval' | 'Processing' | 'Approved' | 'Rejected' | 'Counter Offer' | 'Picking Required' | 'Partial Approved';
 
 // Interface for supplier information
 export interface SupplierInfo {
@@ -26,21 +26,48 @@ export interface ProductCounterOffer {
   reason?: string;
 }
 
-// Interface for counter offer details
-export interface CounterOfferDetail {
+// New interface for picking management
+export interface PickingDetails {
   id: string;
-  originalAmount: number;
-  proposedAmount: number;
-  message: string;
-  createdDate: string;
-  expiryDate: string;
-  status: 'Pending' | 'Accepted' | 'Rejected' | 'Expired';
-  adminId: string;
-  adminName: string;
-  productChanges?: ProductCounterOffer[]; // New: detailed product-level changes
+  originalQuantity: number;
+  availableQuantity: number;
+  allocatedQuantity: number;
+  reason: string;
+  alternativeProducts?: Array<{
+    productId: string;
+    productName: string;
+    quantity: number;
+    unitPrice: number;
+  }>;
+  estimatedRestockDate?: string;
+  supplierComment?: string;
 }
 
-// Interface for order product details with supplier info
+// New interface for buyer preferences
+export interface BuyerPickingPreferences {
+  autoAcceptPartialDelivery: boolean;
+  maxAcceptableReduction: number; // percentage (e.g., 20 means accept up to 20% reduction)
+  requireConfirmationForAlternatives: boolean;
+  notificationPreferences: {
+    email: boolean;
+    inApp: boolean;
+    sms: boolean;
+  };
+}
+
+// Interface for picking notification
+export interface PickingNotification {
+  id: string;
+  orderId: string;
+  productId: string;
+  type: 'partial_available' | 'out_of_stock' | 'alternative_suggested';
+  message: string;
+  createdAt: string;
+  acknowledged: boolean;
+  autoProcessed: boolean;
+}
+
+// Enhanced interface for order product details with picking info
 export interface OrderProductDetail {
   id: string;
   code: string;
@@ -52,6 +79,23 @@ export interface OrderProductDetail {
   supplierName?: string;
   stockAvailable?: number;
   estimatedDelivery?: string;
+  pickingDetails?: PickingDetails; // New field for picking information
+}
+
+// Interface for counter offer details (enhanced)
+export interface CounterOfferDetail {
+  id: string;
+  originalAmount: number;
+  proposedAmount: number;
+  message: string;
+  createdDate: string;
+  expiryDate: string;
+  status: 'Pending' | 'Accepted' | 'Rejected' | 'Expired';
+  adminId: string;
+  adminName: string;
+  productChanges?: ProductCounterOffer[]; // New: detailed product-level changes
+  pickingChanges?: PickingDetails[]; // New: picking-related changes
+  requiresPickingApproval?: boolean; // New: if this counter offer includes picking adjustments
 }
 
 // Interface for additional info about orders
@@ -80,6 +124,11 @@ export interface OrderWithDetails {
   suppliers?: SupplierInfo[];
   priority?: 'Low' | 'Medium' | 'High' | 'Urgent';
   orderType?: 'Standard' | 'Express' | 'Bulk';
+  // New picking-related fields
+  pickingRequired?: boolean;
+  pickingNotifications?: PickingNotification[];
+  buyerPreferences?: BuyerPickingPreferences;
+  hasPartialPickingApproval?: boolean; // Indicates if buyer has approved partial delivery
 }
 
 // Interface for order detail data used in the modal
@@ -636,5 +685,150 @@ export const generateMockOrders = (count: number = 20): OrderWithDetails[] => {
   return orders;
 };
 
-// Export generated orders with more variety
-export const mockOrders = generateMockOrders(20); 
+// Mock buyer preferences
+export const MOCK_BUYER_PREFERENCES: BuyerPickingPreferences = {
+  autoAcceptPartialDelivery: false, // Default to requiring manual approval
+  maxAcceptableReduction: 15, // Accept up to 15% reduction automatically
+  requireConfirmationForAlternatives: true,
+  notificationPreferences: {
+    email: true,
+    inApp: true,
+    sms: false
+  }
+};
+
+// Mock picking notifications
+export const MOCK_PICKING_NOTIFICATIONS: PickingNotification[] = [
+  {
+    id: 'PN-001',
+    orderId: 'ODA-2593',
+    productId: 'P001',
+    type: 'partial_available',
+    message: 'Only 35 units available out of 50 requested for ALVITA GINOCCHIERA. Estimated restock: May 20, 2025',
+    createdAt: 'May 12, 2025 09:30',
+    acknowledged: false,
+    autoProcessed: false
+  },
+  {
+    id: 'PN-002',
+    orderId: 'ODA-2594',
+    productId: 'P003',
+    type: 'out_of_stock',
+    message: 'ZERODOL GEL is currently out of stock. Alternative product VOLTAREN GEL available at similar price.',
+    createdAt: 'May 12, 2025 14:15',
+    acknowledged: false,
+    autoProcessed: false
+  }
+];
+
+// Enhanced mock orders with picking scenarios
+const ENHANCED_PICKING_ORDERS: OrderWithDetails[] = [
+  {
+    id: 'ODA-2593',
+    createdOn: 'May 12, 2025',
+    status: 'Picking Required',
+    totalProducts: 3,
+    items: 150,
+    amount: 3875.00,
+    buyerId: 'BUY-001',
+    buyerName: 'Farmacia Central',
+    pickingRequired: true,
+    buyerPreferences: MOCK_BUYER_PREFERENCES,
+    pickingNotifications: [MOCK_PICKING_NOTIFICATIONS[0]],
+    hasPartialPickingApproval: false,
+    priority: 'Medium',
+    orderType: 'Standard',
+    suppliers: [MOCK_SUPPLIERS[0], MOCK_SUPPLIERS[1]]
+  },
+  {
+    id: 'ODA-2594',
+    createdOn: 'May 12, 2025',
+    status: 'Counter Offer',
+    totalProducts: 4,
+    items: 220,
+    amount: 4250.00,
+    buyerId: 'BUY-002',
+    buyerName: 'Farmacia San Marco',
+    pickingRequired: true,
+    buyerPreferences: {
+      ...MOCK_BUYER_PREFERENCES,
+      autoAcceptPartialDelivery: true,
+      maxAcceptableReduction: 25
+    },
+    pickingNotifications: [MOCK_PICKING_NOTIFICATIONS[1]],
+    hasPartialPickingApproval: false,
+    priority: 'High',
+    orderType: 'Express',
+    counterOffer: {
+      id: 'CO-003',
+      originalAmount: 4250.00,
+      proposedAmount: 3950.00,
+      message: 'Adjusted quantities based on current stock availability. Alternative products included with better pricing.',
+      createdDate: 'May 12, 2025',
+      expiryDate: 'May 19, 2025',
+      status: 'Pending',
+      adminId: 'ADM-001',
+      adminName: 'Marco Rossi',
+      requiresPickingApproval: true,
+      pickingChanges: [
+        {
+          id: 'PD-001',
+          originalQuantity: 100,
+          availableQuantity: 65,
+          allocatedQuantity: 65,
+          reason: 'Current stock limitation - high demand product',
+          alternativeProducts: [
+            {
+              productId: 'P003-ALT',
+              productName: 'VOLTAREN GEL 50g (Alternative)',
+              quantity: 35,
+              unitPrice: 11.80
+            }
+          ],
+          estimatedRestockDate: 'May 22, 2025',
+          supplierComment: 'Premium alternative available with similar efficacy'
+        }
+      ]
+    },
+    suppliers: [MOCK_SUPPLIERS[2]]
+  }
+];
+
+// Generate standard mock orders and combine with enhanced picking orders
+const generatedOrders = generateMockOrders(18); // Generate 18 regular orders
+export const mockOrders: OrderWithDetails[] = [
+  ...ENHANCED_PICKING_ORDERS, // Add 2 picking orders
+  ...generatedOrders // Add 18 regular orders
+];
+
+// Functions for managing picking and preferences
+export const updateBuyerPreferences = (buyerId: string, preferences: BuyerPickingPreferences): boolean => {
+  // In a real app, this would update the database
+  console.log(`Updated preferences for buyer ${buyerId}:`, preferences);
+  return true;
+};
+
+export const processPickingDecision = (orderId: string, decision: 'accept' | 'reject' | 'request_alternatives'): boolean => {
+  // In a real app, this would update the order status and notify suppliers
+  const orderIndex = mockOrders.findIndex(order => order.id === orderId);
+  if (orderIndex !== -1) {
+    if (decision === 'accept') {
+      mockOrders[orderIndex].status = 'Partial Approved';
+      mockOrders[orderIndex].hasPartialPickingApproval = true;
+    } else if (decision === 'reject') {
+      mockOrders[orderIndex].status = 'Rejected';
+    }
+    return true;
+  }
+  return false;
+};
+
+export const acknowledgePickingNotification = (notificationId: string): boolean => {
+  // Mark notification as acknowledged
+  const notification = MOCK_PICKING_NOTIFICATIONS.find(n => n.id === notificationId);
+  if (notification) {
+    notification.acknowledged = true;
+    return true;
+  }
+  return false;
+}; 

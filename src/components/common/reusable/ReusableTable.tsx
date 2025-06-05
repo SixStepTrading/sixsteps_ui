@@ -44,7 +44,7 @@ export const Tooltip: React.FC<TooltipProps> = ({ children, text, position = 'to
   return (
     <div className="relative group inline-block">
       {children}
-      <div className={`absolute invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-gray-800 text-white text-xs rounded p-2 max-w-xs ${
+      <div className={`absolute invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-gray-800 dark:bg-gray-900 text-white text-xs rounded p-2 max-w-xs ${
         position === 'top' ? 'bottom-full left-1/2 transform -translate-x-1/2 mb-1' :
         position === 'bottom' ? 'top-full left-1/2 transform -translate-x-1/2 mt-1' :
         position === 'left' ? 'right-full top-1/2 transform -translate-y-1/2 mr-1' :
@@ -120,11 +120,11 @@ const ReusableTable: React.FC<TableProps> = ({
       {(title || headerBadge || titleAction) && (
         <div className="flex items-center justify-between mb-3 px-2">
           <div className="flex items-center">
-            {title && <h2 className="text-lg font-medium text-gray-800">{title}</h2>}
+            {title && <h2 className="text-lg font-medium text-gray-800 dark:text-dark-text-primary">{title}</h2>}
             {headerBadge && (
-              <div className="ml-3 text-xs text-slate-600 bg-blue-50 px-3 py-1 rounded flex items-center">
+              <div className="ml-3 text-xs text-slate-600 dark:text-dark-text-muted bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded flex items-center">
                 <span className="font-medium">{headerBadge.label}:</span>
-                <span className="ml-1 font-semibold text-blue-600">{headerBadge.value}</span>
+                <span className="ml-1 font-semibold text-blue-600 dark:text-blue-400">{headerBadge.value}</span>
               </div>
             )}
           </div>
@@ -138,11 +138,11 @@ const ReusableTable: React.FC<TableProps> = ({
       <div className="overflow-x-auto w-full">
         <div className={`${isDrawerCollapsed ? minWidth : minWidth}`}>
           {/* Header columns */}
-          <div className="flex items-center px-4 py-3 text-xs uppercase text-slate-500 font-semibold tracking-wider bg-gray-50 rounded-t-lg my-1.5 border-b border-gray-200">
+          <div className="flex items-center px-4 py-3 text-xs uppercase text-slate-500 dark:text-dark-text-muted font-semibold tracking-wider bg-gray-50 dark:bg-dark-bg-tertiary rounded-t-lg my-1.5 border-b border-gray-200 dark:border-dark-border-primary">
             {columns.map((column) => (
               <div 
                 key={column.id} 
-                className={`${column.width} ${column.align === 'center' ? 'text-center' : column.align === 'right' ? 'text-right' : ''} ${column.sortable ? 'cursor-pointer hover:text-blue-600' : ''}`}
+                className={`${column.width} ${column.align === 'center' ? 'text-center' : column.align === 'right' ? 'text-right' : ''} ${column.sortable ? 'cursor-pointer hover:text-blue-600 dark:hover:text-blue-400' : ''}`}
                 onClick={() => column.sortable && handleSort(column.id)}
               >
                 <div className="flex items-center">
@@ -169,7 +169,7 @@ const ReusableTable: React.FC<TableProps> = ({
             {paginatedData.length > 0 ? (
               paginatedData.map((item, idx) => renderRow(item, idx + 1 + (page - 1) * rowsPerPage))
             ) : (
-              <div className="py-6 text-center text-gray-500">{emptyMessage}</div>
+              <div className="py-6 text-center text-gray-500 dark:text-dark-text-muted bg-white dark:bg-dark-bg-secondary rounded-lg">{emptyMessage}</div>
             )}
           </div>
         </div>
@@ -178,11 +178,11 @@ const ReusableTable: React.FC<TableProps> = ({
       {/* Pagination */}
       {(totalCount || data.length) > rowsPerPage && (
         <div className="flex justify-center py-4 mt-2">
-          <div className="flex items-center space-x-1 bg-white px-4 py-2 rounded-lg shadow-sm">
+          <div className="flex items-center space-x-1 bg-white dark:bg-dark-bg-secondary px-4 py-2 rounded-lg shadow-sm dark:shadow-dark-sm border dark:border-dark-border-primary">
             <button
               onClick={() => handlePageChange(page - 1)}
               disabled={page === 1}
-              className={`p-2 rounded ${page === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-100'}`}
+              className={`p-2 rounded ${page === 1 ? 'text-gray-400 dark:text-dark-text-disabled cursor-not-allowed' : 'text-gray-700 dark:text-dark-text-secondary hover:bg-gray-100 dark:hover:bg-dark-bg-hover'}`}
             >
               <ChevronLeftIcon className="h-5 w-5" />
             </button>
@@ -191,7 +191,7 @@ const ReusableTable: React.FC<TableProps> = ({
               <button
                 key={index}
                 onClick={() => handlePageChange(index + 1)}
-                className={`px-3 py-1 rounded ${page === index + 1 ? 'bg-blue-600 text-white font-bold' : 'text-gray-700 hover:bg-gray-100'}`}
+                className={`px-3 py-1 rounded ${page === index + 1 ? 'bg-blue-600 dark:bg-blue-500 text-white font-bold' : 'text-gray-700 dark:text-dark-text-secondary hover:bg-gray-100 dark:hover:bg-dark-bg-hover'}`}
               >
                 {index + 1}
               </button>
@@ -200,7 +200,7 @@ const ReusableTable: React.FC<TableProps> = ({
             <button
               onClick={() => handlePageChange(page + 1)}
               disabled={page === totalPages}
-              className={`p-2 rounded ${page === totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-100'}`}
+              className={`p-2 rounded ${page === totalPages ? 'text-gray-400 dark:text-dark-text-disabled cursor-not-allowed' : 'text-gray-700 dark:text-dark-text-secondary hover:bg-gray-100 dark:hover:bg-dark-bg-hover'}`}
             >
               <ChevronRightIcon className="h-5 w-5" />
             </button>

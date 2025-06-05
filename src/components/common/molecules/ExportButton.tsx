@@ -14,9 +14,10 @@ interface ExportButtonProps {
     vat: number;
   }>;
   isVisible: boolean;
+  userRole?: string;
 }
 
-const ExportButton: React.FC<ExportButtonProps> = ({ selectedProducts, isVisible }) => {
+const ExportButton: React.FC<ExportButtonProps> = ({ selectedProducts, isVisible, userRole = 'Buyer' }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const hasSelectedProducts = selectedProducts.length > 0;
@@ -35,7 +36,7 @@ const ExportButton: React.FC<ExportButtonProps> = ({ selectedProducts, isVisible
   }, []);
 
   const handleExport = (format: 'csv' | 'xlsx') => {
-    exportSelectedProducts(selectedProducts, format);
+    exportSelectedProducts(selectedProducts, format, userRole);
     setIsDropdownOpen(false);
   };
 
@@ -47,8 +48,8 @@ const ExportButton: React.FC<ExportButtonProps> = ({ selectedProducts, isVisible
         <button
           className={`flex items-center gap-1 text-sm py-1.5 px-3 rounded transition-colors ${
             hasSelectedProducts 
-            ? 'bg-blue-600 text-white hover:bg-blue-700' 
-            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            ? 'bg-blue-600 dark:bg-blue-700 text-white hover:bg-blue-700 dark:hover:bg-blue-800' 
+            : 'bg-gray-300 dark:bg-dark-bg-hover text-gray-500 dark:text-dark-text-disabled cursor-not-allowed'
           }`}
           onClick={() => hasSelectedProducts && setIsDropdownOpen(!isDropdownOpen)}
           disabled={!hasSelectedProducts}
@@ -64,21 +65,21 @@ const ExportButton: React.FC<ExportButtonProps> = ({ selectedProducts, isVisible
       </Tooltip>
       
       {isDropdownOpen && hasSelectedProducts && (
-        <div className="absolute z-10 right-0 mt-1 w-48 bg-white rounded-md shadow-lg py-1 text-sm">
+        <div className="absolute z-10 right-0 mt-1 w-48 bg-white dark:bg-dark-bg-card rounded-md shadow-lg dark:shadow-dark-lg py-1 text-sm border dark:border-dark-border-primary">
           <button
-            className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 w-full text-left"
+            className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-dark-bg-hover w-full text-left text-gray-900 dark:text-dark-text-primary"
             onClick={() => handleExport('xlsx')}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 text-green-600">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 text-green-600 dark:text-green-400">
               <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 0 1-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125m-9.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m-17.25 0h7.5m-7.5 0c-.621 0-1.125.504-1.125 1.125m0 0v1.5c0 .621.504 1.125 1.125 1.125M12 10.875v-1.5m0 1.5c0 .621-.504 1.125-1.125 1.125M12 10.875c0 .621.504 1.125 1.125 1.125m-2.25 0c.621 0 1.125.504 1.125 1.125m0 0 1.5-1.5m-1.5 1.5L9.75 12m0 0 1.5 1.5m-1.5-1.5h-1.5m1.5 1.5h1.5m-7.5-6h6" />
             </svg>
             Excel (.xlsx)
           </button>
           <button
-            className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 w-full text-left"
+            className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-dark-bg-hover w-full text-left text-gray-900 dark:text-dark-text-primary"
             onClick={() => handleExport('csv')}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 text-blue-600">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 text-blue-600 dark:text-blue-400">
               <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
             </svg>
             CSV (.csv)

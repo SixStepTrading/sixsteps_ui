@@ -188,6 +188,9 @@ const Dashboard: React.FC = () => {
   // New state for selection problems
   const [selectionWithProblems, setSelectionWithProblems] = useState(false);
 
+  // State for triggering filter reset in ProductTable
+  const [resetFilters, setResetFilters] = useState(0);
+
   // Funzione per gestire l'apertura/chiusura della visualizzazione di tutti i prezzi
   const handleToggleAllPrices = (productId: string) => {
     // Find product and toggle showAllPrices property
@@ -642,7 +645,9 @@ const Dashboard: React.FC = () => {
         quantity: product.quantity,
         unitPrice: product.averagePrice || product.bestPrices[0]?.price || product.publicPrice,
         averagePrice: product.averagePrice || undefined,
-        priceBreakdowns: priceBreakdowns
+        priceBreakdowns: priceBreakdowns,
+        publicPrice: product.publicPrice,
+        vat: product.vat
       };
     });
     
@@ -707,6 +712,9 @@ const Dashboard: React.FC = () => {
       targetPrice: null,
       showAllPrices: false
     })));
+    
+    // Trigger ProductTable filter reset
+    setResetFilters(prev => prev + 1);
     
     // Load fresh data
     loadProducts(true);
@@ -1149,12 +1157,12 @@ const Dashboard: React.FC = () => {
       {/* Error notifications */}
       {error && (
         <div className="fixed top-4 right-4 z-[10100] w-96 shadow-lg">
-          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-md flex items-start">
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 dark:border-yellow-500 p-4 rounded-md flex items-start">
             <div className="flex-grow">
-              <div className="text-yellow-800 font-medium">{error}</div>
+              <div className="text-yellow-800 dark:text-yellow-200 font-medium">{error}</div>
             </div>
             <button 
-              className="ml-2 text-yellow-400 hover:text-yellow-600"
+              className="ml-2 text-yellow-400 dark:text-yellow-300 hover:text-yellow-600 dark:hover:text-yellow-100"
               onClick={handleCloseError}
             >
               <ClearIcon />
@@ -1165,12 +1173,12 @@ const Dashboard: React.FC = () => {
       
       {uploadError && (
         <div className="fixed top-4 right-4 z-[10100] w-96 shadow-lg">
-          <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-md flex items-start">
+          <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-400 dark:border-red-500 p-4 rounded-md flex items-start">
             <div className="flex-grow">
-              <div className="text-red-800 font-medium">{uploadError}</div>
+              <div className="text-red-800 dark:text-red-200 font-medium">{uploadError}</div>
             </div>
             <button 
-              className="ml-2 text-red-400 hover:text-red-600"
+              className="ml-2 text-red-400 dark:text-red-300 hover:text-red-600 dark:hover:text-red-100"
               onClick={() => setUploadError(null)}
             >
               <ClearIcon />
@@ -1181,12 +1189,12 @@ const Dashboard: React.FC = () => {
       
       {uploadSuccess && (
         <div className="fixed top-4 right-4 z-[10100] w-96 shadow-lg">
-          <div className="bg-green-50 border-l-4 border-green-400 p-4 rounded-md flex items-start">
+          <div className="bg-green-50 dark:bg-green-900/20 border-l-4 border-green-400 dark:border-green-500 p-4 rounded-md flex items-start">
             <div className="flex-grow">
-              <div className="text-green-800 font-medium">File processed successfully</div>
+              <div className="text-green-800 dark:text-green-200 font-medium">File processed successfully</div>
             </div>
             <button 
-              className="ml-2 text-green-400 hover:text-green-600"
+              className="ml-2 text-green-400 dark:text-green-300 hover:text-green-600 dark:hover:text-green-100"
               onClick={() => setUploadSuccess(false)}
             >
               <ClearIcon />
@@ -1205,72 +1213,26 @@ const Dashboard: React.FC = () => {
       
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-medium">Dashboard</h1>
-          <p className="text-gray-500 text-sm">
+          <h1 className="text-2xl font-medium text-gray-900 dark:text-dark-text-primary">Dashboard</h1>
+          <p className="text-gray-500 dark:text-dark-text-muted text-sm">
             Welcome back! Here's what's happening with your pharmacy business today.
           </p>
-        </div>
-
-        {/* Buttons moved here from below */}
-        <div className="flex gap-2 items-center">
-          {isAdmin && (
-            <button
-              className="flex items-center gap-1 bg-blue-600 text-white text-sm py-1 px-3 rounded hover:bg-blue-700 transition-colors"
-              onClick={handleOpenAddProductModal}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-              </svg>
-              Add Product
-            </button>
-                  )}
-                  
-                  {/* File Upload Button */}
-          <button
-            className={`flex items-center gap-1 border text-sm py-1 px-3 rounded 
-              ${loading || fileUploading 
-                ? 'border-gray-300 text-gray-400 cursor-not-allowed' 
-                : 'border-blue-600 text-blue-600 hover:bg-blue-50 transition-colors'}
-            `}
-                    onClick={handleUploadButtonClick}
-                    disabled={loading || fileUploading}
-                  >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
-            </svg>
-                    {fileUploading ? 'Processing...' : 'Upload Products'}
-          </button>
-                  
-          <button 
-            className={`flex items-center gap-1 border text-sm py-1 px-3 rounded 
-              ${loading || fileUploading 
-                ? 'border-gray-300 text-gray-400 cursor-not-allowed' 
-                : 'border-gray-500 text-gray-700 hover:bg-gray-50 transition-colors'}
-            `}
-                    onClick={handleRefresh}
-                    disabled={loading || fileUploading}
-                  >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-            </svg>
-                    Refresh
-          </button>
         </div>
       </div>
 
       {/* Search and filter controls converted to Tailwind */}
-      <div className="mb-6 bg-gray-50 p-4 rounded-lg">
+      <div className="mb-6 bg-gray-50 dark:bg-dark-bg-secondary p-4 rounded-lg border dark:border-dark-border-primary">
         <div className={`grid grid-cols-1 ${isAdmin ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-4`}>
           <div className="relative">
             <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4 text-gray-500">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4 text-gray-500 dark:text-dark-text-muted">
                 <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
               </svg>
             </div>
             <input 
               type="text" 
               placeholder="Search products by name, code, EAN..." 
-              className="w-full py-2 pl-10 pr-3 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              className="w-full py-2 pl-10 pr-3 border border-gray-300 dark:border-dark-border-primary rounded-md leading-5 bg-white dark:bg-dark-bg-tertiary text-gray-900 dark:text-dark-text-primary focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 text-sm"
               value={filterValues.searchTerm || ''}
               onChange={(e) => handleFilterChange({...filterValues, searchTerm: e.target.value})}
             />
@@ -1278,7 +1240,7 @@ const Dashboard: React.FC = () => {
 
           <div>
             <select
-              className="w-full py-2 pl-3 pr-10 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              className="w-full py-2 pl-3 pr-10 border border-gray-300 dark:border-dark-border-primary rounded-md leading-5 bg-white dark:bg-dark-bg-tertiary text-gray-900 dark:text-dark-text-primary focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 text-sm"
               value={filterValues.category || ''}
               onChange={(e) => handleFilterChange({...filterValues, category: e.target.value})}
             >
@@ -1291,7 +1253,7 @@ const Dashboard: React.FC = () => {
 
           <div>
             <select
-              className="w-full py-2 pl-3 pr-10 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              className="w-full py-2 pl-3 pr-10 border border-gray-300 dark:border-dark-border-primary rounded-md leading-5 bg-white dark:bg-dark-bg-tertiary text-gray-900 dark:text-dark-text-primary focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 text-sm"
               value={filterValues.manufacturer || ''}
               onChange={(e) => handleFilterChange({...filterValues, manufacturer: e.target.value})}
             >
@@ -1305,7 +1267,7 @@ const Dashboard: React.FC = () => {
           {isAdmin && (
             <div>
               <select
-                className="w-full py-2 pl-3 pr-10 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                className="w-full py-2 pl-3 pr-10 border border-gray-300 dark:border-dark-border-primary rounded-md leading-5 bg-white dark:bg-dark-bg-tertiary text-gray-900 dark:text-dark-text-primary focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 text-sm"
                 value={filterValues.supplier || ''}
                 onChange={(e) => handleFilterChange({...filterValues, supplier: e.target.value})}
               >
@@ -1324,13 +1286,19 @@ const Dashboard: React.FC = () => {
         products={filteredProducts}
         selected={selected}
         onSelect={(id) => handleSelectClick({} as any, id)}
-                                  onQuantityChange={handleQuantityChange}
-                                  onTargetPriceChange={handleTargetPriceChange}
+        onQuantityChange={handleQuantityChange}
+        onTargetPriceChange={handleTargetPriceChange}
         isSelected={isSelected}
-                                  onToggleAllPrices={handleToggleAllPrices}
+        onToggleAllPrices={handleToggleAllPrices}
         onSelectionWithProblemsChange={handleSelectionWithProblemsChange}
         userRole={userRole}
-                    />
+        resetFilters={resetFilters}
+        loading={loading}
+        fileUploading={fileUploading}
+        onAddProduct={handleOpenAddProductModal}
+        onUploadProduct={handleUploadButtonClick}
+        onRefresh={handleRefresh}
+      />
       
       {/* Add the ActionBar component outside the Card */}
       <ActionBar 
@@ -1354,6 +1322,7 @@ const Dashboard: React.FC = () => {
         onSubmitOrder={handleSubmitOrder}
         products={selectedProductsForOrder}
         totalAmount={totalAmount}
+        userRole={userRole}
       />
 
       {/* Add Product Modal */}
