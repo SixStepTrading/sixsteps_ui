@@ -209,7 +209,7 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
   
   return (
     <div 
-      className="fixed right-0 top-0 h-full max-w-md w-full bg-white border-l border-gray-200 shadow-lg z-50 flex flex-col"
+      className="fixed right-0 top-0 h-full max-w-md w-full bg-white dark:bg-dark-bg-card border-l border-gray-200 dark:border-dark-border-primary shadow-lg dark:shadow-dark-lg z-50 flex flex-col"
       style={{ 
         left: `${sidebarWidth}px`, 
         width: 'calc(100% - 350px - ' + sidebarWidth + 'px)',
@@ -217,83 +217,83 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
       }}
     >
       {/* Header */}
-      <div className="border-b border-gray-200">
+      <div className="border-b border-gray-200 dark:border-dark-border-primary">
         <div className="flex items-center justify-between px-4 py-3">
-          <h3 className="text-lg font-semibold text-gray-800">Notifications</h3>
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-dark-text-primary">Notifications</h3>
           <div className="flex space-x-1">
             <button 
-              className="p-1 hover:bg-gray-100 rounded-full"
+              className="p-1 hover:bg-gray-100 dark:hover:bg-dark-bg-hover rounded-full"
               onClick={handleRefresh}
               disabled={refreshing}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${refreshing ? 'animate-spin text-blue-500' : 'text-gray-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${refreshing ? 'animate-spin text-blue-500 dark:text-blue-400' : 'text-gray-500 dark:text-dark-text-muted'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
             </button>
             <button 
-              className="p-1 hover:bg-gray-100 rounded-full"
+              className="p-1 hover:bg-gray-100 dark:hover:bg-dark-bg-hover rounded-full"
               onClick={() => setShowSettings(!showSettings)}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500 dark:text-dark-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
             </button>
             <div className="relative">
               <button 
-                className="p-1 hover:bg-gray-100 rounded-full"
+                className="p-1 hover:bg-gray-100 dark:hover:bg-dark-bg-hover rounded-full"
                 onClick={handleMoreMenuToggle}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500 dark:text-dark-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
                 </svg>
               </button>
               {moreMenuOpen && (
-                <div className="absolute right-0 mt-1 w-48 bg-white shadow-lg rounded-md py-1 z-10">
+                <div className="absolute right-0 mt-1 w-48 bg-white dark:bg-dark-bg-card shadow-lg dark:shadow-dark-lg rounded-md py-1 z-10 border dark:border-dark-border-primary">
                   <button 
-                    className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100"
+                    className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-dark-bg-hover text-gray-900 dark:text-dark-text-primary"
                     onClick={() => {
                       handleMarkAllAsRead();
                       setMoreMenuOpen(false);
                     }}
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-green-600" viewBox="0 0 20 20" fill="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-green-600 dark:text-green-400" viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                     Mark all as read
                   </button>
                   <button 
-                    className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100"
+                    className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-dark-bg-hover text-gray-900 dark:text-dark-text-primary"
                     onClick={() => {
                       handleMarkAllAsUnread();
                       setMoreMenuOpen(false);
                     }}
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-blue-600 dark:text-blue-400" viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                     </svg>
                     Mark all as unread
                   </button>
                   <button 
-                    className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 text-red-600"
+                    className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-dark-bg-hover text-red-600 dark:text-red-400"
                     onClick={() => {
                       handleClearAllNotifications();
                       setMoreMenuOpen(false);
                     }}
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-red-600" viewBox="0 0 20 20" fill="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-red-600 dark:text-red-400" viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
                     </svg>
                     Clear all notifications
                   </button>
                   <button 
-                    className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100"
+                    className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-dark-bg-hover text-gray-900 dark:text-dark-text-primary"
                     onClick={() => {
                       onClose();
                       setMoreMenuOpen(false);
                     }}
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-gray-500 dark:text-dark-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                     Close
@@ -302,10 +302,10 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
               )}
             </div>
             <button 
-              className="p-1 hover:bg-gray-100 rounded-full"
+              className="p-1 hover:bg-gray-100 dark:hover:bg-dark-bg-hover rounded-full"
               onClick={onClose}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500 dark:text-dark-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -317,12 +317,12 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
       <div className="flex-1 overflow-auto">
         {showSettings ? (
           <div className="p-4">
-            <h3 className="text-lg font-semibold mb-4">Notification Settings</h3>
+            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-dark-text-primary">Notification Settings</h3>
             
             <div className="space-y-4">
               {/* General settings */}
               <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-2">General</h4>
+                <h4 className="text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">General</h4>
                 <div className="space-y-2">
                   {Object.entries({
                     enabled: 'Enable notifications',
@@ -332,7 +332,7 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
                     autoRead: 'Mark as read when viewed'
                   }).map(([key, label]) => (
                     <div key={key} className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">{label}</span>
+                      <span className="text-sm text-gray-600 dark:text-dark-text-muted">{label}</span>
                       <label className="relative inline-flex items-center cursor-pointer">
                         <input 
                           type="checkbox" 
@@ -343,7 +343,7 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
                             !preferences[key as keyof NotificationPreferences]
                           )}
                         />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        <div className="w-11 h-6 bg-gray-200 dark:bg-dark-bg-tertiary peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-400 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-dark-border-primary after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-500"></div>
                       </label>
                     </div>
                   ))}
@@ -352,7 +352,7 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
               
               {/* Notification type settings */}
               <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Notification Types</h4>
+                <h4 className="text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Notification Types</h4>
                 <div className="space-y-3">
                   {Object.entries({
                     order: 'Order Notifications',
@@ -362,9 +362,9 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
                     system: 'System Updates',
                     alert: 'Security Alerts'
                   }).map(([type, label]) => (
-                    <div key={type} className="border rounded-md p-2 bg-gray-50">
+                    <div key={type} className="border dark:border-dark-border-primary rounded-md p-2 bg-gray-50 dark:bg-dark-bg-tertiary">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium">{label}</span>
+                        <span className="text-sm font-medium text-gray-900 dark:text-dark-text-primary">{label}</span>
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input 
                             type="checkbox" 
@@ -376,14 +376,14 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
                               !preferences.typePreferences[type as NotificationType]?.enabled
                             )}
                           />
-                          <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                          <div className="w-9 h-5 bg-gray-200 dark:bg-dark-bg-secondary peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-400 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-dark-border-primary after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-500"></div>
                         </label>
                       </div>
-                      <div className="flex items-center text-xs text-gray-500 pl-1">
+                      <div className="flex items-center text-xs text-gray-500 dark:text-dark-text-muted pl-1">
                         <label className="flex items-center">
                           <input 
                             type="checkbox" 
-                            className="mr-1 h-3 w-3 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            className="mr-1 h-3 w-3 rounded border-gray-300 dark:border-dark-border-primary text-blue-600 dark:text-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-dark-bg-tertiary"
                             checked={preferences.typePreferences[type as NotificationType]?.soundEnabled}
                             onChange={() => handleTypePreferenceChange(
                               type as NotificationType, 
@@ -403,13 +403,13 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
             
             <div className="mt-6 flex justify-end">
               <button 
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md text-sm font-medium text-gray-700 mr-2"
+                className="px-4 py-2 bg-gray-200 dark:bg-dark-bg-tertiary hover:bg-gray-300 dark:hover:bg-dark-bg-hover rounded-md text-sm font-medium text-gray-700 dark:text-dark-text-primary mr-2"
                 onClick={() => setShowSettings(false)}
               >
                 Cancel
               </button>
               <button 
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md text-sm font-medium text-white"
+                className="px-4 py-2 bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-400 rounded-md text-sm font-medium text-white"
                 onClick={() => setShowSettings(false)}
               >
                 Save Changes
@@ -427,9 +427,9 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
       
       {/* Footer */}
       {!showSettings && (
-        <div className="border-t border-gray-200 p-3 text-center">
+        <div className="border-t border-gray-200 dark:border-dark-border-primary p-3 text-center">
           <button 
-            className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+            className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
             onClick={() => setShowSettings(true)}
           >
             Manage notification settings

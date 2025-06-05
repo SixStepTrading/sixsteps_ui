@@ -1157,12 +1157,12 @@ const Dashboard: React.FC = () => {
       {/* Error notifications */}
       {error && (
         <div className="fixed top-4 right-4 z-[10100] w-96 shadow-lg">
-          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-md flex items-start">
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 dark:border-yellow-500 p-4 rounded-md flex items-start">
             <div className="flex-grow">
-              <div className="text-yellow-800 font-medium">{error}</div>
+              <div className="text-yellow-800 dark:text-yellow-200 font-medium">{error}</div>
             </div>
             <button 
-              className="ml-2 text-yellow-400 hover:text-yellow-600"
+              className="ml-2 text-yellow-400 dark:text-yellow-300 hover:text-yellow-600 dark:hover:text-yellow-100"
               onClick={handleCloseError}
             >
               <ClearIcon />
@@ -1173,12 +1173,12 @@ const Dashboard: React.FC = () => {
       
       {uploadError && (
         <div className="fixed top-4 right-4 z-[10100] w-96 shadow-lg">
-          <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-md flex items-start">
+          <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-400 dark:border-red-500 p-4 rounded-md flex items-start">
             <div className="flex-grow">
-              <div className="text-red-800 font-medium">{uploadError}</div>
+              <div className="text-red-800 dark:text-red-200 font-medium">{uploadError}</div>
             </div>
             <button 
-              className="ml-2 text-red-400 hover:text-red-600"
+              className="ml-2 text-red-400 dark:text-red-300 hover:text-red-600 dark:hover:text-red-100"
               onClick={() => setUploadError(null)}
             >
               <ClearIcon />
@@ -1189,12 +1189,12 @@ const Dashboard: React.FC = () => {
       
       {uploadSuccess && (
         <div className="fixed top-4 right-4 z-[10100] w-96 shadow-lg">
-          <div className="bg-green-50 border-l-4 border-green-400 p-4 rounded-md flex items-start">
+          <div className="bg-green-50 dark:bg-green-900/20 border-l-4 border-green-400 dark:border-green-500 p-4 rounded-md flex items-start">
             <div className="flex-grow">
-              <div className="text-green-800 font-medium">File processed successfully</div>
+              <div className="text-green-800 dark:text-green-200 font-medium">File processed successfully</div>
             </div>
             <button 
-              className="ml-2 text-green-400 hover:text-green-600"
+              className="ml-2 text-green-400 dark:text-green-300 hover:text-green-600 dark:hover:text-green-100"
               onClick={() => setUploadSuccess(false)}
             >
               <ClearIcon />
@@ -1213,26 +1213,26 @@ const Dashboard: React.FC = () => {
       
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-medium">Dashboard</h1>
-          <p className="text-gray-500 text-sm">
+          <h1 className="text-2xl font-medium text-gray-900 dark:text-dark-text-primary">Dashboard</h1>
+          <p className="text-gray-500 dark:text-dark-text-muted text-sm">
             Welcome back! Here's what's happening with your pharmacy business today.
           </p>
         </div>
       </div>
 
       {/* Search and filter controls converted to Tailwind */}
-      <div className="mb-6 bg-gray-50 p-4 rounded-lg">
+      <div className="mb-6 bg-gray-50 dark:bg-dark-bg-secondary p-4 rounded-lg border dark:border-dark-border-primary">
         <div className={`grid grid-cols-1 ${isAdmin ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-4`}>
           <div className="relative">
             <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4 text-gray-500">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4 text-gray-500 dark:text-dark-text-muted">
                 <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
               </svg>
             </div>
             <input 
               type="text" 
               placeholder="Search products by name, code, EAN..." 
-              className="w-full py-2 pl-10 pr-3 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              className="w-full py-2 pl-10 pr-3 border border-gray-300 dark:border-dark-border-primary rounded-md leading-5 bg-white dark:bg-dark-bg-tertiary text-gray-900 dark:text-dark-text-primary focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 text-sm"
               value={filterValues.searchTerm || ''}
               onChange={(e) => handleFilterChange({...filterValues, searchTerm: e.target.value})}
             />
@@ -1240,7 +1240,7 @@ const Dashboard: React.FC = () => {
 
           <div>
             <select
-              className="w-full py-2 pl-3 pr-10 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              className="w-full py-2 pl-3 pr-10 border border-gray-300 dark:border-dark-border-primary rounded-md leading-5 bg-white dark:bg-dark-bg-tertiary text-gray-900 dark:text-dark-text-primary focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 text-sm"
               value={filterValues.category || ''}
               onChange={(e) => handleFilterChange({...filterValues, category: e.target.value})}
             >
@@ -1253,7 +1253,7 @@ const Dashboard: React.FC = () => {
 
           <div>
             <select
-              className="w-full py-2 pl-3 pr-10 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              className="w-full py-2 pl-3 pr-10 border border-gray-300 dark:border-dark-border-primary rounded-md leading-5 bg-white dark:bg-dark-bg-tertiary text-gray-900 dark:text-dark-text-primary focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 text-sm"
               value={filterValues.manufacturer || ''}
               onChange={(e) => handleFilterChange({...filterValues, manufacturer: e.target.value})}
             >
@@ -1267,7 +1267,7 @@ const Dashboard: React.FC = () => {
           {isAdmin && (
             <div>
               <select
-                className="w-full py-2 pl-3 pr-10 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                className="w-full py-2 pl-3 pr-10 border border-gray-300 dark:border-dark-border-primary rounded-md leading-5 bg-white dark:bg-dark-bg-tertiary text-gray-900 dark:text-dark-text-primary focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 text-sm"
                 value={filterValues.supplier || ''}
                 onChange={(e) => handleFilterChange({...filterValues, supplier: e.target.value})}
               >

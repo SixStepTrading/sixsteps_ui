@@ -273,19 +273,19 @@ const ManageOrders: React.FC = () => {
   const getStatusClass = (status: string) => {
     switch (status) {
       case 'Approved':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300';
       case 'Pending Approval':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300';
       case 'Processing':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300';
       case 'Rejected':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300';
       case 'Counter Offer':
-        return 'bg-purple-100 text-purple-800';
+        return 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300';
       case 'Draft':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300';
       default:
-        return 'bg-gray-100 text-gray-600';
+        return 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400';
     }
   };
   
@@ -318,10 +318,10 @@ const ManageOrders: React.FC = () => {
   
   // Rendering sort icon
   const renderSortIcon = (column: string) => {
-    if (sortBy !== column) return <span className="ml-1 text-gray-300">↕</span>;
+    if (sortBy !== column) return <span className="ml-1 text-gray-300 dark:text-gray-600">↕</span>;
     return sortDirection === 'asc'
-      ? <span className="ml-1 text-blue-600">↑</span>
-      : <span className="ml-1 text-blue-600">↓</span>;
+      ? <span className="ml-1 text-blue-600 dark:text-blue-400">↑</span>
+      : <span className="ml-1 text-blue-600 dark:text-blue-400">↓</span>;
   };
   
   return (
@@ -374,19 +374,19 @@ const ManageOrders: React.FC = () => {
       </div>
       
       {/* Filter controls */}
-      <div className="mb-6 bg-gray-50 p-4 rounded-lg">
+      <div className="mb-6 bg-gray-50 dark:bg-dark-bg-secondary p-4 rounded-lg border dark:border-dark-border-primary">
         <div className="overflow-x-auto">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 min-w-[1000px]">
             <div className="relative">
               <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4 text-gray-500">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4 text-gray-500 dark:text-dark-text-muted">
                   <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
                 </svg>
               </div>
               <input 
                 type="text" 
                 placeholder="Search by order ID or buyer..." 
-                className="w-full py-2 pl-10 pr-3 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                className="w-full py-2 pl-10 pr-3 border border-gray-300 dark:border-dark-border-primary rounded-md leading-5 bg-white dark:bg-dark-bg-card text-gray-900 dark:text-dark-text-primary focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 text-sm"
                 value={filters.searchTerm || ''}
                 onChange={(e) => handleFilterChange({searchTerm: e.target.value})}
               />
@@ -394,7 +394,7 @@ const ManageOrders: React.FC = () => {
 
             <div>
               <select
-                className="w-full py-2 pl-3 pr-10 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                className="w-full py-2 pl-3 pr-10 border border-gray-300 dark:border-dark-border-primary rounded-md leading-5 bg-white dark:bg-dark-bg-card text-gray-900 dark:text-dark-text-primary focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 text-sm"
                 value={filters.status || ''}
                 onChange={(e) => handleFilterChange({status: e.target.value})}
               >
@@ -409,7 +409,7 @@ const ManageOrders: React.FC = () => {
 
             <div>
               <select
-                className="w-full py-2 pl-3 pr-10 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                className="w-full py-2 pl-3 pr-10 border border-gray-300 dark:border-dark-border-primary rounded-md leading-5 bg-white dark:bg-dark-bg-card text-gray-900 dark:text-dark-text-primary focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 text-sm"
                 value={filters.buyer || ''}
                 onChange={(e) => handleFilterChange({buyer: e.target.value})}
               >
@@ -422,7 +422,7 @@ const ManageOrders: React.FC = () => {
 
             <div>
               <select
-                className="w-full py-2 pl-3 pr-10 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                className="w-full py-2 pl-3 pr-10 border border-gray-300 dark:border-dark-border-primary rounded-md leading-5 bg-white dark:bg-dark-bg-card text-gray-900 dark:text-dark-text-primary focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 text-sm"
                 value={filters.dateRange || 'last30days'}
                 onChange={(e) => handleFilterChange({dateRange: e.target.value})}
               >
@@ -443,8 +443,8 @@ const ManageOrders: React.FC = () => {
           disabled={selectedOrderIds.length === 0}
           className={`flex items-center gap-1 px-3 py-1.5 rounded text-sm font-medium
             ${selectedOrderIds.length === 0 
-              ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
-              : 'bg-green-600 text-white hover:bg-green-700'
+              ? 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed' 
+              : 'bg-green-600 dark:bg-green-700 text-white hover:bg-green-700 dark:hover:bg-green-800'
             }`}
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
@@ -458,8 +458,8 @@ const ManageOrders: React.FC = () => {
           disabled={selectedOrderIds.length === 0}
           className={`flex items-center gap-1 px-3 py-1.5 rounded text-sm font-medium
             ${selectedOrderIds.length === 0 
-              ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
-              : 'bg-red-600 text-white hover:bg-red-700'
+              ? 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed' 
+              : 'bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800'
             }`}
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
@@ -473,8 +473,8 @@ const ManageOrders: React.FC = () => {
           disabled={selectedOrderIds.length !== 1}
           className={`flex items-center gap-1 px-3 py-1.5 rounded text-sm font-medium
             ${selectedOrderIds.length !== 1
-              ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
-              : 'bg-purple-600 text-white hover:bg-purple-700'
+              ? 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed' 
+              : 'bg-purple-600 dark:bg-purple-700 text-white hover:bg-purple-700 dark:hover:bg-purple-800'
             }`}
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
@@ -484,7 +484,7 @@ const ManageOrders: React.FC = () => {
         </button>
         
         <button 
-          className="flex items-center gap-1 border border-gray-500 text-gray-700 text-sm py-1.5 px-3 rounded hover:bg-gray-50 transition-colors ml-auto"
+          className="flex items-center gap-1 border border-gray-500 dark:border-gray-600 text-gray-700 dark:text-dark-text-secondary text-sm py-1.5 px-3 rounded hover:bg-gray-50 dark:hover:bg-dark-bg-hover transition-colors ml-auto"
           onClick={handleRefresh}
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
@@ -497,9 +497,9 @@ const ManageOrders: React.FC = () => {
       {/* Orders counter */}
       <div className="w-full flex flex-col gap-1 mb-4">
         <div className="flex items-center mb-1 px-2">
-          <div className="text-xs text-slate-600 bg-blue-50 px-3 py-1 rounded flex items-center">
+          <div className="text-xs text-slate-600 dark:text-dark-text-muted bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded flex items-center border dark:border-blue-800/30">
             <span className="font-medium">Total Orders:</span>
-            <span className="ml-1 font-semibold text-blue-600">{filteredOrders.length}</span>
+            <span className="ml-1 font-semibold text-blue-600 dark:text-blue-300">{filteredOrders.length}</span>
           </div>
         </div>
       </div>
@@ -508,13 +508,13 @@ const ManageOrders: React.FC = () => {
       <div className="overflow-x-auto w-full overflow-y-visible">
         <div className={`${isDrawerCollapsed ? 'min-w-[1000px]' : 'min-w-[1200px]'} transition-all duration-300`}>
           {/* Table header */}
-          <div className="flex items-center px-3 py-3 text-xs uppercase text-slate-500 font-semibold tracking-wider bg-gray-50 rounded-t-lg rounded-xl my-1.5 border-b border-gray-200">
+          <div className="flex items-center px-3 py-3 text-xs uppercase text-slate-500 dark:text-dark-text-muted font-semibold tracking-wider bg-gray-50 dark:bg-dark-bg-secondary rounded-t-lg rounded-xl my-1.5 border-b border-gray-200 dark:border-dark-border-primary">
             <div className="w-[4%] flex items-center justify-center">
               <input 
                 type="checkbox" 
                 checked={selectedOrderIds.length > 0 && selectedOrderIds.length === filteredOrders.length}
                 onChange={selectAllOrders}
-                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                className="w-4 h-4 text-blue-600 bg-gray-100 dark:bg-dark-bg-secondary border-gray-300 dark:border-dark-border-primary rounded focus:ring-blue-500 dark:focus:ring-blue-400"
               />
             </div>
             <div className="w-[12%] cursor-pointer select-none flex items-center" onClick={() => {
@@ -553,12 +553,12 @@ const ManageOrders: React.FC = () => {
           
           {/* Table rows */}
           {sortedOrders.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center bg-white rounded-xl shadow border border-slate-100">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12 text-gray-300 mb-3">
+            <div className="flex flex-col items-center justify-center py-12 text-center bg-white dark:bg-dark-bg-card rounded-xl shadow dark:shadow-dark-md border border-slate-100 dark:border-dark-border-primary">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-3">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3 3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
               </svg>
-              <h3 className="text-lg font-medium text-gray-700">No orders found</h3>
-              <p className="text-gray-500 mt-1 max-w-md">Try adjusting your search or filter criteria to find orders.</p>
+              <h3 className="text-lg font-medium text-gray-700 dark:text-dark-text-primary">No orders found</h3>
+              <p className="text-gray-500 dark:text-dark-text-muted mt-1 max-w-md">Try adjusting your search or filter criteria to find orders.</p>
             </div>
           ) : (
             sortedOrders.map((order, idx) => {
@@ -568,9 +568,9 @@ const ManageOrders: React.FC = () => {
                 <div 
                   key={order.id}
                   className={`
-                    flex items-center px-3 py-3 bg-white border border-gray-100
-                    ${isSelected ? 'bg-blue-50' : ''}
-                    hover:bg-blue-50 cursor-pointer
+                    flex items-center px-3 py-3 bg-white dark:bg-dark-bg-card border border-gray-100 dark:border-dark-border-primary
+                    ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : ''}
+                    hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer
                     relative
                     rounded-xl my-1.5
                   `}
@@ -581,23 +581,23 @@ const ManageOrders: React.FC = () => {
                       type="checkbox" 
                       checked={isSelected}
                       onChange={() => toggleOrderSelection(order.id)}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                      className="w-4 h-4 text-blue-600 bg-gray-100 dark:bg-dark-bg-secondary border-gray-300 dark:border-dark-border-primary rounded focus:ring-blue-500 dark:focus:ring-blue-400"
                     />
                   </div>
                   
                   {/* Order ID */}
                   <div className="w-[12%] flex flex-col">
-                    <span className="font-medium text-sm text-slate-800">{order.id}</span>
+                    <span className="font-medium text-sm text-slate-800 dark:text-dark-text-primary">{order.id}</span>
                   </div>
                   
                   {/* Date */}
                   <div className="w-[9%]">
-                    <span className="text-sm text-slate-600">{order.createdOn}</span>
+                    <span className="text-sm text-slate-600 dark:text-dark-text-secondary">{order.createdOn}</span>
                   </div>
                   
                   {/* Buyer */}
                   <div className="w-[12%]">
-                    <span className="text-sm">{order.buyerName || 'Unknown'}</span>
+                    <span className="text-sm text-gray-900 dark:text-dark-text-primary">{order.buyerName || 'Unknown'}</span>
                   </div>
                   
                   {/* Status */}
@@ -609,22 +609,22 @@ const ManageOrders: React.FC = () => {
                   
                   {/* Products */}
                   <div className="w-[8%] flex flex-col items-center text-xs">
-                    <div className="text-slate-600">
+                    <div className="text-slate-600 dark:text-dark-text-secondary">
                       <span className="font-medium">{order.totalProducts}</span> Products
                     </div>
-                    <div className="text-slate-600">
+                    <div className="text-slate-600 dark:text-dark-text-secondary">
                       <span className="font-medium">{order.items}</span> Items
                     </div>
-                    <div className="text-slate-600">
+                    <div className="text-slate-600 dark:text-dark-text-secondary">
                       <span className="font-medium">{order.suppliers?.length || 0}</span> Suppliers
                     </div>
                   </div>
                   
                   {/* Amount */}
                   <div className="w-[14%] text-right">
-                    <span className="font-semibold text-sm text-slate-700">€{order.amount.toFixed(2)}</span>
+                    <span className="font-semibold text-sm text-slate-700 dark:text-dark-text-primary">€{order.amount.toFixed(2)}</span>
                     {order.counterOffer && (
-                      <div className="text-xs text-purple-600">Counter: €{order.counterOffer.proposedAmount.toFixed(2)}</div>
+                      <div className="text-xs text-purple-600 dark:text-purple-400">Counter: €{order.counterOffer.proposedAmount.toFixed(2)}</div>
                     )}
                   </div>
                   
@@ -638,7 +638,7 @@ const ManageOrders: React.FC = () => {
                             toggleOrderSelection(order.id);
                             handleBulkAction(AdminAction.APPROVE);
                           }}
-                          className="px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded hover:bg-green-200"
+                          className="px-2 py-1 text-xs font-medium text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 rounded hover:bg-green-200 dark:hover:bg-green-900/50"
                         >
                           Approve
                         </button>
@@ -648,7 +648,7 @@ const ManageOrders: React.FC = () => {
                             toggleOrderSelection(order.id);
                             handleBulkAction(AdminAction.REJECT);
                           }}
-                          className="px-2 py-1 text-xs font-medium text-red-700 bg-red-100 rounded hover:bg-red-200"
+                          className="px-2 py-1 text-xs font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30 rounded hover:bg-red-200 dark:hover:bg-red-900/50"
                         >
                           Reject
                         </button>
@@ -658,7 +658,7 @@ const ManageOrders: React.FC = () => {
                             setSelectedOrderIds([order.id]);
                             handleBulkAction(AdminAction.COUNTER_OFFER);
                           }}
-                          className="px-2 py-1 text-xs font-medium text-purple-700 bg-purple-100 rounded hover:bg-purple-200"
+                          className="px-2 py-1 text-xs font-medium text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/30 rounded hover:bg-purple-200 dark:hover:bg-purple-900/50"
                         >
                           Counter
                         </button>
@@ -669,7 +669,7 @@ const ManageOrders: React.FC = () => {
                         e.stopPropagation();
                         navigate(`/purchase-orders/order/${order.id}`);
                       }}
-                      className="px-2 py-1 text-xs font-medium text-blue-700 bg-blue-100 rounded hover:bg-blue-200"
+                      className="px-2 py-1 text-xs font-medium text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/30 rounded hover:bg-blue-200 dark:hover:bg-blue-900/50"
                     >
                       View Details
                     </button>
@@ -684,12 +684,12 @@ const ManageOrders: React.FC = () => {
       {/* Counter offer modal */}
       {counterOfferModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setCounterOfferModalOpen(false)}></div>
-          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full z-10 relative">
-            <h3 className="text-lg font-medium mb-4">Send Counter Offer</h3>
+          <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-black dark:bg-opacity-70" onClick={() => setCounterOfferModalOpen(false)}></div>
+          <div className="bg-white dark:bg-dark-bg-card rounded-lg shadow-xl dark:shadow-dark-lg p-6 max-w-md w-full z-10 relative border dark:border-dark-border-primary">
+            <h3 className="text-lg font-medium mb-4 text-gray-900 dark:text-dark-text-primary">Send Counter Offer</h3>
             
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">New Amount</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">New Amount</label>
               <input
                 type="number"
                 step="0.01"
@@ -698,12 +698,12 @@ const ManageOrders: React.FC = () => {
                   ...counterOfferDetails,
                   newAmount: parseFloat(e.target.value)
                 })}
-                className="w-full p-2 border border-gray-300 rounded"
+                className="w-full p-2 border border-gray-300 dark:border-dark-border-primary bg-white dark:bg-dark-bg-secondary text-gray-900 dark:text-dark-text-primary rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400"
               />
             </div>
             
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">Message</label>
               <textarea
                 value={counterOfferDetails.message}
                 onChange={(e) => setCounterOfferDetails({
@@ -711,7 +711,7 @@ const ManageOrders: React.FC = () => {
                   message: e.target.value
                 })}
                 rows={3}
-                className="w-full p-2 border border-gray-300 rounded"
+                className="w-full p-2 border border-gray-300 dark:border-dark-border-primary bg-white dark:bg-dark-bg-secondary text-gray-900 dark:text-dark-text-primary rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400"
                 placeholder="Explain the counter offer..."
               ></textarea>
             </div>
@@ -719,13 +719,13 @@ const ManageOrders: React.FC = () => {
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setCounterOfferModalOpen(false)}
-                className="px-4 py-2 text-sm border border-gray-300 rounded text-gray-700 hover:bg-gray-50"
+                className="px-4 py-2 text-sm border border-gray-300 dark:border-dark-border-primary rounded text-gray-700 dark:text-dark-text-secondary hover:bg-gray-50 dark:hover:bg-dark-bg-hover"
               >
                 Cancel
               </button>
               <button
                 onClick={submitCounterOffer}
-                className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="px-4 py-2 text-sm bg-blue-600 dark:bg-blue-700 text-white rounded hover:bg-blue-700 dark:hover:bg-blue-800"
               >
                 Send Counter Offer
               </button>

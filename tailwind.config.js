@@ -3,6 +3,7 @@ module.exports = {
   content: [
     "./src/**/*.{js,jsx,ts,tsx}",
   ],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
@@ -36,6 +37,29 @@ module.exports = {
           DEFAULT: '#0288d1',
           dark: '#01579b',
         },
+        dark: {
+          bg: {
+            primary: '#0a0a0a',
+            secondary: '#1a1a1a',
+            tertiary: '#2a2a2a',
+            card: '#1e1e1e',
+            hover: '#333333',
+            accent: '#404040',
+          },
+          text: {
+            primary: '#ffffff',
+            secondary: '#e5e5e5',
+            muted: '#a1a1a1',
+            disabled: '#666666',
+            accent: '#cccccc',
+          },
+          border: {
+            primary: '#404040',
+            secondary: '#333333',
+            accent: '#555555',
+            subtle: '#2a2a2a',
+          }
+        }
       },
       fontFamily: {
         sans: ['Roboto', 'Arial', 'sans-serif'],
@@ -66,6 +90,10 @@ module.exports = {
         md: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
         lg: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
         xl: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+        'dark-sm': '0 1px 2px 0 rgba(0, 0, 0, 0.3)',
+        'dark': '0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px 0 rgba(0, 0, 0, 0.3)',
+        'dark-md': '0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3)',
+        'dark-lg': '0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3)',
       },
     },
   },

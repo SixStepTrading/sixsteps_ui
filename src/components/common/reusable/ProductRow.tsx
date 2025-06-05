@@ -46,16 +46,16 @@ const ProductRow: React.FC<ProductRowProps> = ({
 
   const getBgColor = (isSelected: boolean, stockExceeded: boolean) => {
     if (stockExceeded) {
-      return isSelected ? 'bg-amber-100' : 'bg-amber-50';
+      return isSelected ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-amber-50 dark:bg-amber-900/20';
     }
-    return isSelected ? 'bg-blue-50' : 'bg-white';
+    return isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-white dark:bg-dark-bg-secondary';
   };
 
   const bgColorClass = getBgColor(isSelected, stockExceeded);
 
   return (
     <tr 
-      className={`hover:bg-gray-50 ${bgColorClass} ${stockExceeded ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+      className={`hover:bg-gray-50 dark:hover:bg-dark-bg-hover ${bgColorClass} ${stockExceeded ? 'cursor-not-allowed' : 'cursor-pointer'}`}
       onClick={(event) => {
         // Click handling only for selection checkbox
         if ((event.target as HTMLElement).closest('button') === null &&
@@ -70,14 +70,14 @@ const ProductRow: React.FC<ProductRowProps> = ({
     >
       {/* Checkbox cell */}
       <td 
-        className={`sticky left-0 ${bgColorClass} z-50 border-r border-gray-200 shadow-sm p-1 w-[30px]`}
+        className={`sticky left-0 ${bgColorClass} z-50 border-r border-gray-200 dark:border-dark-border-primary shadow-sm p-1 w-[30px]`}
       >
         {stockExceeded ? (
           <div className="group relative">
-            <div className="flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-white font-bold text-[0.7rem]">
+            <div className="flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 dark:bg-amber-600 text-white font-bold text-[0.7rem]">
               !
             </div>
-            <div className="absolute left-6 bottom-0 hidden group-hover:block bg-white p-2 rounded shadow-lg text-xs w-60 z-50">
+            <div className="absolute left-6 bottom-0 hidden group-hover:block bg-white dark:bg-dark-bg-card p-2 rounded shadow-lg dark:shadow-dark-lg text-xs w-60 z-50 border dark:border-dark-border-primary text-gray-900 dark:text-dark-text-primary">
               Attenzione: La quantità richiesta ({product.quantity}) supera lo stock disponibile ({product.bestPrices.reduce((total, supplier) => total + supplier.stock, 0)}). Non è possibile selezionare questo prodotto.
             </div>
           </div>
@@ -94,20 +94,20 @@ const ProductRow: React.FC<ProductRowProps> = ({
 
       {/* Index cell */}
       <td 
-        className={`sticky left-[30px] ${bgColorClass} z-50 border-r border-gray-200 p-1 text-[0.7rem] w-[30px]`}
+        className={`sticky left-[30px] ${bgColorClass} z-50 border-r border-gray-200 dark:border-dark-border-primary p-1 text-[0.7rem] w-[30px]`}
       >
         {usingMockData ? page * rowsPerPage + index + 1 : index + 1}
       </td>
 
       {/* Combined EAN and Minsan cell */}
       <td
-        className={`sticky left-[60px] ${bgColorClass} z-50 border-r border-gray-200 min-w-[120px] p-2`}
+        className={`sticky left-[60px] ${bgColorClass} z-50 border-r border-gray-200 dark:border-dark-border-primary min-w-[120px] p-2`}
       >
         <div>
-          <p className="font-medium text-[0.75rem]">
+          <p className="font-medium text-[0.75rem] text-gray-900 dark:text-dark-text-primary">
             EAN: {product.ean}
           </p>
-          <p className="text-gray-500 text-[0.65rem]">
+          <p className="text-gray-500 dark:text-dark-text-muted text-[0.65rem]">
             Minsan: {product.minsan}
           </p>
         </div>
@@ -115,13 +115,13 @@ const ProductRow: React.FC<ProductRowProps> = ({
 
       {/* Product name cell */}
       <td
-        className={`sticky left-[180px] ${bgColorClass} z-50 border-r border-gray-200 p-2 max-w-[200px]`}
+        className={`sticky left-[180px] ${bgColorClass} z-50 border-r border-gray-200 dark:border-dark-border-primary p-2 max-w-[200px]`}
       >
         <div>
-          <p className="font-medium text-[0.75rem] whitespace-nowrap overflow-hidden text-ellipsis">
+          <p className="font-medium text-[0.75rem] whitespace-nowrap overflow-hidden text-ellipsis text-gray-900 dark:text-dark-text-primary">
             {product.name}
           </p>
-          <p className="text-gray-500 text-[0.65rem]">
+          <p className="text-gray-500 dark:text-dark-text-muted text-[0.65rem]">
             {product.manufacturer} • {product.inStock ? 'In Stock' : 'Out of Stock'}
           </p>
         </div>
@@ -129,12 +129,12 @@ const ProductRow: React.FC<ProductRowProps> = ({
 
       {/* Public price cell */}
       <td
-        className={`sticky left-[380px] ${bgColorClass} z-50 border-r border-gray-200 p-2 w-[70px]`}
+        className={`sticky left-[380px] ${bgColorClass} z-50 border-r border-gray-200 dark:border-dark-border-primary p-2 w-[70px]`}
       >
-        <p className="font-medium text-[0.75rem]">
+        <p className="font-medium text-[0.75rem] text-gray-900 dark:text-dark-text-primary">
           €{product.publicPrice.toFixed(2)}
         </p>
-        <p className="text-gray-500 text-[0.65rem]">
+        <p className="text-gray-500 dark:text-dark-text-muted text-[0.65rem]">
           VAT {product.vat}%
         </p>
       </td>
@@ -157,8 +157,8 @@ const ProductRow: React.FC<ProductRowProps> = ({
             className={`w-[60px] h-[26px] text-[0.75rem] px-1 py-0.5 text-center rounded border ${
               stockExceeded 
                 ? 'border-amber-500 border-2' 
-                : 'border-gray-300'
-            } focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white`}
+                : 'border-gray-300 dark:border-dark-border-primary'
+            } focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-dark-bg-tertiary text-gray-900 dark:text-dark-text-primary`}
             onClick={(e) => e.stopPropagation()}
           />
         </div>
@@ -166,14 +166,14 @@ const ProductRow: React.FC<ProductRowProps> = ({
 
       {/* Target Price and Avg. Price cell */}
       <td
-        className={`sticky left-[520px] ${bgColorClass} z-50 border-r border-gray-200 shadow-md p-2 w-[100px]`}
+        className={`sticky left-[520px] ${bgColorClass} z-50 border-r border-gray-200 dark:border-dark-border-primary shadow-md p-2 w-[100px]`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex flex-col">
           {/* Target Price Input */}
           <div className="flex items-center">
             <div className="relative">
-              <span className="absolute left-2 top-1 text-[0.75rem]">€</span>
+              <span className="absolute left-2 top-1 text-[0.75rem] text-gray-500 dark:text-dark-text-muted">€</span>
               <input
               type="number"
                 min="0"
@@ -184,8 +184,8 @@ const ProductRow: React.FC<ProductRowProps> = ({
                 className={`w-[80px] h-[26px] text-[0.75rem] pl-5 pr-2 py-0.5 text-right rounded border ${
                   product.quantity > 0 && product.averagePrice !== null && product.targetPrice !== null
                     ? (product.averagePrice <= product.targetPrice ? 'border-green-500 border-2' : 'border-red-500 border-2')
-                    : 'border-gray-300'
-                } focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white`}
+                    : 'border-gray-300 dark:border-dark-border-primary'
+                } focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-dark-bg-tertiary text-gray-900 dark:text-dark-text-primary`}
               onClick={(e) => e.stopPropagation()}
             />
             </div>
@@ -196,40 +196,40 @@ const ProductRow: React.FC<ProductRowProps> = ({
             <div className="ml-1 -mt-1">
               <div className="flex items-center gap-1">
                 <p className={`text-[0.65rem] ${
-                  stockExceeded ? 'text-amber-500' : (
+                  stockExceeded ? 'text-amber-500 dark:text-amber-400' : (
                     product.targetPrice !== null ? (
-                      product.averagePrice <= product.targetPrice ? 'text-green-500' : 'text-red-500'
-                    ) : 'text-gray-500'
+                      product.averagePrice <= product.targetPrice ? 'text-green-500 dark:text-green-400' : 'text-red-500 dark:text-red-400'
+                    ) : 'text-gray-500 dark:text-dark-text-muted'
                   )
                 }`}>
                   Avg: €{product.averagePrice.toFixed(2)}
                   {product.targetPrice !== null && product.averagePrice <= product.targetPrice && (
-                    <span className="ml-1 text-green-500">✓</span>
+                    <span className="ml-1 text-green-500 dark:text-green-400">✓</span>
                   )}
                   {product.targetPrice !== null && product.averagePrice > product.targetPrice && (
-                    <span className="ml-1 text-red-500">(+{(product.averagePrice - product.targetPrice).toFixed(2)})</span>
+                    <span className="ml-1 text-red-500 dark:text-red-400">(+{(product.averagePrice - product.targetPrice).toFixed(2)})</span>
                   )}
                 </p>
                 
                 {stockExceeded && (
                   <div className="group relative">
-                    <div className="inline-flex text-amber-500 text-[0.65rem]">
+                    <div className="inline-flex text-amber-500 dark:text-amber-400 text-[0.65rem]">
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" className="w-3 h-3">
                         <path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
                       </svg>
                     </div>
-                    <div className="absolute left-0 bottom-5 hidden group-hover:block bg-white p-2 rounded shadow-lg text-xs w-60 z-50">
+                    <div className="absolute left-0 bottom-5 hidden group-hover:block bg-white dark:bg-dark-bg-card p-2 rounded shadow-lg dark:shadow-dark-lg text-xs w-60 z-50 border dark:border-dark-border-primary text-gray-900 dark:text-dark-text-primary">
                       Il prezzo medio potrebbe essere impreciso a causa di stock insufficiente
                     </div>
                   </div>
                 )}
               </div>
-              <p className={`text-[0.65rem] -mt-0.5 ${stockExceeded ? 'text-amber-500' : 'text-gray-500'}`}>
+              <p className={`text-[0.65rem] -mt-0.5 ${stockExceeded ? 'text-amber-500 dark:text-amber-400' : 'text-gray-500 dark:text-dark-text-muted'}`}>
                 Total: €{(product.averagePrice * product.quantity).toFixed(2)}
               </p>
             </div>
           ) : (
-            <p className="text-gray-500 text-[0.65rem] ml-1 -mt-1">
+            <p className="text-gray-500 dark:text-dark-text-muted text-[0.65rem] ml-1 -mt-1">
               No avg. price
             </p>
           )}
@@ -241,8 +241,8 @@ const ProductRow: React.FC<ProductRowProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-1">
       {/* Best price 1 */}
       {product.bestPrices.length > 0 ? (
-            <div className="bg-green-50 p-1 rounded mr-1">
-              <p className="font-bold text-[0.65rem]">Best Price</p>
+            <div className="bg-green-50 dark:bg-green-900/30 p-1 rounded mr-1 border dark:border-green-800/30">
+              <p className="font-bold text-[0.65rem] text-green-800 dark:text-green-300">Best Price</p>
           <PriceDisplay
             publicPrice={product.publicPrice}
             supplierPrice={product.bestPrices[0].price}
@@ -253,9 +253,9 @@ const ProductRow: React.FC<ProductRowProps> = ({
           />
             </div>
       ) : (
-            <div className="bg-green-50 p-1 rounded mr-1">
-              <p className="font-bold text-[0.65rem]">Best Price</p>
-              <p className="text-gray-500 text-[0.75rem]">
+            <div className="bg-green-50 dark:bg-green-900/30 p-1 rounded mr-1 border dark:border-green-800/30">
+              <p className="font-bold text-[0.65rem] text-green-800 dark:text-green-300">Best Price</p>
+              <p className="text-gray-500 dark:text-dark-text-muted text-[0.75rem]">
             No supplier
               </p>
             </div>
@@ -263,8 +263,8 @@ const ProductRow: React.FC<ProductRowProps> = ({
 
       {/* Best price 2 */}
       {product.bestPrices.length > 1 ? (
-            <div className="bg-blue-50 p-1 rounded mr-1">
-              <p className="font-bold text-[0.65rem]">2nd Best</p>
+            <div className="bg-blue-50 dark:bg-blue-900/30 p-1 rounded mr-1 border dark:border-blue-800/30">
+              <p className="font-bold text-[0.65rem] text-blue-800 dark:text-blue-300">2nd Best</p>
           <PriceDisplay
             publicPrice={product.publicPrice}
             supplierPrice={product.bestPrices[1].price}
@@ -275,9 +275,9 @@ const ProductRow: React.FC<ProductRowProps> = ({
           />
             </div>
       ) : (
-            <div className="bg-blue-50 p-1 rounded mr-1">
-              <p className="font-bold text-[0.65rem]">2nd Best</p>
-              <p className="text-gray-500 text-[0.75rem]">
+            <div className="bg-blue-50 dark:bg-blue-900/30 p-1 rounded mr-1 border dark:border-blue-800/30">
+              <p className="font-bold text-[0.65rem] text-blue-800 dark:text-blue-300">2nd Best</p>
+              <p className="text-gray-500 dark:text-dark-text-muted text-[0.75rem]">
             No supplier
               </p>
             </div>
@@ -285,8 +285,8 @@ const ProductRow: React.FC<ProductRowProps> = ({
 
       {/* Best price 3 */}
       {product.bestPrices.length > 2 ? (
-            <div className="bg-purple-50 p-1 rounded mr-1">
-              <p className="font-bold text-[0.65rem]">3rd Best</p>
+            <div className="bg-purple-50 dark:bg-purple-900/30 p-1 rounded mr-1 border dark:border-purple-800/30">
+              <p className="font-bold text-[0.65rem] text-purple-800 dark:text-purple-300">3rd Best</p>
           <PriceDisplay
             publicPrice={product.publicPrice}
             supplierPrice={product.bestPrices[2].price}
@@ -297,9 +297,9 @@ const ProductRow: React.FC<ProductRowProps> = ({
           />
             </div>
       ) : (
-            <div className="bg-purple-50 p-1 rounded mr-1">
-              <p className="font-bold text-[0.65rem]">3rd Best</p>
-              <p className="text-gray-500 text-[0.75rem]">
+            <div className="bg-purple-50 dark:bg-purple-900/30 p-1 rounded mr-1 border dark:border-purple-800/30">
+              <p className="font-bold text-[0.65rem] text-purple-800 dark:text-purple-300">3rd Best</p>
+              <p className="text-gray-500 dark:text-dark-text-muted text-[0.75rem]">
             No supplier
               </p>
             </div>
@@ -309,7 +309,7 @@ const ProductRow: React.FC<ProductRowProps> = ({
           {product.bestPrices.length > 3 && (
             <div className="col-span-1 md:col-span-3 mt-1">
               <button 
-                className="text-blue-500 text-[0.7rem] py-0.5 px-1 min-w-0 flex items-center"
+                className="text-blue-500 dark:text-blue-400 text-[0.7rem] py-0.5 px-1 min-w-0 flex items-center hover:text-blue-600 dark:hover:text-blue-300"
               onClick={(e) => {
                 e.stopPropagation();
                 onToggleAllPrices(product.id);
@@ -334,8 +334,8 @@ const ProductRow: React.FC<ProductRowProps> = ({
           {/* Additional price items that show when "Show More" is clicked */}
       {product.showAllPrices && product.bestPrices.length > 3 && 
         product.bestPrices.slice(3).map((priceInfo, idx) => (
-              <div className="bg-gray-50 p-1 rounded mr-1 mt-1" key={idx}>
-                <p className="font-bold text-[0.65rem]">Price {idx + 4}</p>
+              <div className="bg-gray-50 dark:bg-gray-800 p-1 rounded mr-1 mt-1 border dark:border-gray-700" key={idx}>
+                <p className="font-bold text-[0.65rem] text-gray-800 dark:text-gray-300">Price {idx + 4}</p>
             <PriceDisplay
               publicPrice={product.publicPrice}
               supplierPrice={priceInfo.price}

@@ -40,64 +40,62 @@ interface PriceModalProps {
 // Modal per mostrare tutti i prezzi
 const PriceModal: React.FC<PriceModalProps> = ({ isOpen, onClose, product, userRole = 'Buyer' }) => {
   if (!isOpen || !product) return null;
-  
-  const isAdmin = userRole === 'Admin';
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-auto" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-dark-bg-card rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-semibold text-slate-800">All Prices for {product.name}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-500">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary">Price Details - {product.name}</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 dark:text-dark-text-muted hover:text-gray-600 dark:hover:text-dark-text-primary"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
         
-        <div className={`grid ${isAdmin ? 'grid-cols-5' : 'grid-cols-4'} gap-3 text-xs uppercase font-semibold text-slate-500 mb-2 border-b pb-2`}>
-          <div>Price</div>
-          <div>Stock</div>
-          <div className={isAdmin ? 'col-span-2' : 'col-span-2'}>Discount</div>
-          {isAdmin && <div>Supplier</div>}
-        </div>
-
-        {product.bestPrices.map((price, idx) => {
-          // Calcola sia sconto lordo che netto
-          const grossDiscount = product.publicPrice - price.price;
-          const grossDiscountPercent = (grossDiscount / product.publicPrice) * 100;
-          
-          // Prezzo pubblico al netto dell'IVA
-          const netPublicPrice = product.publicPrice / (1 + product.vat / 100);
-          
-          // Sconto netto
-          const netDiscount = netPublicPrice - price.price;
-          const netDiscountPercent = (netDiscount / netPublicPrice) * 100;
-          
-          const grossDiscountTooltip = `${grossDiscountPercent.toFixed(1)}% off public price`;
-          const netDiscountTooltip = `${netDiscountPercent.toFixed(1)}% off net price (VAT excl.)`;
-          
-          return (
-            <div key={idx} className={`grid ${isAdmin ? 'grid-cols-5' : 'grid-cols-4'} gap-3 py-2 ${idx !== product.bestPrices.length - 1 ? 'border-b border-gray-100' : ''}`}>
-              <div className="font-medium text-sm text-slate-800">€{price.price.toFixed(2)}</div>
-              <div className="text-sm text-slate-700">{price.stock} units</div>
-              <div className={`${isAdmin ? 'col-span-2' : 'col-span-2'} text-sm`}>
-                <div className="flex items-center">
-                  <Tooltip text={grossDiscountTooltip} position="left">
-                    <span className="text-red-600 cursor-help hover:font-medium">Gross: €{grossDiscount.toFixed(2)} ({grossDiscountPercent.toFixed(1)}%)</span>
-                  </Tooltip>
-                </div>
-                <div className="flex items-center mt-1">
-                  <Tooltip text={netDiscountTooltip} position="left">
-                    <span className="text-orange-600 cursor-help hover:font-medium">Net: €{netDiscount.toFixed(2)} ({netDiscountPercent.toFixed(1)}%)</span>
-                  </Tooltip>
-                  <span className="text-xs text-slate-500 ml-1">(VAT excluded)</span>
-                </div>
-              </div>
-              {isAdmin && <div className="text-sm text-slate-600">{price.supplier}</div>}
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 dark:bg-dark-bg-tertiary rounded-lg">
+            <div>
+              <span className="text-sm font-medium text-gray-600 dark:text-dark-text-muted">Public Price:</span>
+              <p className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary">€{product.publicPrice.toFixed(2)}</p>
             </div>
-          );
-        })}
+            <div>
+              <span className="text-sm font-medium text-gray-600 dark:text-dark-text-muted">VAT:</span>
+              <p className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary">{product.vat}%</p>
+            </div>
+          </div>
+          
+          <div>
+            <h4 className="text-md font-medium text-gray-900 dark:text-dark-text-primary mb-3">Available Suppliers</h4>
+            <div className="space-y-2">
+              {product.bestPrices.map((price, index) => (
+                <div key={index} className="flex justify-between items-center p-3 border dark:border-dark-border-primary rounded-lg bg-white dark:bg-dark-bg-secondary">
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-gray-900 dark:text-dark-text-primary">€{price.price.toFixed(2)}</span>
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        index === 0 ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' :
+                        index === 1 ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' :
+                        'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300'
+                      }`}>
+                        {index === 0 ? 'Best Price' : index === 1 ? '2nd Best' : '3rd Best'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between mt-2 text-sm">
+                      <span className="text-gray-600 dark:text-dark-text-muted">Stock: {price.stock}</span>
+                      {userRole === 'Admin' && (
+                        <span className="text-gray-600 dark:text-dark-text-muted">Supplier: {price.supplier}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -273,32 +271,23 @@ const ProductTable: React.FC<ProductTableProps> = ({
 
   return (
     <div className="w-full flex flex-col gap-1 mb-8">
-      {/* Header superiore con indicatore numero prodotti a sinistra e ExportButton a destra */}
-      <div className="flex items-center justify-between mb-1 px-2">
-        <div className="flex items-center gap-3">
-          <div className="text-xs text-slate-600 bg-blue-50 px-3 py-1 rounded flex items-center">
-            <span className="font-medium">Total Products:</span>
-            <span className="ml-1 font-semibold text-blue-600">{totalProductCount}</span>
-            {showSelectedOnly && (
-              <span className="ml-1 text-xs text-green-600">(filtered)</span>
-            )}
-          </div>
-          
-          <div className="flex items-center gap-2">
+      {/* Filters section - Migliorato layout e allineamento con reset button */}
+      <div className="flex items-center justify-between mb-4 p-3 bg-white dark:bg-dark-bg-secondary rounded-lg border dark:border-dark-border-primary">
+        <div className="flex items-center gap-4">
+          {/* Show selected only filter */}
+          <div className="flex items-center">
             <input
               type="checkbox"
               id="showSelectedOnly"
               checked={showSelectedOnly}
               onChange={(e) => setShowSelectedOnly(e.target.checked)}
+              className="w-4 h-4 text-blue-600 dark:text-blue-400 bg-gray-100 dark:bg-dark-bg-tertiary border-gray-300 dark:border-dark-border-primary rounded focus:ring-blue-500 dark:focus:ring-blue-400 focus:ring-2"
               disabled={!hasSelectedProducts}
-              className={`w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 ${
-                !hasSelectedProducts ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-              }`}
             />
-            <label 
-              htmlFor="showSelectedOnly" 
-              className={`text-xs font-medium ${
-                hasSelectedProducts ? 'text-slate-700 cursor-pointer' : 'text-slate-400 cursor-not-allowed'
+            <label
+              htmlFor="showSelectedOnly"
+              className={`ml-2 text-xs font-medium ${
+                hasSelectedProducts ? 'text-slate-700 dark:text-dark-text-secondary cursor-pointer' : 'text-slate-400 dark:text-dark-text-disabled cursor-not-allowed'
               }`}
             >
               Show selected only ({selected.length})
@@ -316,7 +305,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
           {/* Action buttons moved from Dashboard */}
           {userRole === 'Admin' && onAddProduct && (
             <button
-              className="flex items-center gap-1 bg-blue-600 text-white text-sm py-1 px-3 rounded hover:bg-blue-700 transition-colors"
+              className="flex items-center gap-1 bg-blue-600 dark:bg-blue-700 text-white text-sm py-1 px-3 rounded hover:bg-blue-700 dark:hover:bg-blue-800 transition-colors"
               onClick={onAddProduct}
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
@@ -330,8 +319,8 @@ const ProductTable: React.FC<ProductTableProps> = ({
             <button
               className={`flex items-center gap-1 border text-sm py-1 px-3 rounded 
                 ${loading || fileUploading 
-                  ? 'border-gray-300 text-gray-400 cursor-not-allowed' 
-                  : 'border-blue-600 text-blue-600 hover:bg-blue-50 transition-colors'}
+                  ? 'border-gray-300 dark:border-dark-border-primary text-gray-400 dark:text-dark-text-disabled cursor-not-allowed' 
+                  : 'border-blue-600 dark:border-blue-500 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors'}
               `}
               onClick={onUploadProduct}
               disabled={loading || fileUploading}
@@ -347,8 +336,8 @@ const ProductTable: React.FC<ProductTableProps> = ({
             <button 
               className={`flex items-center gap-1 border text-sm py-1 px-3 rounded 
                 ${loading || fileUploading 
-                  ? 'border-gray-300 text-gray-400 cursor-not-allowed' 
-                  : 'border-gray-500 text-gray-700 hover:bg-gray-50 transition-colors'}
+                  ? 'border-gray-300 dark:border-dark-border-primary text-gray-400 dark:text-dark-text-disabled cursor-not-allowed' 
+                  : 'border-gray-500 dark:border-dark-border-secondary text-gray-700 dark:text-dark-text-secondary hover:bg-gray-50 dark:hover:bg-dark-bg-hover transition-colors'}
               `}
               onClick={onRefresh}
               disabled={loading || fileUploading}
@@ -371,7 +360,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
           }}
         >
           {/* Header columns - sortable */}
-          <div className="flex items-center px-3 py-2 text-xs uppercase text-slate-500 font-semibold tracking-wider bg-gray-50 rounded-t-lg rounded-xl my-1.5 border-b border-gray-200">
+          <div className="flex items-center px-3 py-2 text-xs uppercase text-slate-500 dark:text-dark-text-muted font-semibold tracking-wider bg-gray-50 dark:bg-dark-bg-tertiary rounded-t-lg rounded-xl my-1.5 border-b border-gray-200 dark:border-dark-border-primary">
             <div className={`${isDrawerCollapsed ? 'w-[3.5%]' : 'w-[4%]'} text-center`}>#</div>
             <div className={`${isDrawerCollapsed ? 'w-[12%]' : 'w-[13%]'} cursor-pointer select-none flex items-center`} onClick={() => {
               if (sortBy === 'codes') setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -420,12 +409,12 @@ const ProductTable: React.FC<ProductTableProps> = ({
 
           {/* Rows - simplified with no extra bottom margins */}
           {sortedProducts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center bg-white rounded-xl shadow border border-slate-100">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12 text-gray-300 mb-3">
+            <div className="flex flex-col items-center justify-center py-12 text-center bg-white dark:bg-dark-bg-secondary rounded-xl shadow border border-slate-100 dark:border-dark-border-primary">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12 text-gray-300 dark:text-dark-text-disabled mb-3">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3 3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
               </svg>
-              <h3 className="text-lg font-medium text-gray-700">No products found</h3>
-              <p className="text-gray-500 mt-1 max-w-md">Try adjusting your search or filter criteria to find products.</p>
+              <h3 className="text-lg font-medium text-gray-700 dark:text-dark-text-primary">No products found</h3>
+              <p className="text-gray-500 dark:text-dark-text-muted mt-1 max-w-md">Try adjusting your search or filter criteria to find products.</p>
             </div>
           ) : (
             sortedProducts.map((product, idx) => {
@@ -442,11 +431,11 @@ const ProductTable: React.FC<ProductTableProps> = ({
                 <div
                   key={product.id}
                   className={`
-                    flex items-center px-3 py-2 bg-white border border-gray-100
+                    flex items-center px-3 py-2 bg-white dark:bg-dark-bg-secondary border border-gray-100 dark:border-dark-border-primary
                     ${idx === products.length - 1 ? 'rounded-b-lg' : ''}
-                    ${isProductSelected ? 'bg-blue-50' : ''}
-                    ${isExceeded ? 'bg-amber-50 border-l-4 border-l-amber-500' : ''}
-                    hover:bg-blue-50 cursor-pointer
+                    ${isProductSelected ? 'bg-blue-50 dark:bg-blue-900/20' : ''}
+                    ${isExceeded ? 'bg-amber-50 dark:bg-amber-900/20 border-l-4 border-l-amber-500 dark:border-l-amber-400' : ''}
+                    hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer
                     relative
                     rounded-xl my-1
                     min-h-[60px]
@@ -458,7 +447,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
                   {/* Row number and Checkbox combined */}
                   <div className={`${isDrawerCollapsed ? 'w-[3.5%]' : 'w-[4%]'} flex items-start pt-1`}>
                     <div className="flex items-center">
-                      <span className="w-5 text-xs text-gray-600 font-medium text-center">{idx + 1}</span>
+                      <span className="w-5 text-xs text-gray-600 dark:text-dark-text-muted font-medium text-center">{idx + 1}</span>
                       {isExceeded ? (
                         <Tooltip text={errorMessage} position="top">
                           <div className="flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-white text-xs font-bold">
@@ -469,7 +458,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
                         <input
                           type="checkbox"
                           checked={isProductSelected}
-                          className="w-4 h-4 rounded border-gray-300 text-blue-600"
+                          className="w-4 h-4 rounded border-gray-300 dark:border-dark-border-primary text-blue-600 dark:text-blue-400 bg-white dark:bg-dark-bg-tertiary"
                           onChange={e => e.stopPropagation()}
                           onClick={e => {
                             e.stopPropagation();
@@ -481,12 +470,12 @@ const ProductTable: React.FC<ProductTableProps> = ({
                   </div>
 
                   {/* Codes */}
-                  <div className={`${isDrawerCollapsed ? 'w-[12%]' : 'w-[13%]'} flex flex-col text-xs text-slate-500 pt-1`}>
+                  <div className={`${isDrawerCollapsed ? 'w-[12%]' : 'w-[13%]'} flex flex-col text-xs text-slate-500 dark:text-dark-text-muted pt-1`}>
                     <div className="flex mb-1">
-                      <span className="font-semibold text-slate-700 w-14">EAN:</span> {product.ean}
+                      <span className="font-semibold text-slate-700 dark:text-dark-text-secondary w-14">EAN:</span> {product.ean}
                     </div>
                     <div className="flex">
-                      <span className="font-semibold text-slate-700 w-14">Minsan:</span> {product.minsan}
+                      <span className="font-semibold text-slate-700 dark:text-dark-text-secondary w-14">Minsan:</span> {product.minsan}
                     </div>
                   </div>
 
@@ -495,7 +484,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
                     <img 
                       src={product.image || getMedicineImage(product.id)} 
                       alt={product.name}
-                      className="w-[40px] h-[40px] object-cover rounded-md shadow-sm border border-gray-200 hover:scale-110 transition-transform duration-200"
+                      className="w-[40px] h-[40px] object-cover rounded-md shadow-sm border border-gray-200 dark:border-dark-border-primary hover:scale-110 transition-transform duration-200"
                       onError={(e) => {
                         // If image fails to load, use a different medicine placeholder
                         const fallbackIndex = (product.id.charCodeAt(1) || 0) % medicineImages.length;
@@ -506,14 +495,14 @@ const ProductTable: React.FC<ProductTableProps> = ({
 
                   {/* Name */}
                   <div className={`${isDrawerCollapsed ? 'w-[19%]' : 'w-[20%]'} flex flex-col pt-1`}>
-                    <span className="font-medium text-sm text-slate-800 truncate">{product.name}</span>
-                    <span className="text-xs text-slate-400 mt-1">{product.manufacturer}</span>
+                    <span className="font-medium text-sm text-slate-800 dark:text-dark-text-primary truncate">{product.name}</span>
+                    <span className="text-xs text-slate-400 dark:text-dark-text-muted mt-1">{product.manufacturer}</span>
                   </div>
 
                   {/* Price */}
                   <div className={`${isDrawerCollapsed ? 'w-[11%]' : 'w-[12%]'} text-right pt-1 pr-4`}>
-                    <span className="font-semibold text-sm text-slate-700">€{product.publicPrice.toFixed(2)}</span>
-                    <div className="text-xs text-slate-400 mt-1">VAT {product.vat}%</div>
+                    <span className="font-semibold text-sm text-slate-700 dark:text-dark-text-primary">€{product.publicPrice.toFixed(2)}</span>
+                    <div className="text-xs text-slate-400 dark:text-dark-text-muted mt-1">VAT {product.vat}%</div>
                   </div>
 
                   {/* Quantity with compact layout aligned right */}
@@ -529,10 +518,10 @@ const ProductTable: React.FC<ProductTableProps> = ({
                           onQuantityChange(product.id, isNaN(value) ? 0 : value);
                         }}
                         className={`w-full h-7 text-xs px-2 py-1 text-center rounded border ${
-                          isExceeded ? 'border-amber-500 bg-amber-50 text-amber-700' : 
-                          (isProductSelected && !product.quantity) ? 'border-red-300 bg-red-50 text-red-700' :
-                          'border-gray-300 bg-white'
-                        } focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-sm`}
+                          isExceeded ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300' : 
+                          (isProductSelected && !product.quantity) ? 'border-red-300 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300' :
+                          'border-gray-300 dark:border-dark-border-primary bg-white dark:bg-dark-bg-tertiary text-gray-900 dark:text-dark-text-primary'
+                        } focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 shadow-sm`}
                       />
                       {isExceeded && (
                         <Tooltip text={errorMessage} position="top">
@@ -556,22 +545,22 @@ const ProductTable: React.FC<ProductTableProps> = ({
                         >
                           <div className={`font-semibold cursor-help text-xs ${
                             isExceeded
-                              ? 'text-amber-500'
+                              ? 'text-amber-500 dark:text-amber-400'
                               : product.targetPrice !== null
                               ? product.averagePrice <= product.targetPrice
-                                ? 'text-green-600'
-                                : 'text-red-600'
-                              : 'text-slate-600'
+                                ? 'text-green-600 dark:text-green-400'
+                                : 'text-red-600 dark:text-red-400'
+                              : 'text-slate-600 dark:text-dark-text-secondary'
                           }`}>
                             <div className="flex items-center justify-between">
                               <span>Avg:</span>
                               <span>€{product.averagePrice.toFixed(2)}
                               {product.targetPrice !== null && product.averagePrice <= product.targetPrice && (
-                                <span className="ml-1 text-green-500">✓</span>
+                                <span className="ml-1 text-green-500 dark:text-green-400">✓</span>
                               )}</span>
                             </div>
                           </div>
-                          <div className="text-slate-500 cursor-help text-xs">
+                          <div className="text-slate-500 dark:text-dark-text-muted cursor-help text-xs">
                             <div className="flex items-center justify-between">
                               <span>Tot:</span>
                               <span>€{(product.averagePrice * product.quantity).toFixed(2)}</span>
@@ -580,7 +569,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
                         </Tooltip>
                       </div>
                     ) : (
-                      <div className="text-xs text-slate-400 mt-1 text-right">--</div>
+                      <div className="text-xs text-slate-400 dark:text-dark-text-muted mt-1 text-right">--</div>
                     )}
                   </div>
 
@@ -588,7 +577,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
                   <div className={`${isDrawerCollapsed ? 'w-[9%]' : 'w-[9%]'} flex flex-col justify-start items-center pl-2`} onClick={e => e.stopPropagation()}>
                     <div className="w-full max-w-[70px]">
                       <div className="relative">
-                        <span className="absolute left-2 top-1 text-xs text-slate-400">€</span>
+                        <span className="absolute left-2 top-1 text-xs text-slate-400 dark:text-dark-text-muted">€</span>
                         <input
                           type="number"
                           min="0"
@@ -596,12 +585,12 @@ const ProductTable: React.FC<ProductTableProps> = ({
                           placeholder="Target"
                           value={product.targetPrice !== null ? product.targetPrice : ''}
                           onChange={e => onTargetPriceChange(product.id, e.target.value)}
-                          className={`w-full h-7 text-xs pl-5 pr-2 py-1 text-right rounded border bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-sm
+                          className={`w-full h-7 text-xs pl-5 pr-2 py-1 text-right rounded border bg-white dark:bg-dark-bg-tertiary text-gray-900 dark:text-dark-text-primary focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 shadow-sm
                             ${product.quantity > 0 && product.averagePrice !== null && product.targetPrice !== null
                               ? product.averagePrice <= product.targetPrice
-                                ? 'border-green-500 bg-green-50 text-green-700'
-                                : 'border-red-500 bg-red-50 text-red-700'
-                              : 'border-gray-300'}`}
+                                ? 'border-green-500 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300'
+                                : 'border-red-500 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'
+                              : 'border-gray-300 dark:border-dark-border-primary'}`}
                         />
                       </div>
                       
@@ -627,13 +616,13 @@ const ProductTable: React.FC<ProductTableProps> = ({
                               return (
                                 <>
                                   <div className={`font-semibold flex items-center justify-between cursor-help text-xs ${
-                                    grossDiscountPercent > 0 ? 'text-green-600' : 'text-red-600'
+                                    grossDiscountPercent > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                                   }`}>
                                     <span>Gross:</span> 
                                     <span>{grossDiscountPercent > 0 ? '+' : ''}{grossDiscountPercent.toFixed(1)}%</span>
                                   </div>
                                   <div className={`flex items-center justify-between cursor-help text-xs ${
-                                    netDiscountPercent > 0 ? 'text-orange-600' : 'text-red-600'
+                                    netDiscountPercent > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-red-600 dark:text-red-400'
                                   }`}>
                                     <span>Net:</span>
                                     <span>{netDiscountPercent > 0 ? '+' : ''}{netDiscountPercent.toFixed(1)}%</span>
@@ -644,7 +633,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
                           </Tooltip>
                         </div>
                       ) : (
-                        <div className="text-xs text-slate-400 mt-1 text-center">--</div>
+                        <div className="text-xs text-slate-400 dark:text-dark-text-muted mt-1 text-center">--</div>
                       )}
                     </div>
                   </div>
@@ -667,16 +656,16 @@ const ProductTable: React.FC<ProductTableProps> = ({
                       `;
                       return (
                         <Tooltip text={tooltipContent} position="left" html>
-                          <div key={i} className={`rounded px-2 py-1 text-xs transition-all duration-150 hover:shadow-md
-                            ${i === 0 ? 'bg-green-50 text-green-700 hover:bg-green-100' : 
-                              i === 1 ? 'bg-blue-50 text-blue-700 hover:bg-blue-100' : 
-                              'bg-purple-50 text-purple-700 hover:bg-purple-100'}`}
+                          <div key={i} className={`rounded px-2 py-1 text-xs transition-all duration-150 hover:shadow-md dark:hover:shadow-dark-md
+                            ${i === 0 ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/50' : 
+                              i === 1 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50' : 
+                              'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50'}`}
                           >
                             <div className="font-semibold text-sm cursor-help">€{price.price.toFixed(2)}</div>
                             <div className="text-xs flex gap-1 items-center">
-                              <span className="text-red-500" title="Gross discount">{grossDiscountPercent.toFixed(0)}%</span>
-                              <span className="text-slate-400">|</span>
-                              <span className="text-orange-500" title="Net discount">{netDiscountPercent.toFixed(0)}%</span>
+                              <span className="text-red-500 dark:text-red-400" title="Gross discount">{grossDiscountPercent.toFixed(0)}%</span>
+                              <span className="text-slate-400 dark:text-slate-500">|</span>
+                              <span className="text-orange-500 dark:text-orange-400" title="Net discount">{netDiscountPercent.toFixed(0)}%</span>
                             </div>
                             <div className="text-xs">Stock: {price.stock}</div>
                           </div>
@@ -687,18 +676,18 @@ const ProductTable: React.FC<ProductTableProps> = ({
                   
                   {/* Total Stock + Show more prices */}
                   <div 
-                    className={`${isDrawerCollapsed ? 'w-[7.5%]' : 'w-[8%]'} flex flex-col items-end text-xs cursor-pointer hover:bg-gray-50 p-1 rounded transition-colors pt-1`}
+                    className={`${isDrawerCollapsed ? 'w-[7.5%]' : 'w-[8%]'} flex flex-col items-end text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-bg-hover p-1 rounded transition-colors pt-1`}
                     onClick={e => {
                       e.stopPropagation();
                       openPriceModal(product);
                     }}
                   >
-                    <div className="text-slate-600 whitespace-nowrap">
-                      Stock: <span className="font-medium text-blue-600">{totalProductStock}</span>
+                    <div className="text-slate-600 dark:text-dark-text-secondary whitespace-nowrap">
+                      Stock: <span className="font-medium text-blue-600 dark:text-blue-400">{totalProductStock}</span>
                     </div>
                     
                     {product.bestPrices.length > 3 && (
-                      <div className="text-blue-500 text-xs flex items-center mt-1 whitespace-nowrap">
+                      <div className="text-blue-500 dark:text-blue-400 text-xs flex items-center mt-1 whitespace-nowrap">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3 mr-1">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 21v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21m0 0h4.5V3.545M12.75 21h7.5V10.75M2.25 21h1.5m18 0h-18M2.25 9l4.5-1.636M18.75 3l-1.5.545m0 6.205l3 1m1.5.5l-1.5-.5M6.75 7.364V3h-3v18m3-13.636l10.5-3.819" />
                         </svg>

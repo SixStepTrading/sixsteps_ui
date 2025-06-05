@@ -26,6 +26,7 @@ export interface NotificationItemProps {
   actions?: Array<{
     label: string;
     onClick: () => void;
+    type?: 'primary' | 'secondary' | 'danger';
   }>;
   onMarkAsRead: (id: string) => void;
   onDelete?: (id: string) => void;
@@ -128,7 +129,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
       <div
         className={`
           flex items-start p-3 relative overflow-hidden rounded mb-1 transition-all duration-200
-          ${isRead ? 'bg-white hover:bg-gray-50' : `${priorityColorClasses.split(' ')[0]} hover:bg-opacity-20 border-l-4 ${priorityColorClasses.split(' ')[2]}`}
+          ${isRead ? 'bg-white dark:bg-dark-bg-secondary hover:bg-gray-50 dark:hover:bg-dark-bg-hover' : `${priorityColorClasses.split(' ')[0]} dark:bg-dark-bg-tertiary hover:bg-opacity-20 dark:hover:bg-dark-bg-hover border-l-4 ${priorityColorClasses.split(' ')[2]} dark:border-l-blue-500`}
         `}
         onClick={handleExpandClick}
       >
@@ -136,7 +137,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
         <div className="mr-3">
           <div className={`
             relative w-10 h-10 rounded-full flex items-center justify-center
-            ${avatar ? '' : priorityColorClasses.split(' ')[0]}
+            ${avatar ? '' : priorityColorClasses.split(' ')[0] + ' dark:bg-dark-bg-accent'}
           `}>
             {avatar ? (
               <img src={avatar} alt={title} className="w-full h-full rounded-full object-cover" />
@@ -144,7 +145,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
               <TypeIcon type={type} />
             )}
             {!isRead && (
-              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-blue-600 rounded-full border-2 border-white"></span>
+              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-blue-600 dark:bg-blue-500 rounded-full border-2 border-white dark:border-dark-bg-secondary"></span>
             )}
           </div>
         </div>
@@ -152,7 +153,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex justify-between items-center mb-1">
-            <h3 className={`text-sm ${isRead ? 'font-normal' : 'font-medium'} truncate`}>
+            <h3 className={`text-sm ${isRead ? 'font-normal text-gray-900 dark:text-dark-text-primary' : 'font-medium text-gray-900 dark:text-dark-text-primary'} truncate`}>
               {title}
             </h3>
             <div className="flex items-center space-x-1">
@@ -165,18 +166,18 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
                 </span>
               )}
               {(expanded || isHovered) && type && (
-                <span className="text-xs px-1.5 py-0.5 rounded-full border border-gray-300 flex items-center">
+                <span className="text-xs px-1.5 py-0.5 rounded-full border border-gray-300 dark:border-dark-border-primary flex items-center bg-white dark:bg-dark-bg-tertiary text-gray-700 dark:text-dark-text-secondary">
                   <TypeIcon type={type} className="h-3 w-3 mr-1" /> {type}
                 </span>
               )}
             </div>
           </div>
           
-          <p className="text-sm text-gray-600 mb-1">
+          <p className="text-sm text-gray-600 dark:text-dark-text-muted mb-1">
             {message}
           </p>
           
-          <div className="flex items-center text-xs text-gray-500">
+          <div className="flex items-center text-xs text-gray-500 dark:text-dark-text-muted">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -184,12 +185,18 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
           </div>
           
           {/* Action buttons */}
-          {expanded && actions && actions.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {actions.map((action, index) => (
+          {(expanded || isHovered) && (
+            <div className="flex items-center space-x-2 mt-2">
+              {actions && actions.map((action, index) => (
                 <button
                   key={index}
-                  className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                  className={`text-xs px-2 py-1 rounded transition-colors ${
+                    action.type === 'primary' 
+                      ? 'bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-400' 
+                      : action.type === 'danger'
+                      ? 'bg-red-600 dark:bg-red-500 text-white hover:bg-red-700 dark:hover:bg-red-400'
+                      : 'bg-gray-200 dark:bg-dark-bg-tertiary text-gray-700 dark:text-dark-text-secondary hover:bg-gray-300 dark:hover:bg-dark-bg-hover'
+                  }`}
                   onClick={(e) => {
                     e.stopPropagation();
                     action.onClick();
@@ -198,44 +205,32 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
                   {action.label}
                 </button>
               ))}
+              
+              {!isRead && (
+                <button
+                  className="text-xs px-2 py-1 rounded bg-green-600 dark:bg-green-500 text-white hover:bg-green-700 dark:hover:bg-green-400 transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onMarkAsRead(id);
+                  }}
+                >
+                  Mark as read
+                </button>
+              )}
+              
+              <button
+                className="text-xs px-2 py-1 rounded bg-red-600 dark:bg-red-500 text-white hover:bg-red-700 dark:hover:bg-red-400 transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onDelete) {
+                    onDelete(id);
+                  }
+                }}
+              >
+                Delete
+              </button>
             </div>
           )}
-        </div>
-        
-        {/* Notification actions */}
-        <div className="flex items-center ml-2">
-          {(isHovered || expanded) && onDelete && (
-            <button 
-              className="p-1 text-gray-400 hover:text-red-500 hover:bg-gray-100 rounded-full"
-              title="Delete"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(id);
-              }}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-            </button>
-          )}
-          <button 
-            className="p-1 rounded-full"
-            title={isRead ? "Mark as unread" : "Mark as read"}
-            onClick={(e) => {
-              e.stopPropagation();
-              onMarkAsRead(id);
-            }}
-          >
-            {isRead ? (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-500" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-            ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-              </svg>
-            )}
-          </button>
         </div>
       </div>
     </div>

@@ -31,15 +31,16 @@ const TableRow: React.FC<TableRowProps> = ({
   return (
     <div 
       className={`
-        flex items-center px-3 py-3 border-b border-gray-100
+        flex items-center px-3 py-3 border-b border-gray-100 dark:border-dark-border-primary
         ${isLast ? 'rounded-b-lg' : ''}
-        ${isSelected ? 'bg-blue-50' : ''}
-        ${hasWarning ? 'bg-amber-50 border-l-4 border-l-amber-500' : ''}
-        ${!isSelected && !hasWarning && (isHighlighted ? 'bg-blue-50/50' : 'hover:bg-blue-50/80')}
+        ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : ''}
+        ${hasWarning ? 'bg-amber-50 dark:bg-amber-900/20 border-l-4 border-l-amber-500 dark:border-l-amber-400' : ''}
+        ${!isSelected && !hasWarning && (isHighlighted ? 'bg-blue-50/50 dark:bg-blue-900/10' : 'hover:bg-blue-50/80 dark:hover:bg-blue-900/20')}
         transition-colors duration-150 
         ${onClick ? 'cursor-pointer' : ''}
         relative
         rounded-xl my-1
+        bg-white dark:bg-dark-bg-secondary
       `}
       onClick={onClick}
     >

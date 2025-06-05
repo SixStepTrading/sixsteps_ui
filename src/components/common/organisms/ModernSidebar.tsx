@@ -5,6 +5,7 @@ import { SidebarItem } from '../atoms';
 import { SidebarHeader } from '../molecules';
 import { NotificationsPanel } from '.';
 import { useUser } from '../../../contexts/UserContext';
+import ThemeToggle from '../atoms/ThemeToggle';
 
 interface MenuItem {
   text: string;
@@ -116,14 +117,14 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({
   ];
   
   const drawer = (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-white dark:bg-dark-bg-secondary">
       <SidebarHeader 
         logo=""
         isCollapsed={isCollapsed}
         onToggleCollapse={onToggleCollapse}
       />
       
-      <hr className="border-gray-200 my-2" />
+      <hr className="border-gray-200 dark:border-dark-border-primary my-2" />
       
       {/* Main menu */}
       <ul className="px-1.5">
@@ -145,20 +146,37 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({
       
       {/* Utility menu (at bottom) */}
       <div className="mt-auto">
-        <hr className="border-gray-200 my-2" />
+        <hr className="border-gray-200 dark:border-dark-border-primary my-2" />
         <ul className="px-1.5">
-          {utilityItems.map((item) => (
-            <li key={item.text}>
+          {/* Notifications */}
+          <li>
             <SidebarItem
-              icon={item.icon}
-              text={item.text}
-              to={item.path}
+              icon={utilityItems[0].icon}
+              text={utilityItems[0].text}
+              to={utilityItems[0].path}
               isCollapsed={isCollapsed}
-              badgeContent={item.badgeContent}
-              onClick={item.onClick}
+              badgeContent={utilityItems[0].badgeContent}
+              onClick={utilityItems[0].onClick}
             />
-            </li>
-          ))}
+          </li>
+          
+          {/* Theme Toggle */}
+          <li>
+            <div className="px-1.5 py-1">
+              <ThemeToggle isCollapsed={isCollapsed} />
+            </div>
+          </li>
+          
+          {/* Logout */}
+          <li>
+            <SidebarItem
+              icon={utilityItems[1].icon}
+              text={utilityItems[1].text}
+              to={utilityItems[1].path}
+              isCollapsed={isCollapsed}
+              onClick={utilityItems[1].onClick}
+            />
+          </li>
         </ul>
       </div>
     </div>
@@ -176,7 +194,7 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({
           <div className={`
             fixed left-0 top-0 bottom-0 
             w-[${DRAWER_WIDTH}px] 
-            bg-white border-r border-gray-200 
+            bg-white dark:bg-dark-bg-secondary border-r border-gray-200 dark:border-dark-border-primary
             shadow-lg z-50 
             transition-transform duration-300
           `}>
@@ -190,9 +208,9 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({
         hidden sm:block
         fixed left-0 top-0 bottom-0
         w-[${isCollapsed ? COLLAPSED_WIDTH : DRAWER_WIDTH}px]
-        bg-white border-r border-gray-200
+        bg-white dark:bg-dark-bg-secondary border-r border-gray-200 dark:border-dark-border-primary
         transition-all duration-300 ease-in-out
-        ${isCollapsed ? 'shadow-none' : 'shadow-sm'}
+        ${isCollapsed ? 'shadow-none' : 'shadow-sm dark:shadow-dark-sm'}
         overflow-hidden
         z-30
       `}>
