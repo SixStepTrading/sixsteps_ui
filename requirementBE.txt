@@ -4,6 +4,29 @@
 ### PANORAMICA GENERALE
 Il backend deve supportare una piattaforma B2B per la gestione di ordini farmaceutici (ODA - Ordini Diretti Acquisto) tra farmacie e fornitori, con funzionalità di amministrazione centralizzata.
 
+### 📊 INDICE RAPIDO
+- [1. Gestione Prodotti](#1-gestione-prodotti-farmaceutici)
+- [2. Gestione Fornitori](#2-gestione-fornitori) 
+- [3. Gestione Utenti](#3-gestione-utenti-e-autenticazione)
+- [4. Gestione Ordini ODA](#4-gestione-ordini-diretti-acquisto-oda)
+- [5. Sistema Stock Avanzato](#5-sistema-avanzato-di-gestione-stock-e-disponibilità)
+- [6. Error Handling](#6-error-handling--logging-enterprise)
+- [7. Notifiche](#7-notifiche-e-comunicazioni)
+- [8. Workflow Avanzato](#8-workflow-avanzato-ordini-e-business-rules)
+- [9. Analytics](#9-analytics-e-reporting)
+- [10. Integrazioni](#10-integrazione-sistemi-esterni)
+- [11. Sicurezza](#11-sicurezza-e-compliance-enterprise)
+- [12. Performance](#12-performance-e-scalabilità-enterprise)
+- [Esempi Pratici](#esempi-pratici-e-casi-duso)
+- [Glossario](#glossario)
+
+### 🎯 OBIETTIVI PRINCIPALI
+1. **Automazione Ordini**: Workflow completo ODA con approvazioni multi-livello
+2. **Gestione Intelligente Stock**: Monitoraggio real-time e alert automatici
+3. **Import/Export Massivo**: Gestione batch di prezzi e fornitori
+4. **Analytics Avanzate**: Dashboard e report personalizzati
+5. **Scalabilità Enterprise**: Architettura moderna per crescita futura
+
 ---
 
 ## 1. GESTIONE PRODOTTI FARMACEUTICI
@@ -33,6 +56,113 @@ Il backend deve supportare una piattaforma B2B per la gestione di ordini farmace
 - `POST /api/products/import` - Import massivo da Excel/CSV
 - `GET /api/products/categories` - Lista categorie
 - `GET /api/products/manufacturers` - Lista produttori
+
+### 📋 ESEMPI PRATICI API PRODOTTI
+
+#### Esempio 1: Lista Prodotti con Filtri
+**Request:**
+```http
+GET /api/products?searchTerm=tachipirina&category=Analgesics&page=1&limit=10
+Authorization: Bearer {jwt_token}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "products": [
+      {
+        "id": "prod_001",
+        "ean": "8029877011234",
+        "minsan": "034528012",
+        "name": "Tachipirina 500mg 20 compresse",
+        "description": "Paracetamolo per dolori e febbre",
+        "manufacturer": "Angelini Pharma",
+        "category": "Analgesics",
+        "publicPrice": 4.50,
+        "vat": 10,
+        "inStock": true,
+        "image": "https://cdn.farmabooster.com/products/tachipirina-500.jpg",
+        "createdAt": "2024-01-15T10:30:00Z",
+        "updatedAt": "2024-01-20T14:45:00Z"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 10,
+      "total": 145,
+      "totalPages": 15
+    }
+  }
+}
+```
+
+#### Esempio 2: Creazione Prodotto
+**Request:**
+```http
+POST /api/products
+Authorization: Bearer {jwt_token}
+Content-Type: application/json
+
+{
+  "ean": "8029877011234",
+  "minsan": "034528012",
+  "name": "Moment 200mg 12 compresse",
+  "description": "Ibuprofene per dolori e infiammazioni",
+  "manufacturer": "Angelini Pharma",
+  "category": "Analgesics",
+  "publicPrice": 6.90,
+  "vat": 10,
+  "inStock": true,
+  "image": "https://cdn.farmabooster.com/products/moment-200.jpg"
+}
+```
+
+**Response Success:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "prod_002",
+    "ean": "8029877011234",
+    "minsan": "034528012",
+    "name": "Moment 200mg 12 compresse",
+    "description": "Ibuprofene per dolori e infiammazioni",
+    "manufacturer": "Angelini Pharma",
+    "category": "Analgesics",
+    "publicPrice": 6.90,
+    "vat": 10,
+    "inStock": true,
+    "image": "https://cdn.farmabooster.com/products/moment-200.jpg",
+    "createdAt": "2024-01-22T09:15:00Z",
+    "updatedAt": "2024-01-22T09:15:00Z"
+  },
+  "message": "Prodotto creato con successo"
+}
+```
+
+**Response Error:**
+```json
+{
+  "success": false,
+  "error": {
+    "type": "https://api.farmabooster.com/errors/validation",
+    "title": "Validation Error",
+    "status": 400,
+    "detail": "EAN code already exists",
+    "instance": "/api/products",
+    "correlationId": "req_xyz789",
+    "errors": [
+      {
+        "field": "ean",
+        "message": "EAN code 8029877011234 already exists",
+        "code": "DUPLICATE_EAN"
+      }
+    ]
+  }
+}
+```
 
 **Filtri supportati:**
 - `searchTerm`: Ricerca per nome, EAN, MINSAN
@@ -96,6 +226,119 @@ Il backend deve supportare una piattaforma B2B per la gestione di ordini farmace
 - `GET /api/batch-operations/{id}/errors` - Errori elaborazione batch
 - `POST /api/batch-operations/{id}/retry` - Riprova elaborazione elementi falliti
 - `GET /api/batch-templates/prices` - Download template Excel prezzi
+
+### 📊 ESEMPI PRATICI GESTIONE BATCH
+
+#### Esempio 3: Import Massivo Prezzi
+**Request:**
+```http
+POST /api/product-prices/batch
+Authorization: Bearer {jwt_token}
+Content-Type: multipart/form-data
+
+file: [Excel/CSV File]
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "batchOperationId": "batch_001",
+    "fileName": "prezzi_fornitori_gennaio_2024.xlsx",
+    "status": "PROCESSING",
+    "totalRecords": 1500,
+    "estimatedTime": "5-7 minuti"
+  },
+  "message": "Import avviato con successo"
+}
+```
+
+#### Esempio 4: Stato Elaborazione Batch
+**Request:**
+```http
+GET /api/batch-operations/batch_001/status
+Authorization: Bearer {jwt_token}
+```
+
+**Response Durante Elaborazione:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "batch_001",
+    "status": "PROCESSING",
+    "progress": {
+      "totalRecords": 1500,
+      "processedRecords": 1200,
+      "successRecords": 1150,
+      "errorRecords": 50,
+      "completionPercentage": 80
+    },
+    "estimatedTimeRemaining": "1-2 minuti"
+  }
+}
+```
+
+**Response Completato:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "batch_001",
+    "status": "COMPLETED",
+    "summary": {
+      "totalRecords": 1500,
+      "processedRecords": 1500,
+      "successRecords": 1450,
+      "errorRecords": 50,
+      "completionPercentage": 100
+    },
+    "completedAt": "2024-01-22T11:30:00Z",
+    "executionTime": "6 minuti 23 secondi",
+    "errorSummary": {
+      "duplicateEAN": 30,
+      "invalidPrice": 15,
+      "unknownSupplier": 5
+    }
+  }
+}
+```
+
+#### Esempio 5: Gestione Errori Batch
+**Request:**
+```http
+GET /api/batch-operations/batch_001/errors
+Authorization: Bearer {jwt_token}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "errors": [
+      {
+        "rowNumber": 45,
+        "productIdentifier": "8029877011234",
+        "supplierName": "Fornitore XYZ",
+        "errorType": "DUPLICATE_EAN",
+        "errorMessage": "EAN già presente per questo fornitore",
+        "suggestedAction": "Verificare EAN o aggiornare prezzo esistente"
+      },
+      {
+        "rowNumber": 78,
+        "productIdentifier": "8029877055555",
+        "supplierName": "Fornitore ABC",
+        "errorType": "INVALID_PRICE",
+        "errorMessage": "Prezzo non valido: -5.50",
+        "suggestedAction": "Inserire prezzo positivo"
+      }
+    ],
+    "downloadUrl": "/api/batch-operations/batch_001/errors/export"
+  }
+}
+```
 
 ---
 
@@ -300,6 +543,175 @@ Il backend deve supportare una piattaforma B2B per la gestione di ordini farmace
 - `POST /api/orders/{id}/reject-counter` - Rifiuto controproposta
 - `GET /api/orders/{id}/picking` - Dettagli picking
 - `POST /api/orders/{id}/picking/process` - Elaborazione picking
+
+### 🛒 ESEMPI PRATICI GESTIONE ORDINI
+
+#### Esempio 6: Creazione Ordine
+**Request:**
+```http
+POST /api/orders
+Authorization: Bearer {jwt_token}
+Content-Type: application/json
+
+{
+  "buyerId": "pharmacy_001",
+  "deliveryAddress": {
+    "street": "Via Roma 123",
+    "city": "Milano",
+    "postalCode": "20100",
+    "country": "IT"
+  },
+  "deliveryDate": "2024-01-30T00:00:00Z",
+  "paymentMethod": "BANK_TRANSFER",
+  "priority": "Medium",
+  "orderType": "Standard",
+  "notes": "Ordine urgente per rifornimento",
+  "items": [
+    {
+      "productId": "prod_001",
+      "quantity": 50,
+      "supplierId": "supplier_001",
+      "notes": "Preferire lotto più recente"
+    },
+    {
+      "productId": "prod_002",
+      "quantity": 30,
+      "supplierId": "supplier_002"
+    }
+  ]
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "ODA-0001",
+    "buyerId": "pharmacy_001",
+    "buyerName": "Farmacia Centrale Milano",
+    "status": "Draft",
+    "totalProducts": 2,
+    "totalItems": 80,
+    "totalAmount": 245.50,
+    "deliveryAddress": {
+      "street": "Via Roma 123",
+      "city": "Milano",
+      "postalCode": "20100",
+      "country": "IT"
+    },
+    "deliveryDate": "2024-01-30T00:00:00Z",
+    "estimatedDelivery": "2024-01-31T00:00:00Z",
+    "paymentMethod": "BANK_TRANSFER",
+    "priority": "Medium",
+    "orderType": "Standard",
+    "notes": "Ordine urgente per rifornimento",
+    "createdAt": "2024-01-22T12:00:00Z",
+    "updatedAt": "2024-01-22T12:00:00Z",
+    "items": [
+      {
+        "id": "item_001",
+        "productId": "prod_001",
+        "productName": "Tachipirina 500mg 20 compresse",
+        "quantity": 50,
+        "unitPrice": 3.20,
+        "totalPrice": 160.00,
+        "supplierId": "supplier_001",
+        "supplierName": "Pharma Supply SpA",
+        "stockAvailable": 120,
+        "estimatedDelivery": "2024-01-31T00:00:00Z"
+      },
+      {
+        "id": "item_002",
+        "productId": "prod_002",
+        "productName": "Moment 200mg 12 compresse",
+        "quantity": 30,
+        "unitPrice": 2.85,
+        "totalPrice": 85.50,
+        "supplierId": "supplier_002",
+        "supplierName": "MedDistribution Srl",
+        "stockAvailable": 45,
+        "estimatedDelivery": "2024-01-30T00:00:00Z"
+      }
+    ]
+  },
+  "message": "Ordine creato con successo"
+}
+```
+
+#### Esempio 7: Workflow Controproposta
+**Request Admin (Controproposta):**
+```http
+POST /api/orders/ODA-0001/counter-offer
+Authorization: Bearer {jwt_token}
+Content-Type: application/json
+
+{
+  "message": "Stock insufficiente per alcuni prodotti. Proponiamo quantità alternative.",
+  "expiryDate": "2024-01-25T23:59:59Z",
+  "requiresPickingApproval": true,
+  "items": [
+    {
+      "productId": "prod_001",
+      "originalQuantity": 50,
+      "proposedQuantity": 40,
+      "originalPrice": 3.20,
+      "proposedPrice": 3.10,
+      "reason": "Stock limitato, offriamo sconto compensativo"
+    },
+    {
+      "productId": "prod_002",
+      "originalQuantity": 30,
+      "proposedQuantity": 30,
+      "originalPrice": 2.85,
+      "proposedPrice": 2.85,
+      "reason": "Quantità confermata"
+    }
+  ]
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "counterOfferId": "counter_001",
+    "orderId": "ODA-0001",
+    "originalAmount": 245.50,
+    "proposedAmount": 209.50,
+    "status": "Pending",
+    "adminId": "admin_001",
+    "adminName": "Mario Rossi",
+    "expiryDate": "2024-01-25T23:59:59Z",
+    "createdAt": "2024-01-22T14:30:00Z",
+    "items": [
+      {
+        "productId": "prod_001",
+        "productName": "Tachipirina 500mg 20 compresse",
+        "originalQuantity": 50,
+        "proposedQuantity": 40,
+        "originalPrice": 3.20,
+        "proposedPrice": 3.10,
+        "reason": "Stock limitato, offriamo sconto compensativo",
+        "savings": 19.50
+      },
+      {
+        "productId": "prod_002",
+        "productName": "Moment 200mg 12 compresse",
+        "originalQuantity": 30,
+        "proposedQuantity": 30,
+        "originalPrice": 2.85,
+        "proposedPrice": 2.85,
+        "reason": "Quantità confermata",
+        "savings": 0
+      }
+    ],
+    "totalSavings": 19.50
+  },
+  "message": "Controproposta inviata con successo"
+}
+```
 
 ---
 
@@ -646,6 +1058,66 @@ Il backend deve supportare una piattaforma B2B per la gestione di ordini farmace
 - Breach notification automation (72h requirement)
 - Regular compliance audits e penetration testing
 
+### ✅ CHECKLIST SICUREZZA E COMPLIANCE
+
+#### 🔐 Sicurezza Applicativa
+- [ ] **Autenticazione Multi-Fattore (MFA)** implementata
+- [ ] **JWT Tokens** con refresh rotation automatico
+- [ ] **Rate Limiting** su tutti gli endpoint pubblici
+- [ ] **Input Validation** e sanitizzazione completa
+- [ ] **SQL Injection** protection tramite ORM/prepared statements
+- [ ] **XSS Protection** con Content Security Policy
+- [ ] **HTTPS/TLS 1.3** obbligatorio per tutte le comunicazioni
+- [ ] **API Keys** con scadenza e rotazione automatica
+
+#### 🛡️ Sicurezza Infrastrutturale
+- [ ] **Firewall** configurato con whitelist IP
+- [ ] **VPN/VPC** per accesso risorse interne
+- [ ] **Database Encryption** at-rest e in-transit
+- [ ] **Backup Encryption** con chiavi separate
+- [ ] **Container Security** scanning per vulnerabilità
+- [ ] **Secrets Management** con HashiCorp Vault/AWS Secrets
+- [ ] **Network Segmentation** per isolamento servizi
+- [ ] **DDoS Protection** tramite CDN/Load Balancer
+
+#### 📋 Compliance Farmaceutica
+- [ ] **21 CFR Part 11** electronic records compliance
+- [ ] **GDP (Good Distribution Practice)** per distribuzione
+- [ ] **Audit Trail** immutabile per tutte le transazioni
+- [ ] **Digital Signatures** per ordini e approvazioni
+- [ ] **Tracciabilità Lotti** completa dalla produzione
+- [ ] **Retention Policy** dati per 7 anni (AIFA requirement)
+- [ ] **Change Control** documentato per ogni modifica
+- [ ] **Validation Documentation** per sistemi computerizzati
+
+#### 🌍 GDPR & Privacy
+- [ ] **Privacy Impact Assessment (PIA)** completato
+- [ ] **Consent Management** granulare implementato
+- [ ] **Right to be Forgotten** automatizzato
+- [ ] **Data Portability** in formato strutturato
+- [ ] **Breach Notification** automatica entro 72h
+- [ ] **Data Protection Officer (DPO)** nominato
+- [ ] **Privacy by Design** in tutti i processi
+- [ ] **Cross-border Transfer** conformi a Standard Contractual Clauses
+
+#### 📊 Monitoring e Audit
+- [ ] **SIEM (Security Information Event Management)** attivo
+- [ ] **Log Integrity** con hash verification
+- [ ] **Anomaly Detection** automatizzato
+- [ ] **Penetration Testing** trimestrale
+- [ ] **Vulnerability Scanning** automatizzato
+- [ ] **Security Metrics** dashboard real-time
+- [ ] **Incident Response Plan** testato e aggiornato
+- [ ] **Security Awareness Training** per team
+
+#### 🏥 Compliance Sanitaria Italiana
+- [ ] **AIFA Guidelines** per sistemi informativi
+- [ ] **Codice Privacy** (D.Lgs. 196/2003) rispettato
+- [ ] **CAD (Codice Amministrazione Digitale)** compliance
+- [ ] **Linee Guida AgID** per sviluppo software
+- [ ] **Certificazione ISO 27001** in corso/completata
+- [ ] **Registro Trattamenti** aggiornato e completo
+
 ---
 
 ## 12. PERFORMANCE E SCALABILITÀ ENTERPRISE
@@ -891,23 +1363,47 @@ Il backend deve supportare una piattaforma B2B per la gestione di ordini farmace
 ### STACK TECNOLOGICO ENTERPRISE 2024
 
 #### Backend Framework (Raccomandazioni basate su industry analysis)
-**Opzione A - Node.js Ecosystem**
+
+### 🎯 CRITERI DI SCELTA STACK TECNOLOGICO
+
+#### Matrice di Valutazione
+| Criterio | Node.js | Python | Java Spring | Peso |
+|----------|---------|---------|-------------|-------|
+| **Performance** | 8/10 | 7/10 | 9/10 | 25% |
+| **Scalabilità** | 9/10 | 8/10 | 10/10 | 25% |
+| **Ecosystem** | 9/10 | 8/10 | 8/10 | 20% |
+| **Team Skill** | 8/10 | 7/10 | 6/10 | 15% |
+| **Maintenance** | 7/10 | 8/10 | 9/10 | 10% |
+| **Time to Market** | 9/10 | 8/10 | 6/10 | 5% |
+
+#### Raccomandazione: **Node.js TypeScript** (Score: 8.3/10)
+
+**Motivazioni:**
+- **Performance**: Ottima per I/O intensive operations (tipiche di B2B)
+- **Scalabilità**: Event-driven architecture nativa
+- **Ecosystem**: NPM ecosystem ricchissimo
+- **Rapido Development**: Prototipazione veloce per MVP
+
+**Opzione A - Node.js Ecosystem (RACCOMANDATO)**
 - **Framework**: Express.js / Fastify per performance
 - **TypeScript**: Mandatory per type safety
 - **ORM**: Prisma / TypeORM per database management
 - **Validation**: Joi / Zod per input validation
+- **Async Processing**: Bull/BullMQ per queue management
 
-**Opzione B - Python Enterprise**
+**Opzione B - Python Enterprise (ALTERNATIVA)**
 - **Framework**: FastAPI per performance e auto-documentation
 - **ORM**: SQLAlchemy 2.0 con async support
 - **Validation**: Pydantic v2 per data validation
 - **Task Queue**: Celery con Redis backend
+- **Uso Consigliato**: Se team ha forte expertise Python
 
-**Opzione C - Java Spring Ecosystem**
+**Opzione C - Java Spring Ecosystem (ENTERPRISE)**
 - **Framework**: Spring Boot 3.x con WebFlux per reactive programming
 - **ORM**: Spring Data JPA con Hibernate
 - **Security**: Spring Security per authentication
 - **Messaging**: Spring Cloud Stream per event handling
+- **Uso Consigliato**: Per grandi enterprise con requisiti compliance elevati
 
 #### Database & Storage
 - **Primary DB**: PostgreSQL 15+ con partitioning
@@ -970,3 +1466,187 @@ Il backend deve supportare una piattaforma B2B per la gestione di ordini farmace
 - **Event Sourcing**: Immutable event store per audit trail
 - **Saga Pattern**: Distributed transaction management
 - **CDC (Change Data Capture)**: Real-time data replication
+
+---
+
+## ESEMPI PRATICI E CASI D'USO
+
+### 🎬 SCENARIO COMPLETO: Ordine con Picking e Controproposta
+
+#### Step 1: Farmacia Crea Ordine
+Una farmacia di Milano deve rifornire urgentemente alcuni prodotti per il weekend.
+
+**Azione**: Crea nuovo ordine con 3 prodotti
+```json
+POST /api/orders
+{
+  "buyerId": "pharmacy_milano_001",
+  "priority": "High",
+  "deliveryDate": "2024-01-26T08:00:00Z",
+  "items": [
+    {"productId": "prod_tachipirina_500", "quantity": 100, "supplierId": "supplier_pharma_supply"},
+    {"productId": "prod_moment_200", "quantity": 50, "supplierId": "supplier_pharma_supply"},  
+    {"productId": "prod_aspirina_500", "quantity": 75, "supplierId": "supplier_med_distribution"}
+  ]
+}
+```
+
+#### Step 2: Sistema Verifica Stock
+Il sistema verifica automaticamente la disponibilità:
+- Tachipirina 500mg: 80 disponibili (20 in meno)
+- Moment 200mg: 50 disponibili (quantità OK)
+- Aspirina 500mg: 0 disponibili (prodotto esaurito)
+
+#### Step 3: Admin Gestisce Situazione Critica
+L'admin vede l'ordine high priority e interviene manualmente.
+
+**Azione**: Crea controproposta con alternative
+```json
+POST /api/orders/ODA-2024-001/counter-offer
+{
+  "message": "Stock parziale disponibile. Proponiamo alternative per Aspirina.",
+  "items": [
+    {
+      "productId": "prod_tachipirina_500",
+      "originalQuantity": 100,
+      "proposedQuantity": 80,
+      "proposedPrice": 3.10,
+      "reason": "Stock limitato, sconto 5% applicato"
+    },
+    {
+      "productId": "prod_moment_200", 
+      "originalQuantity": 50,
+      "proposedQuantity": 50,
+      "reason": "Quantità confermata"
+    }
+  ],
+  "alternatives": [
+    {
+      "originalProductId": "prod_aspirina_500",
+      "alternativeProductId": "prod_aspirina_c_500",
+      "alternativeName": "Aspirina C 500mg effervescente",
+      "quantity": 75,
+      "price": 5.20,
+      "reason": "Aspirina tradizionale esaurita"
+    }
+  ]
+}
+```
+
+#### Step 4: Farmacia Valuta e Risponde
+La farmacia riceve notifica e valuta la proposta.
+
+**Azione**: Accetta parzialmente
+```json
+POST /api/orders/ODA-2024-001/accept-counter
+{
+  "acceptedItems": ["prod_tachipirina_500", "prod_moment_200"],
+  "rejectedItems": ["prod_aspirina_c_500"],
+  "message": "Accettiamo riduzione Tachipirina e Moment. Per Aspirina aspettiamo prossima disponibilità."
+}
+```
+
+#### Step 5: Finalizzazione e Spedizione
+Il sistema:
+1. Aggiorna lo stock
+2. Invia ordine al magazzino
+3. Notifica tutti i soggetti coinvolti
+4. Programma picking per il giorno successivo
+
+### 🔄 CASO D'USO: Import Massivo con Gestione Errori
+
+#### Scenario: Fornitore Aggiorna 2000 Prezzi
+Un grande fornitore farmaceutico carica il listino mensile tramite Excel.
+
+#### Step 1: Upload File
+```http
+POST /api/product-prices/batch
+Content-Type: multipart/form-data
+file: listino_gennaio_2024.xlsx (2MB, 2000 righe)
+```
+
+#### Step 2: Validazione Real-time
+Il sistema processa il file e trova problemi:
+- 50 EAN non riconosciuti (prodotti nuovi?)
+- 30 prezzi negativi (errori di battitura)  
+- 15 duplicati (stesso EAN/fornitore)
+
+#### Step 3: Report Interattivo
+```json
+{
+  "batchId": "batch_20240122_001",
+  "status": "PARTIAL_SUCCESS", 
+  "processed": 1905,
+  "successful": 1905,
+  "failed": 95,
+  "actions": {
+    "autoRetry": "Riprova 45 errori minori automaticamente",
+    "manualReview": "50 EAN necessitano creazione prodotto"
+  }
+}
+```
+
+#### Step 4: Risoluzione Interattiva
+Il fornitore può:
+1. **Auto-fix** errori semplici (prezzi negativi → valore assoluto)
+2. **Mappare** EAN sconosciuti a prodotti esistenti
+3. **Creare** nuovi prodotti per EAN validi ma non in catalogo
+4. **Scaricare** template errori per correzione offline
+
+---
+
+## GLOSSARIO
+
+### Termini Tecnici
+
+**API Gateway**: Punto di ingresso centralizzato per tutte le richieste API che gestisce autenticazione, rate limiting e routing.
+
+**CQRS (Command Query Responsibility Segregation)**: Pattern architetturale che separa le operazioni di lettura da quelle di scrittura per ottimizzare performance e scalabilità.
+
+**Circuit Breaker**: Pattern di resilienza che previene chiamate ripetute a servizi non funzionanti, evitando cascading failures.
+
+**Event Sourcing**: Tecnica di persistenza che memorizza tutti i cambiamenti di stato come sequenza di eventi immutabili.
+
+**Hystrix Pattern**: Framework per gestire latenza e fault tolerance in sistemi distribuiti, implementando circuit breaker e bulkhead isolation.
+
+**JWT (JSON Web Token)**: Standard per trasmettere informazioni in modo sicuro tra parti attraverso token JSON digitalmente firmati.
+
+**Microservices**: Architettura che struttura un'applicazione come insieme di servizi piccoli, indipendenti e comunicanti.
+
+**ORM (Object-Relational Mapping)**: Tecnica di programmazione per convertire dati tra sistemi di tipi incompatibili usando linguaggi di programmazione orientati agli oggetti.
+
+**Rate Limiting**: Tecnica per controllare il numero di richieste che un utente può fare alle API in un determinato periodo di tempo.
+
+**SAGA Pattern**: Pattern per gestire transazioni distribuite attraverso una sequenza di transazioni locali coordinate.
+
+### Termini Business Farmaceutici
+
+**EAN (European Article Number)**: Codice a barre standard europeo per identificazione univoca dei prodotti.
+
+**GDP (Good Distribution Practice)**: Linee guida per la corretta distribuzione di medicinali per uso umano.
+
+**MINSAN**: Codice identificativo assegnato dal Ministero della Salute ai medicinali autorizzati in Italia.
+
+**ODA (Ordine Diretto Acquisto)**: Ordine effettuato direttamente dalla farmacia al fornitore senza passare attraverso intermediari.
+
+**Picking**: Processo di selezione e prelievo dei prodotti dal magazzino per l'evasione degli ordini.
+
+### Termini Compliance
+
+**21 CFR Part 11**: Regolamento FDA che stabilisce i criteri per l'uso di firme elettroniche e record elettronici.
+
+**AIFA**: Agenzia Italiana del Farmaco, ente regolatorio italiano per i medicinali.
+
+**GDPR (General Data Protection Regulation)**: Regolamento europeo sulla protezione dei dati personali.
+
+**PIA (Privacy Impact Assessment)**: Valutazione preventiva dell'impatto sulla privacy di nuovi progetti o trattamenti di dati.
+
+---
+
+## 📞 SUPPORTO E CONTATTI
+
+**Per chiarimenti tecnici**: Riferirsi al team di sviluppo o al solution architect del progetto.
+
+**Per compliance e requisiti normativi**: Consultare il DPO (Data Protection Officer) e i consulenti legali specializzati in farmaceutico.
+
+**Per aspetti business**: Confrontarsi con gli stakeholder farmaceutici e i product owner del progetto.
