@@ -26,7 +26,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const toggleTheme = () => {
     setIsDarkMode(prev => {
       const newMode = !prev;
-      localStorage.setItem('farmabooster-theme', newMode ? 'dark' : 'light');
+      localStorage.setItem('Six Steps - FarmaAggregator-theme', newMode ? 'dark' : 'light');
       return newMode;
     });
   };
@@ -48,7 +48,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleChange = (e: MediaQueryListEvent) => {
       // Only update if user hasn't set a preference
-      if (!localStorage.getItem('farmabooster-theme')) {
+      if (!localStorage.getItem('Six Steps - FarmaAggregator-theme')) {
         setIsDarkMode(e.matches);
       }
     };

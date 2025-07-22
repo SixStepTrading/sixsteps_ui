@@ -1,6 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { SidebarContext } from '../contexts/SidebarContext';
 import { ModernSidebar } from '../components/common/organisms';
+import { useUser } from '../contexts/UserContext';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -10,6 +11,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const [isMobile, setIsMobile] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { isDrawerCollapsed, toggleDrawer } = useContext(SidebarContext);
+  const { logout } = useUser();
   
   // Constants for drawer dimensions
   const DRAWER_WIDTH = 240;
@@ -58,6 +60,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         mobileOpen={mobileOpen}
         onMobileClose={handleDrawerToggle}
         notificationCount={4}
+        onLogout={logout}
       />
       
       {/* Main content */}

@@ -4,6 +4,7 @@ import { ToastProvider } from './contexts/ToastContext';
 import { SidebarProvider } from './contexts/SidebarContext';
 import { UserProvider } from './contexts/UserContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import AuthGuard from './components/common/AuthGuard';
 import MainLayout from './layouts/MainLayout';
 import Dashboard from './components/Dashboard/Dashboard';
 import PurchaseOrdersLayout from './components/PurchaseOrders/PurchaseOrdersLayout';
@@ -16,27 +17,29 @@ function App() {
     <ThemeProvider>
       <div className="min-h-screen bg-gray-50 dark:bg-dark-bg-primary text-gray-900 dark:text-dark-text-primary font-sans transition-colors duration-200">
         <ToastProvider>
-          <SidebarProvider>
-            <UserProvider>
+          <UserProvider>
             <Router>
-              <MainLayout>
-                <Routes>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="/purchase-orders" element={<PurchaseOrdersLayout />} />
-                  <Route 
-                    path="/purchase-orders/order/:orderId" 
-                    element={<OrderDetailPage />} 
-                  />
-                    <Route 
-                      path="/user-management" 
-                      element={<PrivateRoute element={<UserManagement />} requiredRole="Admin" />} 
-                    />
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-              </MainLayout>
+              <AuthGuard>
+                <SidebarProvider>
+                  <MainLayout>
+                    <Routes>
+                      <Route path="/" element={<Dashboard />} />
+                      <Route path="/purchase-orders" element={<PurchaseOrdersLayout />} />
+                      <Route 
+                        path="/purchase-orders/order/:orderId" 
+                        element={<OrderDetailPage />} 
+                      />
+                      <Route 
+                        path="/user-management" 
+                        element={<PrivateRoute element={<UserManagement />} requiredRole="Admin" />} 
+                      />
+                      <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
+                  </MainLayout>
+                </SidebarProvider>
+              </AuthGuard>
             </Router>
-            </UserProvider>
-          </SidebarProvider>
+          </UserProvider>
         </ToastProvider>
       </div>
     </ThemeProvider>
