@@ -289,17 +289,6 @@ const Login: React.FC = () => {
                 {isSubmitting ? 'Signing in...' : 'Sign in'}
               </span>
             </button>
-
-            {/* Test Credentials */}
-            <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-lg">
-              <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
-                🔐 Test Credentials
-              </h3>
-              <div className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
-                <p><strong>Admin:</strong> admin@sixstep.tech / pass4Six!</p>
-                <p><em>Real API - No fallback mode</em></p>
-              </div>
-            </div>
           </div>
         </form>
 
