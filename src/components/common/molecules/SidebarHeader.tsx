@@ -19,7 +19,9 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
     userRole, 
     userName, 
     userDescription,
-    setUserRole 
+    user,
+    setUserRole,
+    logout 
   } = useUser();
   
   // State for profile popper
@@ -47,17 +49,9 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
     }, 10);
   };
 
-  // Handle role switching
-  const handleRoleSwitch = (newRole: 'Admin' | 'Buyer', e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    // Set role with delay to avoid state conflicts
-    setTimeout(() => {
-      setUserRole(newRole);
-      setMenuOpen(false);
-    }, 10);
-  };
+
+
+
   
   // Effect for handling clicks outside
   useEffect(() => {
@@ -159,7 +153,11 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
             {/* Role indicator */}
             {!isCollapsed ? (
               <div className="ml-auto flex items-center text-gray-500 dark:text-dark-text-muted">
-                <div className={`w-2 h-2 rounded-full mr-1 transition-all duration-200 ${userRole === 'Admin' ? 'bg-red-500' : 'bg-green-500'}`}></div>
+                <div className={`w-2 h-2 rounded-full mr-1 transition-all duration-200 ${
+                  userRole === 'Admin' ? 'bg-red-500' : 
+                  userRole === 'Pharmacy' ? 'bg-green-500' :
+                  userRole === 'Supplier' ? 'bg-blue-500' : 'bg-gray-500'
+                }`}></div>
                 <svg 
                   xmlns="http://www.w3.org/2000/svg" 
                   className={`h-4 w-4 transition-transform duration-200 ${menuOpen ? 'rotate-180' : 'rotate-0'}`} 
@@ -172,7 +170,11 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
               </div>
             ) : (
               <div 
-                className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white dark:border-dark-bg-secondary ${userRole === 'Admin' ? 'bg-red-500' : 'bg-green-500'}`}
+                className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white dark:border-dark-bg-secondary ${
+                  userRole === 'Admin' ? 'bg-red-500' : 
+                  userRole === 'Pharmacy' ? 'bg-green-500' :
+                  userRole === 'Supplier' ? 'bg-blue-500' : 'bg-gray-500'
+                }`}
                 title="Click to change role"
               ></div>
             )}
@@ -193,47 +195,36 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
               User Profile
             </div>
             
-            <div className="flex flex-col space-y-2">
-              <div className="text-xs text-gray-500 dark:text-dark-text-muted">SWITCH ROLE</div>
-              
-              <div className="flex flex-col space-y-2">
-                <button
-                  onClick={(e) => handleRoleSwitch('Admin', e)}
-                  className={`
-                    flex items-center p-2 rounded-md text-left
-                    ${userRole === 'Admin' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : 'hover:bg-gray-50 dark:hover:bg-dark-bg-hover'}
-                    h-[60px]
-                  `}
-                >
-                  <div className={`w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 flex items-center justify-center mr-2 flex-shrink-0`}>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="font-medium text-sm">Admin</div>
-                    <div className="text-xs text-gray-500 dark:text-dark-text-muted">Full access to all features</div>
-                  </div>
-                </button>
+            {/* User Info */}
+            <div className="mb-4">
+              <div className="text-sm font-medium text-gray-900 dark:text-dark-text-primary">{user?.referralName || userName}</div>
+              <div className="text-xs text-gray-500 dark:text-dark-text-muted">{user?.entityName || 'Six Steps - FarmaAggregator'}</div>
+              <div className="text-xs text-gray-400 dark:text-dark-text-muted">{user?.referralContacts}</div>
+            </div>
+            
+            <div className="flex flex-col space-y-4">
+              <div>
+                <div className="text-xs text-gray-500 dark:text-dark-text-muted mb-2">CURRENT ROLE</div>
                 
-                <button
-                  onClick={(e) => handleRoleSwitch('Buyer', e)}
-                  className={`
-                    flex items-center p-2 rounded-md text-left
-                    ${userRole === 'Buyer' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : 'hover:bg-gray-50 dark:hover:bg-dark-bg-hover'}
-                    h-[60px]
-                  `}
-                >
-                  <div className={`w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center mr-2 flex-shrink-0`}>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                    </svg>
+                <div className="flex flex-col space-y-2">
+                  <div
+                    className={`
+                      flex items-center p-2 rounded-md text-left
+                      ${userRole === 'Admin' ? 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300' : 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'}
+                      h-[50px]
+                    `}
+                  >
+                    <div className={`w-7 h-7 rounded-full ${userRole === 'Admin' ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'} flex items-center justify-center mr-2 flex-shrink-0`}>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <div className="font-medium text-sm">{userRole === 'Admin' ? 'Administrator' : 'Pharmacy'}</div>
+                      <div className="text-xs text-gray-500 dark:text-dark-text-muted">{userRole === 'Admin' ? 'Full system access' : 'Order management'}</div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="font-medium text-sm">Buyer</div>
-                    <div className="text-xs text-gray-500 dark:text-dark-text-muted">Limited to purchase functions</div>
-                  </div>
-                </button>
+                </div>
               </div>
             </div>
           </div>
