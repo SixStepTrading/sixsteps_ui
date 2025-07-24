@@ -673,4 +673,110 @@ export const verifyToken = async (): Promise<boolean> => {
   } catch (error) {
     return false;
   }
+};
+
+// Interface for logs API response
+export interface LogEntry {
+  id: string;
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    surname: string;
+    role: string;
+  };
+  ip: string;
+  action: string;
+  timestamp: number;
+  formattedDate: string;
+  details: any;
+  userAgent: string;
+}
+
+export interface LogsResponse {
+  message: string;
+  error: boolean;
+  logs: LogEntry[];
+  pagination: {
+    page: number;
+    limit: number;
+    totalCount: number;
+    totalPages: number;
+  };
+}
+
+// Get logs from Sixstep Core API
+export const getLogs = async (page: number = 1, limit: number = 1000000): Promise<LogsResponse> => {
+  try {
+    const payload = {
+      startDate: "2025-01-01",
+      endDate: "3000-12-31",
+      page: 1,
+      limit: 1000000
+    };
+    
+    console.log('Fetching logs from API...', payload);
+    
+    const response = await sixstepClient.post('/logs/get', payload);
+    
+    console.log('Logs API response:', response.data);
+    
+    if (response.data && !response.data.error) {
+      return response.data;
+    } else {
+      console.error('Invalid logs response format:', response.data);
+      return {
+        message: 'Error',
+        error: true,
+        logs: [],
+        pagination: { page: 1, limit: 50, totalCount: 0, totalPages: 0 }
+      };
+    }
+  } catch (error) {
+    console.error('Error fetching logs:', error);
+    return {
+      message: 'Error',
+      error: true,
+      logs: [],
+      pagination: { page: 1, limit: 50, totalCount: 0, totalPages: 0 }
+    };
+  }
+};
+
+// Download logs as CSV
+export const downloadLogs = async (): Promise<void> => {
+  try {
+    const payload = {
+      startDate: "2025-01-01",
+      endDate: "3000-12-31"
+    };
+    
+    console.log('Downloading logs CSV...', payload);
+    
+    const response = await sixstepClient.post('/logs/download', payload, {
+      responseType: 'blob'
+    });
+    
+    console.log('Logs download response:', response);
+    
+    // Create blob from response
+    const blob = new Blob([response.data], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    
+    // Create download link
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `logs-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    
+    // Cleanup
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    
+    console.log('Logs CSV downloaded successfully');
+  } catch (error) {
+    console.error('Error downloading logs:', error);
+    throw error;
+  }
 }; 

@@ -17,29 +17,29 @@ function App() {
     <ThemeProvider>
       <div className="min-h-screen bg-gray-50 dark:bg-dark-bg-primary text-gray-900 dark:text-dark-text-primary font-sans transition-colors duration-200">
         <ToastProvider>
-          <UserProvider>
+            <UserProvider>
             <Router>
               <AuthGuard>
                 <SidebarProvider>
-                  <MainLayout>
-                    <Routes>
-                      <Route path="/" element={<Dashboard />} />
-                      <Route path="/purchase-orders" element={<PurchaseOrdersLayout />} />
-                      <Route 
-                        path="/purchase-orders/order/:orderId" 
-                        element={<OrderDetailPage />} 
-                      />
-                      <Route 
-                        path="/user-management" 
-                        element={<PrivateRoute element={<UserManagement />} requiredRole="Admin" />} 
-                      />
-                      <Route path="*" element={<Navigate to="/" replace />} />
-                    </Routes>
-                  </MainLayout>
+              <MainLayout>
+                <Routes>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/purchase-orders" element={<PurchaseOrdersLayout />} />
+                  <Route 
+                    path="/purchase-orders/order/:orderId" 
+                    element={<OrderDetailPage />} 
+                  />
+                    <Route 
+                      path="/user-management" 
+                      element={<PrivateRoute element={<UserManagement />} requiredRole="Admin" />} 
+                    />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </MainLayout>
                 </SidebarProvider>
               </AuthGuard>
             </Router>
-          </UserProvider>
+            </UserProvider>
         </ToastProvider>
       </div>
     </ThemeProvider>

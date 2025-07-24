@@ -4,6 +4,8 @@ import { SidebarContext } from '../../contexts/SidebarContext';
 
 interface UsersTableProps {
   users: User[];
+  totalUsers: number;
+  hasActiveFilters?: boolean;
   onUserSelect?: (user: User) => void;
   onEditUser?: (user: User) => void;
   onDeleteUser?: (user: User) => void;
@@ -11,6 +13,8 @@ interface UsersTableProps {
 
 const UsersTable: React.FC<UsersTableProps> = ({
   users,
+  totalUsers,
+  hasActiveFilters = false,
   onUserSelect,
   onEditUser,
   onDeleteUser
@@ -93,11 +97,17 @@ const UsersTable: React.FC<UsersTableProps> = ({
     <div className="w-full flex flex-col gap-1 mb-8">
       {/* Users counter */}
       <div className="w-full flex flex-col gap-1 mb-4">
-        <div className="flex items-center mb-1 px-2">
+        <div className="flex items-center justify-between mb-1 px-2">
           <div className="text-xs text-slate-600 dark:text-dark-text-muted bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded flex items-center border dark:border-blue-800/30">
             <span className="font-medium">Total Users:</span>
-            <span className="ml-1 font-semibold text-blue-600 dark:text-blue-300">{sortedUsers.length}</span>
+            <span className="ml-1 font-semibold text-blue-600 dark:text-blue-300">{totalUsers}</span>
           </div>
+          {hasActiveFilters && (
+            <div className="text-xs text-slate-600 dark:text-dark-text-muted bg-green-50 dark:bg-green-900/30 px-3 py-1 rounded flex items-center border dark:border-green-800/30">
+              <span className="font-medium">Filtered:</span>
+              <span className="ml-1 font-semibold text-green-600 dark:text-green-300">{sortedUsers.length}</span>
+            </div>
+          )}
         </div>
       </div>
       

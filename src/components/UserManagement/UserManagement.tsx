@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useToast } from '../../contexts/ToastContext';
 import { useUser } from '../../contexts/UserContext';
 import { SearchIcon, PlusIcon, FilterIcon } from '@heroicons/react/outline';
-import { getAllEntities, getAllUsers, createEntity, updateEntity, deleteEntity, Entity, createUser, UserResponse, CreateUserData } from '../../utils/api';
+import { getAllEntities, getAllUsers, createEntity, updateEntity, deleteEntity, Entity, createUser, UserResponse, CreateUserData, getLogs, downloadLogs } from '../../utils/api';
 import Stepper from '../common/Stepper';
 import EntitySelectionStep from './EntitySelectionStep';
 import UserCreationStep from './UserCreationStep';
@@ -84,39 +84,39 @@ const CreateUserForm: React.FC<{
       });
     }
   };
-  
+
   return (
     <div className="max-w-4xl mx-auto">
       {/* Header Card */}
       <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-6 mb-6">
         <div className="flex items-center justify-between">
-          <div>
+            <div>
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
               Create New User
             </h2>
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Add a new user to the Six Steps - FarmaAggregator platform
             </p>
-          </div>
+            </div>
           <div className="flex items-center space-x-2">
             <div className="flex items-center justify-center w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
+                    </svg>
             </div>
           </div>
         </div>
-      </div>
-
+            </div>
+            
       {/* Progress Steps */}
       <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-6 mb-6">
         <Stepper 
           steps={steps} 
           currentStep={currentStep} 
           completedSteps={completedSteps}
-        />
-      </div>
-
+              />
+            </div>
+            
       {/* Step Content Card */}
       <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700">
         {currentStep === 'entity' && (
@@ -126,7 +126,7 @@ const CreateUserForm: React.FC<{
               onEntitySelected={handleEntitySelected}
               onNext={handleNextStep}
             />
-          </div>
+              </div>
         )}
 
         {currentStep === 'user' && selectedEntity && (
@@ -166,9 +166,16 @@ const UserManagement: React.FC = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
+  // Activities state - loaded from API
+  const [activities, setActivities] = useState<UserActivity[]>([]);
+  const [activitiesLoading, setActivitiesLoading] = useState(false);
+  const [activitiesPage, setActivitiesPage] = useState(1);
+  const [hasMoreActivities, setHasMoreActivities] = useState(true);
+
   useEffect(() => {
     loadUsers();
     loadEntities();
+    loadActivities(true); // true = reset
   }, []);
 
   // Early return if not admin - additional security check (AFTER all hooks)
@@ -375,49 +382,52 @@ const UserManagement: React.FC = () => {
     supplier: filteredUsers.filter(u => u.role === 'Supplier').length,
   };
 
-  // Mock activity data - in a real app this would come from an API
-  const activities: UserActivity[] = [
-    {
-      id: '1',
-      user: 'Marco Rossi',
-      action: 'Login',
-      details: 'Successful login',
-      dateTime: 'May 9, 2025 - 10:42',
-      ipAddress: '192.168.1.105'
-    },
-    {
-      id: '2',
-      user: 'Laura Bianchi',
-      action: 'Order Created',
-      details: 'Created order #ODA-2542',
-      dateTime: 'May 8, 2025 - 15:23',
-      ipAddress: '192.168.1.87'
-    },
-    {
-      id: '3',
-      user: 'Giuseppe Verdi',
-      action: 'Product Update',
-      details: 'Updated inventory for 15 products',
-      dateTime: 'May 7, 2025 - 09:11',
-      ipAddress: '192.168.1.42'
-    },
-    {
-      id: '4',
-      user: 'Elena Ferrari',
-      action: 'Password Reset',
-      details: 'Requested password reset',
-      dateTime: 'May 6, 2025 - 14:05',
-      ipAddress: '192.168.1.56'
-    },
-    {
-      id: '5',
-      user: 'Marco Rossi',
-      action: 'User Created',
-      details: 'Created user Paolo Colombo',
-      dateTime: 'May 5, 2025 - 11:30',
-      ipAddress: '192.168.1.105'
+  // Load activities from API
+  const loadActivities = async (reset: boolean = false) => {
+    if (activitiesLoading) return;
+    
+    setActivitiesLoading(true);
+    try {
+      const currentPage = reset ? 1 : activitiesPage;
+      const response = await getLogs(currentPage, 20);
+      
+      if (reset) {
+        setActivities(response.logs);
+        setActivitiesPage(2);
+      } else {
+        setActivities(prev => [...prev, ...response.logs]);
+        setActivitiesPage(currentPage + 1);
+      }
+      
+      // Check if there are more pages
+      setHasMoreActivities(currentPage < response.pagination.totalPages);
+      
+      console.log('Activities loaded:', response.logs);
+    } catch (error) {
+      console.error('Error loading activities:', error);
+      showToast('Failed to load activities', 'error');
+    } finally {
+      setActivitiesLoading(false);
     }
-  ];
+  };
+
+  // Load more activities for infinite scroll
+  const loadMoreActivities = () => {
+    if (!activitiesLoading && hasMoreActivities) {
+      loadActivities(false);
+    }
+  };
+
+  // Download activities as CSV
+  const handleDownloadCSV = async () => {
+    try {
+      await downloadLogs();
+      showToast('Logs CSV downloaded successfully', 'success');
+    } catch (error) {
+      console.error('Error downloading logs CSV:', error);
+      showToast('Failed to download logs CSV', 'error');
+    }
+  };
   
   return (
     <div className="space-y-6">
@@ -425,8 +435,8 @@ const UserManagement: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">User Management</h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Manage users, permissions, and monitor activity
-          </p>
+          Manage users, permissions, and monitor activity
+        </p>
         </div>
       </div>
       
@@ -551,7 +561,7 @@ const UserManagement: React.FC = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                     </svg>
                   </div>
-                  <div>
+        <div>
                     <h3 className="text-sm font-medium text-orange-600 dark:text-orange-400">Supplier</h3>
                     <p className="text-xs text-gray-500 dark:text-gray-400">Can manage product listings an...</p>
                   </div>
@@ -562,7 +572,7 @@ const UserManagement: React.FC = () => {
               </div>
             </div>
           </div>
-
+          
           {/* Filters Section */}
           <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-4">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -579,9 +589,9 @@ const UserManagement: React.FC = () => {
                     value={filters.search}
                     onChange={(e) => handleFilterChange('search', e.target.value)}
                     className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                  />
-                </div>
-
+              />
+            </div>
+            
                 {/* Role Filter */}
                 <div className="min-w-[140px]">
                   <select
@@ -620,15 +630,15 @@ const UserManagement: React.FC = () => {
                   Reset
                 </button>
                 
-                <button
+              <button
                   onClick={handleCreateNewUser}
                   className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
                 >
                   <PlusIcon className="h-4 w-4 mr-2" />
-                  New User
-                </button>
-                
-                <button
+                New User
+              </button>
+              
+              <button 
                   onClick={handleRefresh}
                   disabled={isRefreshing}
                   className="flex items-center px-4 py-2 text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -638,29 +648,19 @@ const UserManagement: React.FC = () => {
                   ) : (
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
+                </svg>
                   )}
-                  Refresh
-                </button>
+                Refresh
+              </button>
               </div>
             </div>
           </div>
-
-          {/* Total Users Counter */}
-          <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
-            <div>
-              Total Users: <span className="font-semibold text-blue-600 dark:text-blue-400">{users.length}</span>
-              {(filters.search || filters.role || filters.status || filters.entity) && (
-                <span className="ml-2 text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full">
-                  Filtered: {filteredUsers.length}
-                </span>
-              )}
-            </div>
-          </div>
-
+          
           {/* Users Table */}
-          <UsersTable
+          <UsersTable 
             users={filteredUsers}
+            totalUsers={users.length}
+            hasActiveFilters={!!(filters.search || filters.role || filters.status || filters.entity)}
             onEditUser={handleEditUser}
             onDeleteUser={handleDeleteUser}
           />
@@ -668,11 +668,17 @@ const UserManagement: React.FC = () => {
       )}
       
       {activeTab === 'create' && currentUser?.entityType === 'ADMIN' && (
-        <CreateUserForm onCreateUser={handleCreateUser} />
+            <CreateUserForm onCreateUser={handleCreateUser} />
       )}
-
+      
       {activeTab === 'activity' && (
-        <ActivitiesTable activities={activities} />
+          <ActivitiesTable 
+          activities={activities} 
+          loading={activitiesLoading}
+          hasMore={hasMoreActivities}
+          onLoadMore={loadMoreActivities}
+          onDownloadCSV={handleDownloadCSV}
+        />
       )}
 
       {/* Modals */}
