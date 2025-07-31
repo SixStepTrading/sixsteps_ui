@@ -952,6 +952,29 @@ export interface UploadProgressResponse {
   estimatedTimeRemaining?: number; // in seconds
 }
 
+// Interface for active upload
+export interface ActiveUpload {
+  uploadId: string;
+  status: "pending" | "processing" | "completed" | "failed";
+  progress: number;
+  totalRows: number;
+  processedRows: number;
+  created: number;
+  updated: number;
+  skipped: number;
+  errors: string[];
+  message: string;
+  startTime: number;
+  estimatedTimeRemaining: number;
+}
+
+// Interface for active uploads response
+export interface ActiveUploadsResponse {
+  message: string;
+  error: boolean;
+  uploads: ActiveUpload[];
+}
+
 // Upload Products CSV (Admin only) - for updating general product database
 export const uploadProductsCSV = async (
   file: File,
@@ -1246,6 +1269,19 @@ export const getUploadProgress = async (
     return response.data;
   } catch (error) {
     console.error("❌ Error getting upload progress:", error);
+    throw error;
+  }
+};
+
+// Get active uploads
+export const getActiveUploads = async (): Promise<ActiveUploadsResponse> => {
+  try {
+    console.log("🔄 Getting active uploads...");
+    const response = await sixstepClient.post("/upload/active");
+    console.log("✅ Active uploads retrieved:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Error getting active uploads:", error);
     throw error;
   }
 };

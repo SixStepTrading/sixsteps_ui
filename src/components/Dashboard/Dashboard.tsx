@@ -20,6 +20,7 @@ import OrderConfirmationModal, { ProductItem, OrderData } from '../common/molecu
 import AddProductModal, { ProductFormData } from '../common/molecules/AddProductModal';
 import SupplierStockUploadModal from '../common/molecules/SupplierStockUploadModal';
 import AdminStockManagementModal from '../common/molecules/AdminStockManagementModal';
+import ActiveUploadsModal from '../common/molecules/ActiveUploadsModal';
 import { v4 as uuid } from 'uuid';
 import ProductTable from './ProductTable';
 import TableSkeleton from '../common/atoms/TableSkeleton';
@@ -196,6 +197,9 @@ const Dashboard: React.FC = () => {
   // New state for stock upload modals
   const [isSupplierStockModalOpen, setIsSupplierStockModalOpen] = useState(false);
   const [isAdminStockModalOpen, setIsAdminStockModalOpen] = useState(false);
+
+  // State for Active Uploads modal
+  const [isActiveUploadsModalOpen, setIsActiveUploadsModalOpen] = useState(false);
 
   // New state for selection problems
   const [selectionWithProblems, setSelectionWithProblems] = useState(false);
@@ -1195,6 +1199,14 @@ const Dashboard: React.FC = () => {
     setIsAdminStockModalOpen(false);
   };
 
+  const handleOpenActiveUploadsModal = () => {
+    setIsActiveUploadsModalOpen(true);
+  };
+
+  const handleCloseActiveUploadsModal = () => {
+    setIsActiveUploadsModalOpen(false);
+  };
+
   // Handle successful stock upload - refresh products
   const handleStockUploadSuccess = () => {
     showToast('Stock data uploaded successfully!', 'success');
@@ -1406,6 +1418,7 @@ const Dashboard: React.FC = () => {
         onUploadProduct={handleUploadButtonClick}
         onUploadStock={handleOpenSupplierStockModal}
         onManageStock={handleOpenAdminStockModal}
+        onViewActiveUploads={handleOpenActiveUploadsModal}
         onRefresh={handleRefresh}
         filterValues={filterValues}
         onFilterChange={setFilterValues}
@@ -1456,6 +1469,12 @@ const Dashboard: React.FC = () => {
         onClose={handleCloseAdminStockModal}
         onSuccess={handleStockUploadSuccess}
         suppliers={suppliers}
+      />
+
+      {/* Active Uploads Modal */}
+      <ActiveUploadsModal
+        open={isActiveUploadsModalOpen}
+        onClose={handleCloseActiveUploadsModal}
       />
     </div>
   );

@@ -32,6 +32,7 @@ type ProductTableProps = {
   onUploadProduct?: () => void;
   onUploadStock?: () => void;      // New: Supplier stock upload
   onManageStock?: () => void;      // New: Admin stock management  
+  onViewActiveUploads?: () => void; // New: View active uploads
   onRefresh?: () => void;
   // Filter controls
   filterValues?: {
@@ -159,6 +160,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
   onUploadProduct,
   onUploadStock,
   onManageStock,
+  onViewActiveUploads,
   onRefresh,
   filterValues,
   onFilterChange,
@@ -396,9 +398,26 @@ const ProductTable: React.FC<ProductTableProps> = ({
               </svg>
               Manage Stock
             </button>
-          )}
-          
-          {onRefresh && (
+                      )}
+            
+            {onViewActiveUploads && (
+              <button
+                className={`flex items-center gap-1 border text-sm py-1 px-3 rounded 
+                  ${loading || fileUploading 
+                    ? 'border-gray-300 dark:border-dark-border-primary text-gray-400 dark:text-dark-text-disabled cursor-not-allowed' 
+                    : 'border-purple-500 dark:border-purple-400 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors'}
+                `}
+                onClick={onViewActiveUploads}
+                disabled={loading || fileUploading}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                </svg>
+                Active Uploads
+              </button>
+            )}
+
+            {onRefresh && (
             <button 
               className={`flex items-center gap-1 border text-sm py-1 px-3 rounded 
                 ${loading || fileUploading 
