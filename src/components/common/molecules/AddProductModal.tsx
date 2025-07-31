@@ -693,55 +693,26 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
           const transformedFile = await transformFileWithCorrectColumns(selectedFiles[0], columnMapping);
           console.log('🔄 File transformed with API-compliant column names');
           
-          // Debug: Log actual file content for first few lines
-          console.log('🔍 Debugging transformed file content...');
-          const fileText = await transformedFile.text();
-          const firstLines = fileText.split('\n').slice(0, 5);
-          console.log('📄 First 5 lines of transformed file:', firstLines);
+          // Debug: Log transformed file details
+          console.log('🔍 Transformed file ready for upload:');
           console.log('📏 File size:', transformedFile.size, 'bytes');
           console.log('📝 File type:', transformedFile.type);
           console.log('📁 File name:', transformedFile.name);
           
-          // Create a minimal test file to verify API format expectations
-          const testCsvContent = `sku;name;ean;vat;price
-123456;Test Product;1234567890123;22;15,99
-789012;Another Test;;10;9,50`;
+          // Use the properly transformed file directly
+          const fileToUpload = transformedFile;
           
-          const testFile = new File(['\uFEFF' + testCsvContent], 'test_api_format.csv', { 
-            type: 'text/csv;charset=utf-8' 
-          });
-          
-          console.log('🧪 Testing with minimal file first...');
-          console.log('📄 Test file content:', testCsvContent);
-          
-          // Recreate the file to ensure it's properly readable
-          const finalFile = new File([fileText], transformedFile.name, { 
-            type: 'text/csv;charset=utf-8' 
-          });
-          
-          // Try with test file first for debugging
-          const useTestFile = true; // Set to true to test with minimal file
-          const fileToUpload = useTestFile ? testFile : finalFile;
-          
-          console.log(`📤 Uploading ${useTestFile ? 'TEST' : 'FULL'} file:`, {
+          console.log('📤 Uploading transformed file:', {
             name: fileToUpload.name,
             size: fileToUpload.size,
             type: fileToUpload.type
           });
           
-          // Create 1:1 column mapping for API compliance 
-          // (API might require columnMapping even for pre-formatted files)
-          const apiColumnMapping: ColumnMapping = {
-            'sku': 'sku',
-            'name': 'name', 
-            'ean': 'ean',
-            'vat': 'vat',
-            'price': 'price'
-          };
+          // File is already transformed with correct API headers: sku;name;ean;vat;price
+          // No column mapping needed since headers match API expectations
+          console.log('📋 File already has API-compliant headers - no mapping needed');
           
-          console.log('📋 Using 1:1 API column mapping:', apiColumnMapping);
-          
-          const result = await uploadProductsCSV(fileToUpload, apiColumnMapping);
+          const result = await uploadProductsCSV(fileToUpload, {});
           
           console.log('🔍 API Response received:', {
             result: result,
