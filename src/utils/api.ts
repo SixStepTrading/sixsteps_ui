@@ -1,23 +1,14 @@
 import axios from 'axios';
+import * as XLSX from 'xlsx';
 import { Product, ProductPrice } from '../data/mockProducts';
 import { staticMockProducts } from '../data/staticMockData';
-
-// Base URL for the pharmaceutical products API
-const API_BASE_URL = 'https://api.pharmaceutical-database.io/v1';
 
 // Sixstep Core API Configuration
 const SIXSTEP_CORE_URL = process.env.REACT_APP_SIXSTEP_CORE_URL || 'https://sixstep-be-uq52c.ondigitalocean.app';
 
-// API key for authentication
-const API_KEY = process.env.REACT_APP_PHARMA_API_KEY || '';
-
-// Create axios instance with common configuration
-const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${API_KEY}`
-  }
+console.log('🌐 API Configuration:', {
+  SIXSTEP_CORE_URL,
+  environment: process.env.NODE_ENV
 });
 
 // Create Sixstep Core axios instance
@@ -72,11 +63,14 @@ export const fetchProducts = async (
   products: Product[], 
   totalCount: number, 
   categories: string[], 
-  manufacturers: string[] 
+  manufacturers: string[],
+  suppliers: string[]
 }> => {
   try {
-    // Build query parameters
-    const params: Record<string, any> = {
+    console.log('🚀 Fetching products from Sixstep Core API...');
+    
+    // Build payload for Sixstep Core API
+    const payload: Record<string, any> = {
       page,
       limit,
       ...filters.searchTerm && { search: filters.searchTerm },
@@ -87,38 +81,95 @@ export const fetchProducts = async (
       ...filters.maxPrice !== undefined && { maxPrice: filters.maxPrice }
     };
 
-    const response = await apiClient.get('/products', { params });
+    console.log('📦 Calling POST /products/get with payload:', payload);
+    const response = await sixstepClient.post('/products/get', payload);
+    
+    console.log('✅ Sixstep Core API response:', response.data);
+    
+    // Check if response has the expected structure
+    if (!response.data || !Array.isArray(response.data.products)) {
+      console.warn('⚠️ Unexpected API response structure, using fallback');
+      throw new Error('Invalid API response structure');
+    }
     
     // Transform the API response to match our Product interface
     const products: Product[] = response.data.products.map((item: any) => {
-      // Transform supplier prices to match our ProductPrice interface
-      const bestPrices: ProductPrice[] = item.suppliers.map((supplier: any) => ({
-        supplier: supplier.name,
-        price: supplier.price,
-        stock: supplier.stockQuantity
-      })).sort((a: ProductPrice, b: ProductPrice) => a.price - b.price);
+      // Handle supplies/suppliers - check if they're integrated in the product
+      let bestPrices: ProductPrice[] = [];
+      
+      if (item.supplies && Array.isArray(item.supplies)) {
+        // New format with integrated supplies
+        bestPrices = item.supplies.map((supply: any) => ({
+          supplier: supply.supplier || supply.supplierName || 'Unknown Supplier',
+          price: supply.price || supply.publicPrice || 0,
+          stock: supply.stock || supply.quantity || 0
+        }));
+      } else if (item.suppliers && Array.isArray(item.suppliers)) {
+        // Old format with separate suppliers
+        bestPrices = item.suppliers.map((supplier: any) => ({
+          supplier: supplier.name || supplier.supplier || 'Unknown Supplier',
+          price: supplier.price || supplier.publicPrice || 0,
+          stock: supplier.stockQuantity || supplier.stock || 0
+        }));
+      } else {
+        // No supply data, create default entry
+        bestPrices = [{
+          supplier: 'Internal Stock',
+          price: item.publicPrice || 0,
+          stock: 0
+        }];
+      }
+      
+      // Sort by price
+      bestPrices.sort((a: ProductPrice, b: ProductPrice) => a.price - b.price);
 
       return {
-        id: item.id.toString(),
-        ean: item.ean,
-        minsan: item.minsan || '', // Handle the Minsan field from API
-        name: item.name,
-        description: item.description,
-        manufacturer: item.manufacturer,
-        category: item.category,
-        publicPrice: item.publicPrice,
-        vat: item.vatRate,
+        id: item.id?.toString() || item._id?.toString() || '',
+        ean: item.ean || item.EAN || '',
+        minsan: item.minsan || item.MINSAN || '',
+        name: item.name || item.productName || 'Unknown Product',
+        description: item.description || '',
+        manufacturer: item.manufacturer || 'Unknown Manufacturer',
+        category: item.category || 'Uncategorized',
+        publicPrice: item.publicPrice || item.price || 0,
+        vat: item.vatRate || item.vat || 22,
         bestPrices,
         inStock: bestPrices.some(price => price.stock > 0)
       };
     });
 
-    return {
+    // Extract unique suppliers from products
+    const allSuppliers = new Set<string>();
+    products.forEach(product => {
+      product.bestPrices.forEach(price => {
+        if (price.supplier) {
+          allSuppliers.add(price.supplier);
+        }
+      });
+    });
+
+    console.log(`✅ Processed ${products.length} products`);
+
+    // Extract unique values for filters
+    const categories = Array.from(new Set(products.map(p => p.category).filter(Boolean))).sort();
+    const manufacturers = Array.from(new Set(products.map(p => p.manufacturer).filter(Boolean))).sort();
+
+    const result = {
       products,
-      totalCount: response.data.totalCount,
-      categories: response.data.categories || [],
-      manufacturers: response.data.manufacturers || []
+      totalCount: response.data.totalCount || products.length,
+      categories,
+      manufacturers,
+      suppliers: Array.from(allSuppliers).sort()
     };
+
+    console.log('📊 Final result stats:', {
+      products: result.products.length,
+      categories: result.categories.length,
+      manufacturers: result.manufacturers.length,
+      suppliers: result.suppliers.length
+    });
+
+    return result;
   } catch (error) {
     console.error('Error fetching pharmaceutical products:', error);
     throw error;
@@ -130,20 +181,32 @@ export const getFallbackProducts = async (): Promise<{
   products: Product[], 
   totalCount: number, 
   categories: string[], 
-  manufacturers: string[] 
+  manufacturers: string[],
+  suppliers: string[]
 }> => {
   // Use the static mock products directly
   console.log(`Using ${staticMockProducts.length} static mock products`);
   
-  // Extract unique categories and manufacturers
+  // Extract unique categories, manufacturers, and suppliers
   const categories = Array.from(new Set(staticMockProducts.map(p => p.category))).sort();
   const manufacturers = Array.from(new Set(staticMockProducts.map(p => p.manufacturer))).sort();
+  
+  // Extract unique suppliers from all products
+  const allSuppliers = new Set<string>();
+  staticMockProducts.forEach(product => {
+    product.bestPrices.forEach(price => {
+      if (price.supplier) {
+        allSuppliers.add(price.supplier);
+      }
+    });
+  });
   
   return {
     products: staticMockProducts,
     totalCount: staticMockProducts.length,
     categories,
-    manufacturers
+    manufacturers,
+    suppliers: Array.from(allSuppliers).sort()
   };
 };
 
@@ -777,6 +840,298 @@ export const downloadLogs = async (): Promise<void> => {
     console.log('Logs CSV downloaded successfully');
   } catch (error) {
     console.error('Error downloading logs:', error);
+    throw error;
+  }
+};
+
+// ===== UPLOAD ENDPOINTS =====
+
+// Interface for column mapping
+export interface ColumnMapping {
+  [key: string]: string; // column header -> field name
+}
+
+// Interface for upload validation response
+export interface UploadValidationResponse {
+  success: boolean;
+  message: string;
+  detectedColumns: string[];
+  suggestedMappings?: ColumnMapping;
+  previewData?: any[];
+}
+
+// Interface for upload response
+export interface UploadResponse {
+  success: boolean;
+  message: string;
+  processedRows?: number;
+  errors?: string[];
+  uploadId?: string; // Upload ID for progress tracking
+  error?: boolean; // For error responses
+  reason?: string; // Error reason
+  upload_id?: string; // Alternative uploadId format
+  id?: string; // Alternative ID format
+}
+
+// Interface for upload progress response
+export interface UploadProgressResponse {
+  uploadId: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  progress: number; // 0-100
+  currentStep: string;
+  totalSteps: number;
+  currentStepIndex: number;
+  processedRows?: number;
+  totalRows?: number;
+  errors?: string[];
+  message: string;
+  estimatedTimeRemaining?: number; // in seconds
+}
+
+// Upload Products CSV (Admin only) - for updating general product database
+export const uploadProductsCSV = async (
+  file: File, 
+  columnMapping: ColumnMapping
+): Promise<UploadResponse> => {
+  try {
+    console.log('🚀 Starting products file upload...', { fileName: file.name, mapping: columnMapping });
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('columnMapping', JSON.stringify(columnMapping));
+
+        const response = await sixstepClient.post('/upload/products', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    console.log('✅ Products file uploaded successfully:', response.data);
+    console.log('🔍 Raw API Response Details:', {
+      status: response.status,
+      statusText: response.statusText,
+      data: response.data,
+      dataType: typeof response.data,
+      dataKeys: Object.keys(response.data || {}),
+      hasUploadId: !!(response.data && response.data.uploadId),
+      uploadId: response.data?.uploadId,
+      success: response.data?.success,
+      error: response.data?.error
+    });
+    
+    // Check if server returned an error even with 200 status
+    if (response.data?.error || response.data?.success === false) {
+      console.error('❌ Server returned error in response body:', response.data);
+      throw new Error(response.data?.message || response.data?.reason || 'Server returned error');
+    }
+    
+    return response.data;
+  } catch (error) {
+    console.error('❌ Error uploading products:', error);
+    throw error;
+  }
+};
+
+// Upload Supplies CSV (Supplier) - for updating own stock levels
+export const uploadSuppliesCSV = async (
+  file: File, 
+  columnMapping: ColumnMapping
+): Promise<UploadResponse> => {
+  try {
+    console.log('🚀 Starting supplies CSV upload...', { fileName: file.name, mapping: columnMapping });
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('columnMapping', JSON.stringify(columnMapping));
+
+    const response = await sixstepClient.post('/upload/supplies', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    console.log('✅ Supplies uploaded successfully:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('❌ Error uploading supplies:', error);
+    throw error;
+  }
+};
+
+// Upload Supplies CSV (Admin) - for updating specific supplier's stock levels
+export const uploadSuppliesAdminCSV = async (
+  file: File, 
+  columnMapping: ColumnMapping,
+  supplierId: string
+): Promise<UploadResponse> => {
+  try {
+    console.log('🚀 Starting admin supplies file upload...', { 
+      fileName: file.name, 
+      fileSize: file.size,
+      fileType: file.type,
+      mapping: columnMapping, 
+      supplierId 
+    });
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('columnMapping', JSON.stringify(columnMapping));
+    formData.append('supplierId', supplierId);
+
+    console.log('📤 FormData prepared:', {
+      fileAppended: formData.has('file'),
+      mappingAppended: formData.has('columnMapping'),
+      supplierAppended: formData.has('supplierId')
+    });
+
+    console.log('🌐 Making API request to: POST /upload/supplies/admin');
+    console.log('📡 Request headers will include: Content-Type: multipart/form-data');
+    
+    const response = await sixstepClient.post('/upload/supplies/admin', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    console.log('✅ Admin supplies uploaded successfully!');
+    console.log('📊 API Response status:', response.status);
+    console.log('📊 API Response data:', response.data);
+    console.log('📊 API Response headers:', response.headers);
+    
+    return response.data;
+  } catch (error: any) {
+    console.error('❌ Error uploading admin supplies:', error);
+    
+    if (error.response) {
+      console.error('📍 API Error Details:');
+      console.error('  Status:', error.response.status);
+      console.error('  Status Text:', error.response.statusText);  
+      console.error('  Data:', error.response.data);
+      console.error('  Headers:', error.response.headers);
+    } else if (error.request) {
+      console.error('📍 Network Error - No response received:');
+      console.error('  Request:', error.request);
+    } else {
+      console.error('📍 Request Setup Error:', error.message);
+    }
+    
+    throw error;
+  }
+};
+
+// Validate CSV/Excel file and get column headers (reads only first row for performance)
+export const validateCSVHeaders = async (file: File): Promise<UploadValidationResponse> => {
+  return new Promise((resolve, reject) => {
+    const isExcelFile = file.name.match(/\.(xlsx?|xls)$/i);
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      try {
+        console.log('📋 Validating file headers for:', file.name);
+        let headers: string[] = [];
+        
+        if (isExcelFile) {
+          // Handle Excel files using XLSX library
+          console.log('📊 Processing Excel file...');
+          const data = e.target?.result as ArrayBuffer;
+          const workbook = XLSX.read(data, { type: 'array' });
+          
+          // Get first worksheet
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+          
+          // Extract headers from first row
+          headers = (jsonData[0] as string[]) || [];
+          console.log('📊 Excel headers detected:', headers);
+                 } else {
+           // Handle CSV files as text
+           console.log('📊 Processing CSV file...');
+           const content = e.target?.result as string;
+           
+           // Get only first line for performance (as requested)
+           const firstLine = content.split('\n')[0];
+           
+           // Try different separators (comma, semicolon)
+           let separator = ',';
+           if (firstLine.includes(';') && firstLine.split(';').length > firstLine.split(',').length) {
+             separator = ';';
+             console.log('📊 Detected semicolon separator');
+           } else {
+             console.log('📊 Using comma separator');
+           }
+           
+           headers = firstLine.split(separator).map(h => h.trim().replace(/['"]/g, ''));
+           console.log('📊 CSV headers detected:', headers);
+         }
+        
+        // Suggest mappings based on common column patterns
+        const suggestedMappings: ColumnMapping = {};
+        headers.forEach(header => {
+          const lowerHeader = header.toLowerCase();
+          
+          // Common product field mappings (English and Italian) - Updated for separate SKU/EAN
+          if (lowerHeader === 'name' || lowerHeader.includes('nome') || lowerHeader.includes('descrizione')) {
+            suggestedMappings[header] = 'name';
+          } else if (lowerHeader === 'sku' || lowerHeader.includes('code') || lowerHeader.includes('codice')) {
+            suggestedMappings[header] = 'sku';
+          } else if (lowerHeader.includes('minsan')) {
+            suggestedMappings[header] = 'minsan';
+          } else if (lowerHeader === 'ean') {
+            suggestedMappings[header] = 'ean';
+          } else if (lowerHeader === 'price' || lowerHeader.includes('prezzo')) {
+            suggestedMappings[header] = 'price';
+          } else if (lowerHeader.includes('stock') || lowerHeader.includes('giacenza') || lowerHeader.includes('quantit')) {
+            suggestedMappings[header] = 'stock';
+          } else if (lowerHeader.includes('manufacturer') || lowerHeader.includes('produttore') || lowerHeader.includes('ditta')) {
+            suggestedMappings[header] = 'manufacturer';
+          } else if (lowerHeader === 'vat' || lowerHeader.includes('iva')) {
+            suggestedMappings[header] = 'vat';
+          } else if (lowerHeader.includes('supplier') || lowerHeader.includes('fornitore')) {
+            suggestedMappings[header] = 'supplier';
+          }
+        });
+
+        console.log('🎯 Suggested mappings:', suggestedMappings);
+
+        resolve({
+          success: true,
+          message: 'File headers detected successfully',
+          detectedColumns: headers,
+          suggestedMappings
+        });
+      } catch (error) {
+        console.error('❌ Error parsing file:', error);
+        reject(new Error(`Error parsing file: ${error}`));
+      }
+    };
+    
+    reader.onerror = () => {
+      console.error('❌ Error reading file');
+      reject(new Error('Error reading file'));
+    };
+    
+    // Use appropriate reader method based on file type
+    if (isExcelFile) {
+      reader.readAsArrayBuffer(file);
+    } else {
+      reader.readAsText(file);
+    }
+  });
+};
+
+// Get upload progress by upload ID
+export const getUploadProgress = async (uploadId: string): Promise<UploadProgressResponse> => {
+  try {
+    console.log(`📊 Getting upload progress for ID: ${uploadId}`);
+    
+    const response = await sixstepClient.post('/upload/progress', {
+      uploadId
+    });
+
+    console.log('✅ Upload progress response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('❌ Error getting upload progress:', error);
     throw error;
   }
 }; 

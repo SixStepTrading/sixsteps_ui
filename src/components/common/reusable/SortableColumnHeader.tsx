@@ -3,9 +3,7 @@ import {
   Box, 
   TableCell, 
   TableCellProps, 
-  TableSortLabel, 
-  Tooltip, 
-  IconButton 
+  Tooltip 
 } from '@mui/material';
 import { 
   ArrowUpward as ArrowUpwardIcon,
