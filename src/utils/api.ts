@@ -1,28 +1,30 @@
-import axios from 'axios';
-import * as XLSX from 'xlsx';
-import { Product, ProductPrice } from '../data/mockProducts';
-import { staticMockProducts } from '../data/staticMockData';
+import axios from "axios";
+import * as XLSX from "xlsx";
+import { Product, ProductPrice } from "../data/mockProducts";
+import { staticMockProducts } from "../data/staticMockData";
 
 // Sixstep Core API Configuration
-const SIXSTEP_CORE_URL = process.env.REACT_APP_SIXSTEP_CORE_URL || 'https://sixstep-be-uq52c.ondigitalocean.app';
+const SIXSTEP_CORE_URL =
+  process.env.REACT_APP_SIXSTEP_CORE_URL ||
+  "https://sixstep-be-uq52c.ondigitalocean.app";
 
-console.log('🌐 API Configuration:', {
+console.log("🌐 API Configuration:", {
   SIXSTEP_CORE_URL,
-  environment: process.env.NODE_ENV
+  environment: process.env.NODE_ENV,
 });
 
 // Create Sixstep Core axios instance
 const sixstepClient = axios.create({
   baseURL: SIXSTEP_CORE_URL,
   headers: {
-    'Content-Type': 'application/json'
-  }
+    "Content-Type": "application/json",
+  },
 });
 
 // Request interceptor to add session token dynamically
 sixstepClient.interceptors.request.use(
   (config) => {
-    const sessionToken = localStorage.getItem('sixstep_token');
+    const sessionToken = localStorage.getItem("sixstep_token");
     if (sessionToken) {
       config.headers.Authorization = `Bearer ${sessionToken}`;
     }
@@ -39,9 +41,9 @@ sixstepClient.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       // Token expired or invalid
-      localStorage.removeItem('sixstep_token');
-      localStorage.removeItem('sixstep_user');
-      window.location.href = '/login';
+      localStorage.removeItem("sixstep_token");
+      localStorage.removeItem("sixstep_user");
+      window.location.href = "/login";
     }
     return Promise.reject(error);
   }
@@ -59,89 +61,92 @@ export const fetchProducts = async (
     minPrice?: number;
     maxPrice?: number;
   } = {}
-): Promise<{ 
-  products: Product[], 
-  totalCount: number, 
-  categories: string[], 
-  manufacturers: string[],
-  suppliers: string[]
+): Promise<{
+  products: Product[];
+  totalCount: number;
+  categories: string[];
+  manufacturers: string[];
+  suppliers: string[];
 }> => {
   try {
-    console.log('🚀 Fetching products from Sixstep Core API...');
-    
+    console.log("🚀 Fetching products from Sixstep Core API...");
+
     // Build payload for Sixstep Core API
     const payload: Record<string, any> = {
       page,
       limit,
-      ...filters.searchTerm && { search: filters.searchTerm },
-      ...filters.category && { category: filters.category },
-      ...filters.manufacturer && { manufacturer: filters.manufacturer },
-      ...filters.inStockOnly && { inStock: true },
-      ...filters.minPrice !== undefined && { minPrice: filters.minPrice },
-      ...filters.maxPrice !== undefined && { maxPrice: filters.maxPrice }
+      ...(filters.searchTerm && { search: filters.searchTerm }),
+      ...(filters.category && { category: filters.category }),
+      ...(filters.manufacturer && { manufacturer: filters.manufacturer }),
+      ...(filters.inStockOnly && { inStock: true }),
+      ...(filters.minPrice !== undefined && { minPrice: filters.minPrice }),
+      ...(filters.maxPrice !== undefined && { maxPrice: filters.maxPrice }),
     };
 
-    console.log('📦 Calling POST /products/get with payload:', payload);
-    const response = await sixstepClient.post('/products/get', payload);
-    
-    console.log('✅ Sixstep Core API response:', response.data);
-    
+    console.log("📦 Calling POST /products/get with payload:", payload);
+    const response = await sixstepClient.post("/products/get", payload);
+
+    console.log("✅ Sixstep Core API response:", response.data);
+
     // Check if response has the expected structure
     if (!response.data || !Array.isArray(response.data.products)) {
-      console.warn('⚠️ Unexpected API response structure, using fallback');
-      throw new Error('Invalid API response structure');
+      console.warn("⚠️ Unexpected API response structure, using fallback");
+      throw new Error("Invalid API response structure");
     }
-    
+
     // Transform the API response to match our Product interface
     const products: Product[] = response.data.products.map((item: any) => {
       // Handle supplies/suppliers - check if they're integrated in the product
       let bestPrices: ProductPrice[] = [];
-      
+
       if (item.supplies && Array.isArray(item.supplies)) {
         // New format with integrated supplies
         bestPrices = item.supplies.map((supply: any) => ({
-          supplier: supply.supplier || supply.supplierName || 'Unknown Supplier',
+          supplier:
+            supply.supplier || supply.supplierName || "Unknown Supplier",
           price: supply.price || supply.publicPrice || 0,
-          stock: supply.stock || supply.quantity || 0
+          stock: supply.stock || supply.quantity || 0,
         }));
       } else if (item.suppliers && Array.isArray(item.suppliers)) {
         // Old format with separate suppliers
         bestPrices = item.suppliers.map((supplier: any) => ({
-          supplier: supplier.name || supplier.supplier || 'Unknown Supplier',
+          supplier: supplier.name || supplier.supplier || "Unknown Supplier",
           price: supplier.price || supplier.publicPrice || 0,
-          stock: supplier.stockQuantity || supplier.stock || 0
+          stock: supplier.stockQuantity || supplier.stock || 0,
         }));
       } else {
         // No supply data, create default entry
-        bestPrices = [{
-          supplier: 'Internal Stock',
-          price: item.publicPrice || 0,
-          stock: 0
-        }];
+        bestPrices = [
+          {
+            supplier: "Internal Stock",
+            price: item.publicPrice || 0,
+            stock: 0,
+          },
+        ];
       }
-      
+
       // Sort by price
       bestPrices.sort((a: ProductPrice, b: ProductPrice) => a.price - b.price);
 
       return {
-        id: item.id?.toString() || item._id?.toString() || '',
-        ean: item.ean || item.EAN || '',
-        minsan: item.minsan || item.MINSAN || '',
-        name: item.name || item.productName || 'Unknown Product',
-        description: item.description || '',
-        manufacturer: item.manufacturer || 'Unknown Manufacturer',
-        category: item.category || 'Uncategorized',
+        id: item.id?.toString() || item._id?.toString() || "",
+        ean: item.ean || item.EAN || "",
+        minsan: item.minsan || item.MINSAN || "",
+        name: item.name || item.productName || "Unknown Product",
+        description: item.description || "",
+        manufacturer: item.manufacturer || "Unknown Manufacturer",
+        category: item.category || "Uncategorized",
         publicPrice: item.publicPrice || item.price || 0,
         vat: item.vatRate || item.vat || 22,
         bestPrices,
-        inStock: bestPrices.some(price => price.stock > 0)
+        inStock: bestPrices.some((price) => price.stock > 0),
       };
     });
 
     // Extract unique suppliers from products
     const allSuppliers = new Set<string>();
-    products.forEach(product => {
-      product.bestPrices.forEach(price => {
+    products.forEach((product) => {
+      product.bestPrices.forEach((price) => {
         if (price.supplier) {
           allSuppliers.add(price.supplier);
         }
@@ -151,62 +156,70 @@ export const fetchProducts = async (
     console.log(`✅ Processed ${products.length} products`);
 
     // Extract unique values for filters
-    const categories = Array.from(new Set(products.map(p => p.category).filter(Boolean))).sort();
-    const manufacturers = Array.from(new Set(products.map(p => p.manufacturer).filter(Boolean))).sort();
+    const categories = Array.from(
+      new Set(products.map((p) => p.category).filter(Boolean))
+    ).sort();
+    const manufacturers = Array.from(
+      new Set(products.map((p) => p.manufacturer).filter(Boolean))
+    ).sort();
 
     const result = {
       products,
       totalCount: response.data.totalCount || products.length,
       categories,
       manufacturers,
-      suppliers: Array.from(allSuppliers).sort()
+      suppliers: Array.from(allSuppliers).sort(),
     };
 
-    console.log('📊 Final result stats:', {
+    console.log("📊 Final result stats:", {
       products: result.products.length,
       categories: result.categories.length,
       manufacturers: result.manufacturers.length,
-      suppliers: result.suppliers.length
+      suppliers: result.suppliers.length,
     });
 
     return result;
   } catch (error) {
-    console.error('Error fetching pharmaceutical products:', error);
+    console.error("Error fetching pharmaceutical products:", error);
     throw error;
   }
 };
 
 // Fallback function to use mock data when API is not available
-export const getFallbackProducts = async (): Promise<{ 
-  products: Product[], 
-  totalCount: number, 
-  categories: string[], 
-  manufacturers: string[],
-  suppliers: string[]
+export const getFallbackProducts = async (): Promise<{
+  products: Product[];
+  totalCount: number;
+  categories: string[];
+  manufacturers: string[];
+  suppliers: string[];
 }> => {
   // Use the static mock products directly
   console.log(`Using ${staticMockProducts.length} static mock products`);
-  
+
   // Extract unique categories, manufacturers, and suppliers
-  const categories = Array.from(new Set(staticMockProducts.map(p => p.category))).sort();
-  const manufacturers = Array.from(new Set(staticMockProducts.map(p => p.manufacturer))).sort();
-  
+  const categories = Array.from(
+    new Set(staticMockProducts.map((p) => p.category))
+  ).sort();
+  const manufacturers = Array.from(
+    new Set(staticMockProducts.map((p) => p.manufacturer))
+  ).sort();
+
   // Extract unique suppliers from all products
   const allSuppliers = new Set<string>();
-  staticMockProducts.forEach(product => {
-    product.bestPrices.forEach(price => {
+  staticMockProducts.forEach((product) => {
+    product.bestPrices.forEach((price) => {
       if (price.supplier) {
         allSuppliers.add(price.supplier);
       }
     });
   });
-  
+
   return {
     products: staticMockProducts,
     totalCount: staticMockProducts.length,
     categories,
     manufacturers,
-    suppliers: Array.from(allSuppliers).sort()
+    suppliers: Array.from(allSuppliers).sort(),
   };
 };
 
@@ -237,11 +250,17 @@ export interface LoginResponse {
 
 export interface Entity {
   id: string;
-  entityType: 'PHARMA' | 'LANDLORD' | 'TENANT' | 'ADMIN' | 'PHARMACY' | 'SUPPLIER';
+  entityType:
+    | "PHARMA"
+    | "LANDLORD"
+    | "TENANT"
+    | "ADMIN"
+    | "PHARMACY"
+    | "SUPPLIER";
   entityName: string;
   country?: string;
   notes?: string;
-  status?: 'ACTIVE' | 'INACTIVE';
+  status?: "ACTIVE" | "INACTIVE";
   referralName?: string;
   referralContacts?: string;
   username?: string;
@@ -251,17 +270,23 @@ export interface Entity {
 }
 
 export interface CreateEntityData {
-  entityType: 'PHARMA' | 'LANDLORD' | 'TENANT' | 'ADMIN' | 'PHARMACY' | 'SUPPLIER';
+  entityType:
+    | "PHARMA"
+    | "LANDLORD"
+    | "TENANT"
+    | "ADMIN"
+    | "PHARMACY"
+    | "SUPPLIER";
   entityName: string;
   country: string;
   notes?: string;
-  status: 'ACTIVE' | 'INACTIVE';
+  status: "ACTIVE" | "INACTIVE";
 }
 
 export interface CreateUserData {
   name: string;
   surname: string;
-  role: 'admin' | 'user';
+  role: "admin" | "user";
   email: string;
   entity: string; // Entity ID
   password: string;
@@ -282,52 +307,55 @@ export interface UserResponse {
 // SIXSTEP CORE API FUNCTIONS
 
 // Login function
-export const login = async (credentials: LoginCredentials): Promise<LoginResponse> => {
+export const login = async (
+  credentials: LoginCredentials
+): Promise<LoginResponse> => {
   try {
     console.log(`Attempting login to ${SIXSTEP_CORE_URL}/users/login`);
-    const response = await sixstepClient.post('/users/login', credentials);
-    
+    const response = await sixstepClient.post("/users/login", credentials);
+
     // Debug: log the actual response structure
-    console.log('Login API Response:', response.data);
-    
+    console.log("Login API Response:", response.data);
+
     // Check for successful login (error: false means success)
     if (response.data.error === false && response.data.session) {
       // Store session token and refresh token
-      localStorage.setItem('sixstep_token', response.data.session);
-      localStorage.setItem('sixstep_refresh_token', response.data.refreshToken);
-      
+      localStorage.setItem("sixstep_token", response.data.session);
+      localStorage.setItem("sixstep_refresh_token", response.data.refreshToken);
+
       // Create user object from available data (using nested user object)
       const userData = response.data.user || {};
       const user: AuthUser = {
-        id: userData.id || response.data.userId || 'unknown',
-        role: userData.type || 'user', // Backend uses 'type' field inside user object: 'admin' or 'user'
-        entityType: userData.entityType || response.data.entityType || 'ADMIN',
-        entityName: userData.entityName || response.data.entityName || 'Unknown Entity',
-        referralName: userData.name + ' ' + userData.surname || 'Admin User',
+        id: userData.id || response.data.userId || "unknown",
+        role: userData.type || "user", // Backend uses 'type' field inside user object: 'admin' or 'user'
+        entityType: userData.entityType || response.data.entityType || "ADMIN",
+        entityName:
+          userData.entityName || response.data.entityName || "Unknown Entity",
+        referralName: userData.name + " " + userData.surname || "Admin User",
         referralContacts: userData.email || credentials.email,
         username: userData.email || credentials.email,
-        crmId: userData.crmId || response.data.crmId || '',
-        notes: userData.notes || response.data.notes || ''
+        crmId: userData.crmId || response.data.crmId || "",
+        notes: userData.notes || response.data.notes || "",
       };
-      
-      localStorage.setItem('sixstep_user', JSON.stringify(user));
-      
+
+      localStorage.setItem("sixstep_user", JSON.stringify(user));
+
       // Return a compatible response structure
       return {
         success: true,
         token: response.data.session,
         user: user,
-        message: response.data.message || 'Login successful'
+        message: response.data.message || "Login successful",
       };
     }
-    
-    throw new Error(response.data.message || 'Login failed');
+
+    throw new Error(response.data.message || "Login failed");
   } catch (error: any) {
-    console.error('Login API error:', error);
+    console.error("Login API error:", error);
     throw new Error(
-      error.response?.data?.message || 
-      error.message || 
-      'Network error during login'
+      error.response?.data?.message ||
+        error.message ||
+        "Network error during login"
     );
   }
 };
@@ -336,52 +364,60 @@ export const login = async (credentials: LoginCredentials): Promise<LoginRespons
 export const logout = async (): Promise<void> => {
   try {
     // Call logout endpoint if available (might be /users/logout or similar)
-    await sixstepClient.post('/users/logout');
+    await sixstepClient.post("/users/logout");
   } catch (error) {
-    console.warn('Logout endpoint error:', error);
+    console.warn("Logout endpoint error:", error);
   } finally {
     // Always clear local storage
-    localStorage.removeItem('sixstep_token');
-    localStorage.removeItem('sixstep_refresh_token');
-    localStorage.removeItem('sixstep_user');
+    localStorage.removeItem("sixstep_token");
+    localStorage.removeItem("sixstep_refresh_token");
+    localStorage.removeItem("sixstep_user");
   }
 };
 
 // Get all entities
 export const getAllEntities = async (): Promise<Entity[]> => {
   try {
-    const response = await sixstepClient.get('/entities/get/all');
-    console.log('Raw API response:', response.data);
-    
+    const response = await sixstepClient.get("/entities/get/all");
+    console.log("Raw API response:", response.data);
+
     // Extract entities from the response structure
-    if (response.data && response.data.entities && Array.isArray(response.data.entities)) {
+    if (
+      response.data &&
+      response.data.entities &&
+      Array.isArray(response.data.entities)
+    ) {
       const entities = response.data.entities.map((item: any) => ({
         id: item.entity._id, // Map _id to id
         entityType: item.entity.entityType,
         entityName: item.entity.entityName,
-        country: item.entity.country || 'Unknown',
-        notes: item.entity.notes || '',
-        status: item.entity.status || 'ACTIVE',
-        referralName: item.entity.referralName || '',
-        referralContacts: item.entity.referralContacts || '',
-        username: item.entity.username || '',
-        crmId: item.entity.crmId || '',
-        createdAt: item.entity.createdAt || new Date(item.entity.lastUpdated).toISOString(),
-        updatedAt: item.entity.updatedAt || new Date(item.entity.lastUpdated).toISOString()
+        country: item.entity.country || "Unknown",
+        notes: item.entity.notes || "",
+        status: item.entity.status || "ACTIVE",
+        referralName: item.entity.referralName || "",
+        referralContacts: item.entity.referralContacts || "",
+        username: item.entity.username || "",
+        crmId: item.entity.crmId || "",
+        createdAt:
+          item.entity.createdAt ||
+          new Date(item.entity.lastUpdated).toISOString(),
+        updatedAt:
+          item.entity.updatedAt ||
+          new Date(item.entity.lastUpdated).toISOString(),
       }));
-      
-      console.log('Processed entities:', entities);
+
+      console.log("Processed entities:", entities);
       return entities;
     }
-    
-    console.warn('No entities found in response');
+
+    console.warn("No entities found in response");
     return [];
   } catch (error: any) {
-    console.error('Get all entities error:', error);
+    console.error("Get all entities error:", error);
     throw new Error(
       error.response?.data?.message ||
-      error.message ||
-      'Failed to fetch entities'
+        error.message ||
+        "Failed to fetch entities"
     );
   }
 };
@@ -392,90 +428,98 @@ export const getEntity = async (entityId: string): Promise<Entity> => {
     const response = await sixstepClient.get(`/entities/get/${entityId}`);
     return response.data;
   } catch (error: any) {
-    console.error('Get entity error:', error);
+    console.error("Get entity error:", error);
     throw new Error(
-      error.response?.data?.message || 
-      error.message || 
-      'Failed to fetch entity'
+      error.response?.data?.message || error.message || "Failed to fetch entity"
     );
   }
 };
 
 // Update entity
-export const updateEntity = async (entityData: Partial<Entity> & { entityId: string }): Promise<Entity> => {
+export const updateEntity = async (
+  entityData: Partial<Entity> & { entityId: string }
+): Promise<Entity> => {
   try {
-    const response = await sixstepClient.post('/entities/update', entityData);
+    const response = await sixstepClient.post("/entities/update", entityData);
     return response.data;
   } catch (error: any) {
-    console.error('Update entity error:', error);
+    console.error("Update entity error:", error);
     throw new Error(
-      error.response?.data?.message || 
-      error.message || 
-      'Failed to update entity'
+      error.response?.data?.message ||
+        error.message ||
+        "Failed to update entity"
     );
   }
 };
 
 // Create new entity
-export const createEntity = async (entityData: CreateEntityData): Promise<Entity> => {
+export const createEntity = async (
+  entityData: CreateEntityData
+): Promise<Entity> => {
   try {
-    console.log('Creating entity with data:', entityData);
-    const response = await sixstepClient.post('/entities/create', entityData);
-    console.log('Raw Create Entity API response:', response.data);
-    
+    console.log("Creating entity with data:", entityData);
+    const response = await sixstepClient.post("/entities/create", entityData);
+    console.log("Raw Create Entity API response:", response.data);
+
     // Handle different response structures
     if (response.data) {
       // If response has entity wrapped (like other APIs)
       if (response.data.entity) {
-        console.log('Entity found in wrapped structure:', response.data.entity);
+        console.log("Entity found in wrapped structure:", response.data.entity);
         const entity = {
           id: response.data.entity._id || response.data.entity.id,
           entityType: response.data.entity.entityType,
           entityName: response.data.entity.entityName,
-          country: response.data.entity.country || 'Unknown',
-          notes: response.data.entity.notes || '',
-          status: response.data.entity.status || 'ACTIVE',
-          referralName: response.data.entity.referralName || '',
-          referralContacts: response.data.entity.referralContacts || '',
-          username: response.data.entity.username || '',
-          crmId: response.data.entity.crmId || '',
+          country: response.data.entity.country || "Unknown",
+          notes: response.data.entity.notes || "",
+          status: response.data.entity.status || "ACTIVE",
+          referralName: response.data.entity.referralName || "",
+          referralContacts: response.data.entity.referralContacts || "",
+          username: response.data.entity.username || "",
+          crmId: response.data.entity.crmId || "",
           createdAt: response.data.entity.createdAt || new Date().toISOString(),
-          updatedAt: response.data.entity.updatedAt || new Date().toISOString()
+          updatedAt: response.data.entity.updatedAt || new Date().toISOString(),
         };
-        console.log('Processed created entity:', entity);
+        console.log("Processed created entity:", entity);
         return entity;
       }
-      
+
       // If response is direct entity object
       if (response.data._id || response.data.id) {
-        console.log('Entity found as direct object:', response.data);
+        console.log("Entity found as direct object:", response.data);
         const entity = {
           id: response.data._id || response.data.id,
           entityType: response.data.entityType,
           entityName: response.data.entityName,
-          country: response.data.country || 'Unknown',
-          notes: response.data.notes || '',
-          status: response.data.status || 'ACTIVE',
-          referralName: response.data.referralName || '',
-          referralContacts: response.data.referralContacts || '',
-          username: response.data.username || '',
-          crmId: response.data.crmId || '',
+          country: response.data.country || "Unknown",
+          notes: response.data.notes || "",
+          status: response.data.status || "ACTIVE",
+          referralName: response.data.referralName || "",
+          referralContacts: response.data.referralContacts || "",
+          username: response.data.username || "",
+          crmId: response.data.crmId || "",
           createdAt: response.data.createdAt || new Date().toISOString(),
-          updatedAt: response.data.updatedAt || new Date().toISOString()
+          updatedAt: response.data.updatedAt || new Date().toISOString(),
         };
-        console.log('Processed created entity:', entity);
+        console.log("Processed created entity:", entity);
         return entity;
       }
     }
-    
-    console.error('Unexpected create entity response structure:', response.data);
-    throw new Error('Invalid response structure from create entity API');
+
+    console.error(
+      "Unexpected create entity response structure:",
+      response.data
+    );
+    throw new Error("Invalid response structure from create entity API");
   } catch (error: any) {
-    console.error('Create entity error:', error.response?.data || error.message);
+    console.error(
+      "Create entity error:",
+      error.response?.data || error.message
+    );
     throw new Error(
-      error.response?.data?.message || 
-      error.message || 
-      'Failed to create entity'
+      error.response?.data?.message ||
+        error.message ||
+        "Failed to create entity"
     );
   }
 };
@@ -485,18 +529,22 @@ export const getAllUsers = async (): Promise<UserResponse[]> => {
   try {
     // Empty payload to get all users (no entity filter)
     const searchPayload = {};
-    
-    console.log('Searching users with payload:', searchPayload);
-    const response = await sixstepClient.post('/users/search', searchPayload);
-    console.log('Raw Users Search API response:', response.data);
-    console.log('Response status:', response.status);
-    console.log('Response headers:', response.headers);
-    
+
+    console.log("Searching users with payload:", searchPayload);
+    const response = await sixstepClient.post("/users/search", searchPayload);
+    console.log("Raw Users Search API response:", response.data);
+    console.log("Response status:", response.status);
+    console.log("Response headers:", response.headers);
+
     // Check if response has users data
     if (response.data) {
       // If it's a direct array
       if (Array.isArray(response.data)) {
-        console.log('Users response is direct array:', response.data.length, 'users');
+        console.log(
+          "Users response is direct array:",
+          response.data.length,
+          "users"
+        );
         return response.data.map((user: any) => ({
           id: user.id || user._id,
           name: user.name,
@@ -505,92 +553,109 @@ export const getAllUsers = async (): Promise<UserResponse[]> => {
           email: user.email,
           entity: user.entity,
           createdAt: user.createdAt,
-          updatedAt: user.updatedAt
+          updatedAt: user.updatedAt,
         }));
       }
-      
+
       // If it's nested (e.g., response.data.users)
       if (response.data.users && Array.isArray(response.data.users)) {
-        console.log('Users found in nested structure:', response.data.users.length, 'users');
+        console.log(
+          "Users found in nested structure:",
+          response.data.users.length,
+          "users"
+        );
         const users = response.data.users.map((item: any) => ({
           id: item._id || item.id,
           name: item.name,
           surname: item.surname,
           email: item.email,
           role: item.role || item.type,
-          entity: item.entity || 'Unknown'
+          entity: item.entity || "Unknown",
         }));
         return users;
       }
-      
+
       // If it's nested as results (common in search endpoints)
       if (response.data.results && Array.isArray(response.data.results)) {
-        console.log('Users found in results:', response.data.results.length, 'users');
+        console.log(
+          "Users found in results:",
+          response.data.results.length,
+          "users"
+        );
         const users = response.data.results.map((item: any) => ({
           id: item._id || item.id,
           name: item.name,
           surname: item.surname,
           email: item.email,
           role: item.role || item.type,
-          entity: item.entity || 'Unknown'
+          entity: item.entity || "Unknown",
         }));
         return users;
       }
-      
+
       // If it's a single user object
       if (response.data.user) {
-        console.log('Single user found, converting to array:', response.data.user);
+        console.log(
+          "Single user found, converting to array:",
+          response.data.user
+        );
         const user = {
           id: response.data.user.id,
           name: response.data.user.name,
           surname: response.data.user.surname,
           email: response.data.user.email,
           role: response.data.user.type || response.data.user.role,
-          entity: response.data.user.entity || 'Unknown'
+          entity: response.data.user.entity || "Unknown",
         };
         return [user]; // Return as array with single user
       }
-      
+
       // If the response looks like search result with no matches
       if (response.data.message && response.data.error === false) {
-        console.log('Search successful but no users found');
+        console.log("Search successful but no users found");
         return [];
       }
     }
-    
-    console.warn('Unexpected search response structure:', response.data);
+
+    console.warn("Unexpected search response structure:", response.data);
     return [];
   } catch (error: any) {
-    console.error('Search users error:', error.response?.status, error.response?.statusText);
-    console.error('Error details:', error.response?.data);
-    
+    console.error(
+      "Search users error:",
+      error.response?.status,
+      error.response?.statusText
+    );
+    console.error("Error details:", error.response?.data);
+
     // If 404, the endpoint might not exist
     if (error.response?.status === 404) {
-      console.warn('Users search endpoint not found - API might not have this endpoint yet');
+      console.warn(
+        "Users search endpoint not found - API might not have this endpoint yet"
+      );
       return []; // Return empty array instead of throwing
     }
-    
+
     throw new Error(
-      error.response?.data?.message || 
-      error.message || 
-      'Failed to search users'
+      error.response?.data?.message || error.message || "Failed to search users"
     );
   }
 };
 
 // Create new user (admin or regular user)
-export const createUser = async (userData: CreateUserData): Promise<UserResponse> => {
+export const createUser = async (
+  userData: CreateUserData
+): Promise<UserResponse> => {
   try {
-    console.log('Creating user with data:', userData);
-    const response = await sixstepClient.post('/users/create', userData);
-    console.log('Raw Create User API response:', response.data);
-    console.log('Response status:', response.status);
-    
+    console.log("Creating user with data:", userData);
+    const response = await sixstepClient.post("/users/create", userData);
+    console.log("Raw Create User API response:", response.data);
+    console.log("Response status:", response.status);
+
     // Handle different response structures
     if (response.data) {
       // If response has user wrapped
       if (response.data.user) {
-        console.log('User found in wrapped structure:', response.data.user);
+        console.log("User found in wrapped structure:", response.data.user);
         const user = {
           id: response.data.user._id || response.data.user.id,
           name: response.data.user.name,
@@ -599,15 +664,15 @@ export const createUser = async (userData: CreateUserData): Promise<UserResponse
           role: response.data.user.role || response.data.user.type,
           entity: response.data.user.entity,
           createdAt: response.data.user.createdAt,
-          updatedAt: response.data.user.updatedAt
+          updatedAt: response.data.user.updatedAt,
         };
-        console.log('Processed created user:', user);
+        console.log("Processed created user:", user);
         return user;
       }
-      
+
       // If response is direct user object
       if (response.data.id || response.data._id) {
-        console.log('User found as direct object:', response.data);
+        console.log("User found as direct object:", response.data);
         const user = {
           id: response.data._id || response.data.id,
           name: response.data.name,
@@ -616,27 +681,25 @@ export const createUser = async (userData: CreateUserData): Promise<UserResponse
           role: response.data.role || response.data.type,
           entity: response.data.entity,
           createdAt: response.data.createdAt,
-          updatedAt: response.data.updatedAt
+          updatedAt: response.data.updatedAt,
         };
-        console.log('Processed created user:', user);
+        console.log("Processed created user:", user);
         return user;
       }
-      
-      // If it's a success message with user data  
+
+      // If it's a success message with user data
       if (response.data.message && !response.data.error) {
-        console.log('Success response with message:', response.data.message);
+        console.log("Success response with message:", response.data.message);
         return response.data; // Return as-is for now
       }
     }
-    
-    console.error('Unexpected create user response structure:', response.data);
+
+    console.error("Unexpected create user response structure:", response.data);
     return response.data; // Fallback to raw response
   } catch (error: any) {
-    console.error('Create user error:', error.response?.data || error.message);
+    console.error("Create user error:", error.response?.data || error.message);
     throw new Error(
-      error.response?.data?.message || 
-      error.message || 
-      'Failed to create user'
+      error.response?.data?.message || error.message || "Failed to create user"
     );
   }
 };
@@ -654,19 +717,17 @@ export interface EditUserData {
 
 export const editUser = async (userData: EditUserData): Promise<void> => {
   try {
-    console.log('Editing user with data:', userData);
-    const response = await sixstepClient.post('/users/edit', userData);
-    console.log('Edit User API response:', response.data);
-    console.log('Response status:', response.status);
-    
+    console.log("Editing user with data:", userData);
+    const response = await sixstepClient.post("/users/edit", userData);
+    console.log("Edit User API response:", response.data);
+    console.log("Response status:", response.status);
+
     // API returns no response body on success
     return;
   } catch (error: any) {
-    console.error('Edit user error:', error.response?.data || error.message);
+    console.error("Edit user error:", error.response?.data || error.message);
     throw new Error(
-      error.response?.data?.message || 
-      error.message || 
-      'Failed to edit user'
+      error.response?.data?.message || error.message || "Failed to edit user"
     );
   }
 };
@@ -676,21 +737,21 @@ export interface DeleteUserData {
   userId: string;
 }
 
-export const deleteUserById = async (userData: DeleteUserData): Promise<void> => {
+export const deleteUserById = async (
+  userData: DeleteUserData
+): Promise<void> => {
   try {
-    console.log('Deleting user with ID:', userData.userId);
-    const response = await sixstepClient.post('/users/delete', userData);
-    console.log('Delete User API response:', response.data);
-    console.log('Response status:', response.status);
-    
+    console.log("Deleting user with ID:", userData.userId);
+    const response = await sixstepClient.post("/users/delete", userData);
+    console.log("Delete User API response:", response.data);
+    console.log("Response status:", response.status);
+
     // API returns no response body on success
     return;
   } catch (error: any) {
-    console.error('Delete user error:', error.response?.data || error.message);
+    console.error("Delete user error:", error.response?.data || error.message);
     throw new Error(
-      error.response?.data?.message || 
-      error.message || 
-      'Failed to delete user'
+      error.response?.data?.message || error.message || "Failed to delete user"
     );
   }
 };
@@ -700,30 +761,30 @@ export const deleteEntity = async (entityId: string): Promise<void> => {
   try {
     await sixstepClient.delete(`/entities/delete/${entityId}`);
   } catch (error: any) {
-    console.error('Delete entity error:', error);
+    console.error("Delete entity error:", error);
     throw new Error(
-      error.response?.data?.message || 
-      error.message || 
-      'Failed to delete entity'
+      error.response?.data?.message ||
+        error.message ||
+        "Failed to delete entity"
     );
   }
 };
 
 // Check if user is authenticated
 export const isAuthenticated = (): boolean => {
-  const token = localStorage.getItem('sixstep_token');
-  const user = localStorage.getItem('sixstep_user');
+  const token = localStorage.getItem("sixstep_token");
+  const user = localStorage.getItem("sixstep_user");
   return !!(token && user);
 };
 
 // Get current user from localStorage
 export const getCurrentUser = (): AuthUser | null => {
   try {
-    const userStr = localStorage.getItem('sixstep_user');
+    const userStr = localStorage.getItem("sixstep_user");
     return userStr ? JSON.parse(userStr) : null;
   } catch (error) {
-    console.error('Error parsing user data:', error);
-    localStorage.removeItem('sixstep_user');
+    console.error("Error parsing user data:", error);
+    localStorage.removeItem("sixstep_user");
     return null;
   }
 };
@@ -731,7 +792,7 @@ export const getCurrentUser = (): AuthUser | null => {
 // Verify token validity
 export const verifyToken = async (): Promise<boolean> => {
   try {
-    await sixstepClient.get('/auth/verify');
+    await sixstepClient.get("/auth/verify");
     return true;
   } catch (error) {
     return false;
@@ -769,39 +830,42 @@ export interface LogsResponse {
 }
 
 // Get logs from Sixstep Core API
-export const getLogs = async (page: number = 1, limit: number = 1000000): Promise<LogsResponse> => {
+export const getLogs = async (
+  page: number = 1,
+  limit: number = 1000000
+): Promise<LogsResponse> => {
   try {
     const payload = {
       startDate: "2025-01-01",
       endDate: "3000-12-31",
       page: 1,
-      limit: 1000000
+      limit: 1000000,
     };
-    
-    console.log('Fetching logs from API...', payload);
-    
-    const response = await sixstepClient.post('/logs/get', payload);
-    
-    console.log('Logs API response:', response.data);
-    
+
+    console.log("Fetching logs from API...", payload);
+
+    const response = await sixstepClient.post("/logs/get", payload);
+
+    console.log("Logs API response:", response.data);
+
     if (response.data && !response.data.error) {
       return response.data;
     } else {
-      console.error('Invalid logs response format:', response.data);
+      console.error("Invalid logs response format:", response.data);
       return {
-        message: 'Error',
+        message: "Error",
         error: true,
         logs: [],
-        pagination: { page: 1, limit: 50, totalCount: 0, totalPages: 0 }
+        pagination: { page: 1, limit: 50, totalCount: 0, totalPages: 0 },
       };
     }
   } catch (error) {
-    console.error('Error fetching logs:', error);
+    console.error("Error fetching logs:", error);
     return {
-      message: 'Error',
+      message: "Error",
       error: true,
       logs: [],
-      pagination: { page: 1, limit: 50, totalCount: 0, totalPages: 0 }
+      pagination: { page: 1, limit: 50, totalCount: 0, totalPages: 0 },
     };
   }
 };
@@ -811,35 +875,35 @@ export const downloadLogs = async (): Promise<void> => {
   try {
     const payload = {
       startDate: "2025-01-01",
-      endDate: "3000-12-31"
+      endDate: "3000-12-31",
     };
-    
-    console.log('Downloading logs CSV...', payload);
-    
-    const response = await sixstepClient.post('/logs/download', payload, {
-      responseType: 'blob'
+
+    console.log("Downloading logs CSV...", payload);
+
+    const response = await sixstepClient.post("/logs/download", payload, {
+      responseType: "blob",
     });
-    
-    console.log('Logs download response:', response);
-    
+
+    console.log("Logs download response:", response);
+
     // Create blob from response
-    const blob = new Blob([response.data], { type: 'text/csv' });
+    const blob = new Blob([response.data], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
-    
+
     // Create download link
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
-    link.download = `logs-${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `logs-${new Date().toISOString().split("T")[0]}.csv`;
     document.body.appendChild(link);
     link.click();
-    
+
     // Cleanup
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
-    
-    console.log('Logs CSV downloaded successfully');
+
+    console.log("Logs CSV downloaded successfully");
   } catch (error) {
-    console.error('Error downloading logs:', error);
+    console.error("Error downloading logs:", error);
     throw error;
   }
 };
@@ -876,7 +940,7 @@ export interface UploadResponse {
 // Interface for upload progress response
 export interface UploadProgressResponse {
   uploadId: string;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
+  status: "pending" | "processing" | "completed" | "failed";
   progress: number; // 0-100
   currentStep: string;
   totalSteps: number;
@@ -890,24 +954,27 @@ export interface UploadProgressResponse {
 
 // Upload Products CSV (Admin only) - for updating general product database
 export const uploadProductsCSV = async (
-  file: File, 
+  file: File,
   columnMapping: ColumnMapping
 ): Promise<UploadResponse> => {
   try {
-    console.log('🚀 Starting products file upload...', { fileName: file.name, mapping: columnMapping });
-    
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('columnMapping', JSON.stringify(columnMapping));
+    console.log("🚀 Starting products file upload...", {
+      fileName: file.name,
+      mapping: columnMapping,
+    });
 
-        const response = await sixstepClient.post('/upload/products', formData, {
+    const formData = new FormData();
+    formData.append("csvFile", file);
+    // formData.append("columnMapping", JSON.stringify(columnMapping));
+
+    const response = await sixstepClient.post("/upload/products", formData, {
       headers: {
-        'Content-Type': 'multipart/form-data',
+        "Content-Type": "multipart/form-data",
       },
     });
 
-    console.log('✅ Products file uploaded successfully:', response.data);
-    console.log('🔍 Raw API Response Details:', {
+    console.log("✅ Products file uploaded successfully:", response.data);
+    console.log("🔍 Raw API Response Details:", {
       status: response.status,
       statusText: response.statusText,
       data: response.data,
@@ -916,200 +983,245 @@ export const uploadProductsCSV = async (
       hasUploadId: !!(response.data && response.data.uploadId),
       uploadId: response.data?.uploadId,
       success: response.data?.success,
-      error: response.data?.error
+      error: response.data?.error,
     });
-    
+
     // Check if server returned an error even with 200 status
     if (response.data?.error || response.data?.success === false) {
-      console.error('❌ Server returned error in response body:', response.data);
-      throw new Error(response.data?.message || response.data?.reason || 'Server returned error');
+      console.error(
+        "❌ Server returned error in response body:",
+        response.data
+      );
+      throw new Error(
+        response.data?.message ||
+          response.data?.reason ||
+          "Server returned error"
+      );
     }
-    
+
     return response.data;
   } catch (error) {
-    console.error('❌ Error uploading products:', error);
+    console.error("❌ Error uploading products:", error);
     throw error;
   }
 };
 
 // Upload Supplies CSV (Supplier) - for updating own stock levels
 export const uploadSuppliesCSV = async (
-  file: File, 
+  file: File,
   columnMapping: ColumnMapping
 ): Promise<UploadResponse> => {
   try {
-    console.log('🚀 Starting supplies CSV upload...', { fileName: file.name, mapping: columnMapping });
-    
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('columnMapping', JSON.stringify(columnMapping));
+    console.log("🚀 Starting supplies CSV upload...", {
+      fileName: file.name,
+      mapping: columnMapping,
+    });
 
-    const response = await sixstepClient.post('/upload/supplies', formData, {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("columnMapping", JSON.stringify(columnMapping));
+
+    const response = await sixstepClient.post("/upload/supplies", formData, {
       headers: {
-        'Content-Type': 'multipart/form-data',
+        "Content-Type": "multipart/form-data",
       },
     });
 
-    console.log('✅ Supplies uploaded successfully:', response.data);
+    console.log("✅ Supplies uploaded successfully:", response.data);
     return response.data;
   } catch (error) {
-    console.error('❌ Error uploading supplies:', error);
+    console.error("❌ Error uploading supplies:", error);
     throw error;
   }
 };
 
 // Upload Supplies CSV (Admin) - for updating specific supplier's stock levels
 export const uploadSuppliesAdminCSV = async (
-  file: File, 
+  file: File,
   columnMapping: ColumnMapping,
   supplierId: string
 ): Promise<UploadResponse> => {
   try {
-    console.log('🚀 Starting admin supplies file upload...', { 
-      fileName: file.name, 
+    console.log("🚀 Starting admin supplies file upload...", {
+      fileName: file.name,
       fileSize: file.size,
       fileType: file.type,
-      mapping: columnMapping, 
-      supplierId 
+      mapping: columnMapping,
+      supplierId,
     });
-    
+
     const formData = new FormData();
-    formData.append('file', file);
-    formData.append('columnMapping', JSON.stringify(columnMapping));
-    formData.append('supplierId', supplierId);
+    formData.append("file", file);
+    formData.append("columnMapping", JSON.stringify(columnMapping));
+    formData.append("supplierId", supplierId);
 
-    console.log('📤 FormData prepared:', {
-      fileAppended: formData.has('file'),
-      mappingAppended: formData.has('columnMapping'),
-      supplierAppended: formData.has('supplierId')
+    console.log("📤 FormData prepared:", {
+      fileAppended: formData.has("file"),
+      mappingAppended: formData.has("columnMapping"),
+      supplierAppended: formData.has("supplierId"),
     });
 
-    console.log('🌐 Making API request to: POST /upload/supplies/admin');
-    console.log('📡 Request headers will include: Content-Type: multipart/form-data');
-    
-    const response = await sixstepClient.post('/upload/supplies/admin', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    console.log("🌐 Making API request to: POST /upload/supplies/admin");
+    console.log(
+      "📡 Request headers will include: Content-Type: multipart/form-data"
+    );
 
-    console.log('✅ Admin supplies uploaded successfully!');
-    console.log('📊 API Response status:', response.status);
-    console.log('📊 API Response data:', response.data);
-    console.log('📊 API Response headers:', response.headers);
-    
+    const response = await sixstepClient.post(
+      "/upload/supplies/admin",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+
+    console.log("✅ Admin supplies uploaded successfully!");
+    console.log("📊 API Response status:", response.status);
+    console.log("📊 API Response data:", response.data);
+    console.log("📊 API Response headers:", response.headers);
+
     return response.data;
   } catch (error: any) {
-    console.error('❌ Error uploading admin supplies:', error);
-    
+    console.error("❌ Error uploading admin supplies:", error);
+
     if (error.response) {
-      console.error('📍 API Error Details:');
-      console.error('  Status:', error.response.status);
-      console.error('  Status Text:', error.response.statusText);  
-      console.error('  Data:', error.response.data);
-      console.error('  Headers:', error.response.headers);
+      console.error("📍 API Error Details:");
+      console.error("  Status:", error.response.status);
+      console.error("  Status Text:", error.response.statusText);
+      console.error("  Data:", error.response.data);
+      console.error("  Headers:", error.response.headers);
     } else if (error.request) {
-      console.error('📍 Network Error - No response received:');
-      console.error('  Request:', error.request);
+      console.error("📍 Network Error - No response received:");
+      console.error("  Request:", error.request);
     } else {
-      console.error('📍 Request Setup Error:', error.message);
+      console.error("📍 Request Setup Error:", error.message);
     }
-    
+
     throw error;
   }
 };
 
 // Validate CSV/Excel file and get column headers (reads only first row for performance)
-export const validateCSVHeaders = async (file: File): Promise<UploadValidationResponse> => {
+export const validateCSVHeaders = async (
+  file: File
+): Promise<UploadValidationResponse> => {
   return new Promise((resolve, reject) => {
     const isExcelFile = file.name.match(/\.(xlsx?|xls)$/i);
     const reader = new FileReader();
-    
+
     reader.onload = (e) => {
       try {
-        console.log('📋 Validating file headers for:', file.name);
+        console.log("📋 Validating file headers for:", file.name);
         let headers: string[] = [];
-        
+
         if (isExcelFile) {
           // Handle Excel files using XLSX library
-          console.log('📊 Processing Excel file...');
+          console.log("📊 Processing Excel file...");
           const data = e.target?.result as ArrayBuffer;
-          const workbook = XLSX.read(data, { type: 'array' });
-          
+          const workbook = XLSX.read(data, { type: "array" });
+
           // Get first worksheet
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
           const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
-          
+
           // Extract headers from first row
           headers = (jsonData[0] as string[]) || [];
-          console.log('📊 Excel headers detected:', headers);
-                 } else {
-           // Handle CSV files as text
-           console.log('📊 Processing CSV file...');
-           const content = e.target?.result as string;
-           
-           // Get only first line for performance (as requested)
-           const firstLine = content.split('\n')[0];
-           
-           // Try different separators (comma, semicolon)
-           let separator = ',';
-           if (firstLine.includes(';') && firstLine.split(';').length > firstLine.split(',').length) {
-             separator = ';';
-             console.log('📊 Detected semicolon separator');
-           } else {
-             console.log('📊 Using comma separator');
-           }
-           
-           headers = firstLine.split(separator).map(h => h.trim().replace(/['"]/g, ''));
-           console.log('📊 CSV headers detected:', headers);
-         }
-        
+          console.log("📊 Excel headers detected:", headers);
+        } else {
+          // Handle CSV files as text
+          console.log("📊 Processing CSV file...");
+          const content = e.target?.result as string;
+
+          // Get only first line for performance (as requested)
+          const firstLine = content.split("\n")[0];
+
+          // Try different separators (comma, semicolon)
+          let separator = ",";
+          if (
+            firstLine.includes(";") &&
+            firstLine.split(";").length > firstLine.split(",").length
+          ) {
+            separator = ";";
+            console.log("📊 Detected semicolon separator");
+          } else {
+            console.log("📊 Using comma separator");
+          }
+
+          headers = firstLine
+            .split(separator)
+            .map((h) => h.trim().replace(/['"]/g, ""));
+          console.log("📊 CSV headers detected:", headers);
+        }
+
         // Suggest mappings based on common column patterns
         const suggestedMappings: ColumnMapping = {};
-        headers.forEach(header => {
+        headers.forEach((header) => {
           const lowerHeader = header.toLowerCase();
-          
+
           // Common product field mappings (English and Italian) - Updated for separate SKU/EAN
-          if (lowerHeader === 'name' || lowerHeader.includes('nome') || lowerHeader.includes('descrizione')) {
-            suggestedMappings[header] = 'name';
-          } else if (lowerHeader === 'sku' || lowerHeader.includes('code') || lowerHeader.includes('codice')) {
-            suggestedMappings[header] = 'sku';
-          } else if (lowerHeader.includes('minsan')) {
-            suggestedMappings[header] = 'minsan';
-          } else if (lowerHeader === 'ean') {
-            suggestedMappings[header] = 'ean';
-          } else if (lowerHeader === 'price' || lowerHeader.includes('prezzo')) {
-            suggestedMappings[header] = 'price';
-          } else if (lowerHeader.includes('stock') || lowerHeader.includes('giacenza') || lowerHeader.includes('quantit')) {
-            suggestedMappings[header] = 'stock';
-          } else if (lowerHeader.includes('manufacturer') || lowerHeader.includes('produttore') || lowerHeader.includes('ditta')) {
-            suggestedMappings[header] = 'manufacturer';
-          } else if (lowerHeader === 'vat' || lowerHeader.includes('iva')) {
-            suggestedMappings[header] = 'vat';
-          } else if (lowerHeader.includes('supplier') || lowerHeader.includes('fornitore')) {
-            suggestedMappings[header] = 'supplier';
+          if (
+            lowerHeader === "name" ||
+            lowerHeader.includes("nome") ||
+            lowerHeader.includes("descrizione")
+          ) {
+            suggestedMappings[header] = "name";
+          } else if (
+            lowerHeader === "sku" ||
+            lowerHeader.includes("code") ||
+            lowerHeader.includes("codice")
+          ) {
+            suggestedMappings[header] = "sku";
+          } else if (lowerHeader.includes("minsan")) {
+            suggestedMappings[header] = "minsan";
+          } else if (lowerHeader === "ean") {
+            suggestedMappings[header] = "ean";
+          } else if (
+            lowerHeader === "price" ||
+            lowerHeader.includes("prezzo")
+          ) {
+            suggestedMappings[header] = "price";
+          } else if (
+            lowerHeader.includes("stock") ||
+            lowerHeader.includes("giacenza") ||
+            lowerHeader.includes("quantit")
+          ) {
+            suggestedMappings[header] = "stock";
+          } else if (
+            lowerHeader.includes("manufacturer") ||
+            lowerHeader.includes("produttore") ||
+            lowerHeader.includes("ditta")
+          ) {
+            suggestedMappings[header] = "manufacturer";
+          } else if (lowerHeader === "vat" || lowerHeader.includes("iva")) {
+            suggestedMappings[header] = "vat";
+          } else if (
+            lowerHeader.includes("supplier") ||
+            lowerHeader.includes("fornitore")
+          ) {
+            suggestedMappings[header] = "supplier";
           }
         });
 
-        console.log('🎯 Suggested mappings:', suggestedMappings);
+        console.log("🎯 Suggested mappings:", suggestedMappings);
 
         resolve({
           success: true,
-          message: 'File headers detected successfully',
+          message: "File headers detected successfully",
           detectedColumns: headers,
-          suggestedMappings
+          suggestedMappings,
         });
       } catch (error) {
-        console.error('❌ Error parsing file:', error);
+        console.error("❌ Error parsing file:", error);
         reject(new Error(`Error parsing file: ${error}`));
       }
     };
-    
+
     reader.onerror = () => {
-      console.error('❌ Error reading file');
-      reject(new Error('Error reading file'));
+      console.error("❌ Error reading file");
+      reject(new Error("Error reading file"));
     };
-    
+
     // Use appropriate reader method based on file type
     if (isExcelFile) {
       reader.readAsArrayBuffer(file);
@@ -1120,18 +1232,20 @@ export const validateCSVHeaders = async (file: File): Promise<UploadValidationRe
 };
 
 // Get upload progress by upload ID
-export const getUploadProgress = async (uploadId: string): Promise<UploadProgressResponse> => {
+export const getUploadProgress = async (
+  uploadId: string
+): Promise<UploadProgressResponse> => {
   try {
     console.log(`📊 Getting upload progress for ID: ${uploadId}`);
-    
-    const response = await sixstepClient.post('/upload/progress', {
-      uploadId
+
+    const response = await sixstepClient.post("/upload/progress", {
+      uploadId,
     });
 
-    console.log('✅ Upload progress response:', response.data);
+    console.log("✅ Upload progress response:", response.data);
     return response.data;
   } catch (error) {
-    console.error('❌ Error getting upload progress:', error);
+    console.error("❌ Error getting upload progress:", error);
     throw error;
   }
-}; 
+};
