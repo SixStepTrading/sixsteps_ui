@@ -244,7 +244,7 @@ const Dashboard: React.FC = () => {
         searchTerm: filterValues.searchTerm
       };
       
-      const result = await fetchProducts(1, 50000, filters); // Get all products
+      const result = await fetchProducts(1, 999999, filters); // Get all products
       
       // Add quantity and averagePrice properties to products
       const productsWithQuantity = result.products.map((product: Product) => ({

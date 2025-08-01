@@ -61,7 +61,7 @@ export const fetchProducts = async (
     minPrice?: number;
     maxPrice?: number;
   } = {}
-): Promise<{ 
+): Promise<{
   products: Product[];
   totalCount: number;
   categories: string[];
@@ -93,7 +93,7 @@ export const fetchProducts = async (
       console.warn("⚠️ Unexpected API response structure, using fallback");
       throw new Error("Invalid API response structure");
     }
-    
+
     // Transform the API response to match our Product interface
     const products: Product[] = response.data.products.map((item: any) => {
       // Handle supplies/suppliers - check if they're integrated in the product
@@ -186,7 +186,7 @@ export const fetchProducts = async (
 };
 
 // Fallback function to use mock data when API is not available
-export const getFallbackProducts = async (): Promise<{ 
+export const getFallbackProducts = async (): Promise<{
   products: Product[];
   totalCount: number;
   categories: string[];
@@ -195,7 +195,7 @@ export const getFallbackProducts = async (): Promise<{
 }> => {
   // Use the static mock products directly
   console.log(`Using ${staticMockProducts.length} static mock products`);
-  
+
   // Extract unique categories, manufacturers, and suppliers
   const categories = Array.from(
     new Set(staticMockProducts.map((p) => p.category))
@@ -213,7 +213,7 @@ export const getFallbackProducts = async (): Promise<{
       }
     });
   });
-  
+
   return {
     products: staticMockProducts,
     totalCount: staticMockProducts.length,
@@ -1041,7 +1041,7 @@ export const uploadSuppliesCSV = async (
     });
 
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("csvFile", file);
     // formData.append("columnMapping", JSON.stringify(columnMapping));
 
     const response = await sixstepClient.post("/upload/supplies", formData, {
@@ -1074,7 +1074,7 @@ export const uploadSuppliesAdminCSV = async (
     });
 
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("csvFile", file);
     // formData.append("columnMapping", JSON.stringify(columnMapping));
     formData.append("supplierId", supplierId);
 
