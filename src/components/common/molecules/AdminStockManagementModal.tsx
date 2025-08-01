@@ -24,7 +24,9 @@ import {
   TableRow,
   Step,
   Stepper,
-  StepLabel
+  StepLabel,
+  Autocomplete,
+  TextField
 } from '@mui/material';
 import {
   CloudUpload as CloudUploadIcon,
@@ -37,6 +39,7 @@ import {
 import { validateCSVHeaders, uploadSuppliesAdminCSV, ColumnMapping, UploadValidationResponse, UploadResponse } from '../../../utils/api';
 import { useUploadProgress } from '../../../hooks/useUploadProgress';
 import UploadProgressBar from '../../common/atoms/UploadProgressBar';
+import * as XLSX from 'xlsx';
 
 interface AdminStockManagementModalProps {
   open: boolean;
@@ -91,17 +94,249 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
 
   const steps = ['Select Supplier', 'Upload File', 'Map Columns'];
 
-  // Available field mappings for admin stock management
+  // Available field mappings for admin stock management - UPDATED FOR BACKEND API
   const availableFields = [
     { value: '', label: 'Select field...' },
     { value: 'sku', label: 'SKU/Product Code' },
     { value: 'ean', label: 'EAN Code' },
     { value: 'minsan', label: 'MINSAN Code' },
     { value: 'name', label: 'Product Name' },
-    { value: 'stock', label: 'Stock Quantity' },
+    { value: 'quantity', label: 'Stock Quantity' }, // Changed from 'stock' to 'quantity'
     { value: 'price', label: 'Price' },
-    { value: 'vat', label: 'VAT %' }
+    { value: 'vat', label: 'VAT %' },
+    { value: 'currency', label: 'Currency' },
+    { value: 'unit', label: 'Unit of Measure' }
   ];
+
+  // Helper to read complete file data (COPIED FROM AddProductModal)
+  const readFileData = (file: File): Promise<{headers: string[], rows: any[], rawData: any[]}> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        try {
+          const data = e.target?.result;
+          if (!data) {
+            reject(new Error('No data found in file'));
+            return;
+          }
+          
+          let parsedData: any[] = [];
+          let headers: string[] = [];
+          let rows: any[][] = [];
+          
+          // Handle Excel file
+          if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+            const workbook = XLSX.read(data, { type: 'binary' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            parsedData = XLSX.utils.sheet_to_json(worksheet);
+            
+            if (parsedData.length > 0) {
+              headers = Object.keys(parsedData[0]);
+              rows = parsedData.map(row => 
+                headers.map(header => row[header] || '')
+              );
+            }
+          } 
+          // Handle CSV file
+          else if (file.name.endsWith('.csv')) {
+            const csvData = data.toString();
+            
+            try {
+              const workbook = XLSX.read(csvData, { type: 'string' });
+              const firstSheetName = workbook.SheetNames[0];
+              const worksheet = workbook.Sheets[firstSheetName];
+              parsedData = XLSX.utils.sheet_to_json(worksheet);
+              
+              if (parsedData.length > 0) {
+                headers = Object.keys(parsedData[0]);
+                rows = parsedData.map(row => 
+                  headers.map(header => row[header] || '')
+                );
+              }
+            } catch(xlsxError) {
+              // Fallback to manual CSV parsing
+              const lines = csvData.split('\n');
+              headers = lines[0].split(',').map(h => h.trim());
+              
+              parsedData = [];
+              rows = [];
+              for(let i = 1; i < lines.length; i++) {
+                if(lines[i].trim() === '') continue;
+                
+                const values = lines[i].split(',').map(v => v.trim());
+                const row: Record<string, string> = {};
+                
+                for(let j = 0; j < headers.length; j++) {
+                  row[headers[j]] = values[j] || '';
+                }
+                
+                parsedData.push(row);
+                rows.push(values);
+              }
+            }
+          } else {
+            reject(new Error('Unsupported file format'));
+            return;
+          }
+          
+          if (parsedData.length === 0) {
+            reject(new Error('No data found in file after parsing'));
+            return;
+          }
+          
+          resolve({ headers, rows, rawData: parsedData });
+        } catch (error) {
+          console.error("File parsing error:", error);
+          reject(new Error('Error parsing file'));
+        }
+      };
+      
+      reader.onerror = () => {
+        reject(new Error('Error reading file'));
+      };
+      
+      if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+        reader.readAsBinaryString(file);
+      } else {
+        reader.readAsText(file);
+      }
+    });
+  };
+
+  // Transform file with API-compliant column names for stock uploads - COPIED FROM AddProductModal
+  const transformFileWithCorrectColumns = async (file: File, columnMapping: ColumnMapping): Promise<File> => {
+    try {
+      console.log('🔄 Starting stock file transformation...', { fileName: file.name, mapping: columnMapping });
+      
+      // Read the original file data
+      const fileData = await readFileData(file);
+      
+      // Create new headers with API-compliant names and track column mapping
+      const newHeaders: string[] = [];
+      const columnIndexMap: Record<number, string> = {}; // originalIndex -> newColumnName
+      
+      fileData.headers.forEach((originalHeader, index) => {
+        const mappedField = columnMapping[originalHeader];
+        if (mappedField && mappedField.trim() !== '') {
+          newHeaders.push(mappedField);
+          columnIndexMap[index] = mappedField;
+        }
+      });
+      
+      // Transform data rows using the raw data
+      const newRows = fileData.rawData.map(originalRow => {
+        const newRow: Record<string, any> = {};
+        
+        // Map each original column to new column name
+        Object.entries(columnMapping).forEach(([originalHeader, newFieldName]) => {
+          if (newFieldName && newFieldName.trim() !== '') {
+            const value = originalRow[originalHeader];
+            if (value !== undefined && value !== null && value !== '') {
+              newRow[newFieldName] = value;
+            }
+          }
+        });
+        
+        return newRow;
+      });
+      
+      console.log('📊 Stock transformation complete:', {
+        originalHeaders: fileData.headers,
+        newHeaders: newHeaders,
+        rowCount: newRows.length,
+        sampleRow: newRows[0]
+      });
+      
+      // Validate that we have the required API fields for stock uploads
+      const requiredFields = ['sku', 'quantity']; // Backend expects 'quantity' not 'stock'
+      const missingFields = requiredFields.filter(field => !newHeaders.includes(field));
+      
+      if (missingFields.length > 0) {
+        console.warn('⚠️ Missing required stock API fields:', missingFields);
+        console.log('💡 Available headers:', newHeaders);
+        console.log('🔍 Original mapping:', columnMapping);
+      }
+      
+      // Backend expects exactly: sku;price;vat;currency;quantity;unit
+      const backendHeaders = ['sku', 'price', 'vat', 'currency', 'quantity', 'unit'];
+      
+      // Create new CSV content with EXACT backend format
+      const csvContent = [
+        backendHeaders.join(';'),
+        ...newRows.map(row => 
+          backendHeaders.map(header => {
+            let value = row[header] || '';
+            
+            // Add default values for missing fields
+            if (value === '' || value === null || value === undefined) {
+              switch (header) {
+                case 'currency':
+                  value = 'EUR'; // Default currency
+                  break;
+                case 'unit':
+                  value = 'PZ'; // Default unit (Pezzi)
+                  break;
+                case 'vat':
+                  value = '22'; // Default VAT for Italy
+                  break;
+                default:
+                  value = '';
+              }
+            }
+            
+            // Convert decimal numbers from US format (19.9) to European format (19,9)
+            if ((header === 'price' || header === 'vat') && value !== '') {
+              if (typeof value === 'number' || (typeof value === 'string' && /^\d+\.?\d*$/.test(value))) {
+                value = String(value).replace('.', ',');
+              }
+            }
+            
+            // Handle empty values - leave empty instead of quotes
+            if (value === '' || value === null || value === undefined) {
+              return '';
+            }
+            
+            // Escape values that contain semicolons, quotes, or newlines  
+            if (typeof value === 'string' && (value.includes(';') || value.includes('"') || value.includes('\n'))) {
+              return `"${value.replace(/"/g, '""')}"`;
+            }
+            
+            return value;
+          }).join(';')
+        )
+      ].join('\n');
+      
+      // Log CSV preview for debugging
+      console.log('📝 Generated stock CSV preview (first 3 lines):');
+      const csvLines = csvContent.split('\n');
+      csvLines.slice(0, 3).forEach((line, idx) => {
+        console.log(`Line ${idx}: ${line}`);
+      });
+      
+      // Create new file with API-compliant structure with proper UTF-8 BOM
+      // Add UTF-8 BOM to ensure proper encoding
+      const BOM = '\uFEFF';
+      const csvContentWithBOM = BOM + csvContent;
+      
+      const transformedFile = new File([csvContentWithBOM], `api_compliant_${file.name.replace(/\.(xlsx?|xls)$/, '.csv')}`, {
+        type: 'text/csv;charset=utf-8'
+      });
+      
+      console.log('✅ Stock file transformation successful:', {
+        originalSize: file.size,
+        newSize: transformedFile.size,
+        newFileName: transformedFile.name,
+        columnMapping: columnMapping
+      });
+      
+      return transformedFile;
+    } catch (error) {
+      console.error('❌ Stock file transformation failed:', error);
+      throw error;
+    }
+  };
 
   const handleDragEnter = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -175,9 +410,11 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
     fileInputRef.current?.click();
   };
 
-  const handleSupplierSelection = (supplierId: string) => {
-    setSelectedSupplier(supplierId);
-    setActiveStep(1);
+  const handleSupplierSelection = (supplierValue: string | null) => {
+    if (supplierValue) {
+      setSelectedSupplier(supplierValue);
+      setActiveStep(1);
+    }
   };
 
   const handleColumnMappingChange = (column: string, field: string) => {
@@ -210,15 +447,32 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
       setUploadResult(null);
       
       console.log('🚀 Starting admin stock management upload...');
-      console.log('📋 Final upload parameters:', {
-        fileName: selectedFile.name,
-        fileSize: selectedFile.size,
-        supplier: selectedSupplier,
-        mappingKeys: Object.keys(columnMapping),
-        mappingValues: Object.values(columnMapping)
+      
+      // Transform file with correct column names that API expects
+      const transformedFile = await transformFileWithCorrectColumns(selectedFile, columnMapping);
+      console.log('🔄 Stock file transformed with API-compliant column names');
+      
+      // Debug: Log transformed file details
+      console.log('🔍 Transformed stock file ready for upload:');
+      console.log('📏 File size:', transformedFile.size, 'bytes');
+      console.log('📝 File type:', transformedFile.type);
+      console.log('📁 File name:', transformedFile.name);
+      
+      // Use the properly transformed file directly
+      const fileToUpload = transformedFile;
+      
+      console.log('📤 Uploading transformed stock file:', {
+        name: fileToUpload.name,
+        size: fileToUpload.size,
+        type: fileToUpload.type,
+        supplier: selectedSupplier
       });
-
-      const result = await uploadSuppliesAdminCSV(selectedFile, columnMapping, selectedSupplier);
+      
+      // File is already transformed with correct API headers
+      // No column mapping needed since headers match API expectations
+      console.log('📋 File already has API-compliant headers - no mapping needed');
+      
+      const result = await uploadSuppliesAdminCSV(fileToUpload, {}, selectedSupplier);
       
       if (result.uploadId) {
         console.log('📊 Upload ID received:', result.uploadId);
@@ -262,7 +516,8 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
   };
 
   const canUpload = selectedFile && validation && selectedSupplier && Object.keys(columnMapping).length > 0;
-  const selectedSupplierName = suppliers.find(s => s.value === selectedSupplier)?.label || '';
+  // Get supplier name - either from list or use the manually entered value
+  const selectedSupplierName = suppliers.find(s => s.value === selectedSupplier)?.label || selectedSupplier;
 
   return (
     <Dialog 
@@ -349,20 +604,46 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
               Choose the supplier whose stock levels you want to update:
             </Typography>
             
-            <FormControl fullWidth>
-              <InputLabel>Select Supplier</InputLabel>
-              <Select
-                value={selectedSupplier}
-                label="Select Supplier"
-                onChange={(e) => handleSupplierSelection(e.target.value)}
-              >
-                {suppliers.map((supplier) => (
-                  <MenuItem key={supplier.value} value={supplier.value}>
-                    {supplier.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <Autocomplete
+              fullWidth
+              freeSolo
+              options={suppliers.map(s => s.value)}
+              getOptionLabel={(option) => {
+                // If option is from the list, find its label
+                const supplierFromList = suppliers.find(s => s.value === option);
+                return supplierFromList ? supplierFromList.label : option;
+              }}
+              value={selectedSupplier}
+              onChange={(event, newValue) => handleSupplierSelection(newValue)}
+              onInputChange={(event, newInputValue) => {
+                if (event?.type === 'change') {
+                  setSelectedSupplier(newInputValue);
+                }
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Select or Enter Supplier"
+                  placeholder="Choose from list or type manually..."
+                  helperText="You can select from the list or enter a new supplier name"
+                />
+              )}
+              renderOption={(props, option) => {
+                const supplier = suppliers.find(s => s.value === option);
+                return (
+                  <li {...props}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                      <Typography variant="body1">{supplier?.label || option}</Typography>
+                      {supplier?.label && supplier.label !== option && (
+                        <Typography variant="caption" color="text.secondary">
+                          ID: {option}
+                        </Typography>
+                      )}
+                    </Box>
+                  </li>
+                );
+              }}
+            />
 
             {selectedSupplier && (
               <Alert severity="info" sx={{ mt: 2 }}>

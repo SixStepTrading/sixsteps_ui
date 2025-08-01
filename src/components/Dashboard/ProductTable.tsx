@@ -367,8 +367,8 @@ const ProductTable: React.FC<ProductTableProps> = ({
             </button>
           )}
 
-          {/* Upload Stock Button - Only for Suppliers */}
-          {userRole === 'Supplier' && onUploadStock && (
+          {/* Upload Stock Button - For All Users */}
+          {(userRole === 'Supplier' || userRole === 'Admin' || userRole === 'Pharmacy') && onUploadStock && (
             <button
               className={`flex items-center gap-1 bg-green-600 dark:bg-green-700 text-white text-sm py-1 px-3 rounded hover:bg-green-700 dark:hover:bg-green-800 transition-colors
                 ${loading || fileUploading ? 'opacity-50 cursor-not-allowed' : ''}
