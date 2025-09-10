@@ -32,18 +32,21 @@ import {
   Visibility as VisibilityIcon
 } from '@mui/icons-material';
 import * as XLSX from 'xlsx';
-<<<<<<< Updated upstream
-=======
 import { uploadProductsCSV, ColumnMapping } from '../../../utils/api';
 import { useUploadProgress } from '../../../hooks/useUploadProgress';
 import UploadProgressBar from '../../common/atoms/UploadProgressBar';
->>>>>>> Stashed changes
 
 export interface ProductFormData {
-  productCode: string;
-  productName: string;
-  publicPrice: number;
-  stockQuantity: number;
+  productCode: string; // Keep for backward compatibility 
+  sku: string;
+  ean: string;
+  minsan: string;
+  name: string; // API field name
+  productName: string; // UI field name (backward compatibility)
+  price: number; // API field name  
+  publicPrice: number; // UI field name (backward compatibility)
+  stock: number; // API field name
+  stockQuantity: number; // UI field name (backward compatibility)
   stockPrice: number;
   manufacturer: string;
   vat: number;
@@ -73,10 +76,16 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   onAddMultipleProducts
 }) => {
   const initialFormData: ProductFormData = {
-    productCode: '',
-    productName: '',
-    publicPrice: 0,
-    stockQuantity: 0,
+    productCode: '', // Keep for backward compatibility
+    sku: '',
+    ean: '',
+    minsan: '',
+    name: '', // API field name
+    productName: '', // UI field name (backward compatibility)
+    price: 0, // API field name
+    publicPrice: 0, // UI field name (backward compatibility)
+    stock: 0, // API field name
+    stockQuantity: 0, // UI field name (backward compatibility)
     stockPrice: 0,
     manufacturer: '',
     vat: 10
@@ -117,75 +126,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   // References
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-<<<<<<< Updated upstream
-  // Handle tab changes
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setActiveTab(newValue);
-  };
-
-  // Single product form handlers
-  const handleChange = (field: keyof ProductFormData) => (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = field === 'productCode' || field === 'productName' || field === 'manufacturer'
-      ? event.target.value 
-      : parseFloat(event.target.value);
-    
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-
-    // Clear error when field is changed
-    if (errors[field]) {
-      setErrors(prev => ({
-        ...prev,
-        [field]: undefined
-      }));
-    }
-  };
-
-  const validateForm = (): boolean => {
-    const newErrors: Partial<Record<keyof ProductFormData, string>> = {};
-    
-    if (!formData.productCode.trim()) {
-      newErrors.productCode = 'Product code is required';
-    }
-    
-    if (!formData.productName.trim()) {
-      newErrors.productName = 'Product name is required';
-    }
-    
-    if (formData.publicPrice <= 0) {
-      newErrors.publicPrice = 'Public price must be greater than zero';
-    }
-    
-    if (formData.stockQuantity < 0) {
-      newErrors.stockQuantity = 'Stock quantity cannot be negative';
-    }
-    
-    if (formData.stockPrice <= 0) {
-      newErrors.stockPrice = 'Stock price must be greater than zero';
-    }
-
-    if (!formData.manufacturer.trim()) {
-      newErrors.manufacturer = 'Manufacturer is required';
-    }
-    
-    if (formData.vat <= 0 || formData.vat > 100) {
-      newErrors.vat = 'VAT must be between 1 and 100';
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmitSingle = () => {
-    if (validateForm()) {
-      onAddProduct(formData);
-      setFormData(initialFormData);
-      onClose();
-    }
-  };
-=======
   // Upload progress tracking for bulk import (optional)
   const uploadProgress = useUploadProgress({
     onComplete: (result) => {
@@ -201,7 +141,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       setFileError(error.message);
     }
   });
->>>>>>> Stashed changes
 
   // File upload handlers
   const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
@@ -262,19 +201,23 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       const preview = await readFilePreview(file);
       setFilePreview(preview);
       
-      // Auto-map columns based on column names
+      // Auto-map columns based on column names - Updated for separate SKU/EAN
       const newMapping: Record<string, ProductField | ''> = {};
       preview.headers.forEach(header => {
         const lowerHeader = header.toLowerCase();
         
-        if (lowerHeader.includes('code') || lowerHeader.includes('ean')) {
-          newMapping[header] = 'productCode';
+        if (lowerHeader === 'sku' || lowerHeader.includes('code') || lowerHeader.includes('codice')) {
+          newMapping[header] = 'sku';
+        } else if (lowerHeader === 'ean') {
+          newMapping[header] = 'ean';
+        } else if (lowerHeader.includes('minsan')) {
+          newMapping[header] = 'minsan';
         } else if (lowerHeader.includes('name') || lowerHeader.includes('product') || lowerHeader.includes('descrizione')) {
-          newMapping[header] = 'productName';
+          newMapping[header] = 'name';
         } else if (lowerHeader.includes('public') && lowerHeader.includes('price')) {
-          newMapping[header] = 'publicPrice';
+          newMapping[header] = 'price';
         } else if (lowerHeader.includes('stock') && lowerHeader.includes('quantity')) {
-          newMapping[header] = 'stockQuantity';
+          newMapping[header] = 'stock';
         } else if (lowerHeader.includes('stock') && lowerHeader.includes('price')) {
           newMapping[header] = 'stockPrice';
         } else if (lowerHeader.includes('manufacturer') || lowerHeader.includes('brand')) {
@@ -416,6 +359,214 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     });
   };
 
+  // Helper to read complete file data (not just preview)
+  const readFileData = (file: File): Promise<{headers: string[], rows: any[], rawData: any[]}> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        try {
+          const data = e.target?.result;
+          if (!data) {
+            reject(new Error('No data found in file'));
+            return;
+          }
+          
+          let parsedData: any[] = [];
+          let headers: string[] = [];
+          let rows: any[][] = [];
+          
+          // Handle Excel file
+          if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+            const workbook = XLSX.read(data, { type: 'binary' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            parsedData = XLSX.utils.sheet_to_json(worksheet);
+            
+            if (parsedData.length > 0) {
+              headers = Object.keys(parsedData[0]);
+              rows = parsedData.map(row => 
+                headers.map(header => row[header] || '')
+              );
+            }
+          } 
+          // Handle CSV file
+          else if (file.name.endsWith('.csv')) {
+            const csvData = data.toString();
+            
+            try {
+              const workbook = XLSX.read(csvData, { type: 'string' });
+              const firstSheetName = workbook.SheetNames[0];
+              const worksheet = workbook.Sheets[firstSheetName];
+              parsedData = XLSX.utils.sheet_to_json(worksheet);
+              
+              if (parsedData.length > 0) {
+                headers = Object.keys(parsedData[0]);
+                rows = parsedData.map(row => 
+                  headers.map(header => row[header] || '')
+                );
+              }
+            } catch(xlsxError) {
+              // Fallback to manual CSV parsing
+              const lines = csvData.split('\n');
+              headers = lines[0].split(',').map(h => h.trim());
+              
+              parsedData = [];
+              rows = [];
+              for(let i = 1; i < lines.length; i++) {
+                if(lines[i].trim() === '') continue;
+                
+                const values = lines[i].split(',').map(v => v.trim());
+                const row: Record<string, string> = {};
+                
+                for(let j = 0; j < headers.length; j++) {
+                  row[headers[j]] = values[j] || '';
+                }
+                
+                parsedData.push(row);
+                rows.push(values);
+              }
+            }
+          } else {
+            reject(new Error('Unsupported file format'));
+            return;
+          }
+          
+          if (parsedData.length === 0) {
+            reject(new Error('No data found in file after parsing'));
+            return;
+          }
+          
+          resolve({ headers, rows, rawData: parsedData });
+        } catch (error) {
+          console.error("File parsing error:", error);
+          reject(new Error('Error parsing file'));
+        }
+      };
+      
+      reader.onerror = () => {
+        reject(new Error('Error reading file'));
+      };
+      
+      if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+        reader.readAsBinaryString(file);
+      } else {
+        reader.readAsText(file);
+      }
+    });
+  };
+
+  // Transform file with API-compliant column names
+  const transformFileWithCorrectColumns = async (file: File, columnMapping: ColumnMapping): Promise<File> => {
+    try {
+      console.log('🔄 Starting file transformation...', { fileName: file.name, mapping: columnMapping });
+      
+      // Read the original file data
+      const fileData = await readFileData(file);
+      
+      // Create new headers with API-compliant names and track column mapping
+      const newHeaders: string[] = [];
+      const columnIndexMap: Record<number, string> = {}; // originalIndex -> newColumnName
+      
+      fileData.headers.forEach((originalHeader, index) => {
+        const mappedField = columnMapping[originalHeader];
+        if (mappedField && mappedField.trim() !== '') {
+          newHeaders.push(mappedField);
+          columnIndexMap[index] = mappedField;
+        }
+      });
+      
+      // Transform data rows using the raw data
+      const newRows = fileData.rawData.map(originalRow => {
+        const newRow: Record<string, any> = {};
+        
+        // Map each original column to new column name
+        Object.entries(columnMapping).forEach(([originalHeader, newFieldName]) => {
+          if (newFieldName && newFieldName.trim() !== '') {
+            const value = originalRow[originalHeader];
+            if (value !== undefined && value !== null && value !== '') {
+              newRow[newFieldName] = value;
+            }
+          }
+        });
+        
+        return newRow;
+      });
+      
+      console.log('📊 Transformation complete:', {
+        originalHeaders: fileData.headers,
+        newHeaders: newHeaders,
+        rowCount: newRows.length,
+        sampleRow: newRows[0]
+      });
+      
+      // Validate that we have the required API fields
+      const requiredFields = ['sku', 'name', 'ean', 'vat', 'price'];
+      const missingFields = requiredFields.filter(field => !newHeaders.includes(field));
+      
+      if (missingFields.length > 0) {
+        console.warn('⚠️ Missing required API fields:', missingFields);
+        console.log('💡 Available headers:', newHeaders);
+        console.log('🔍 Original mapping:', columnMapping);
+      }
+      
+      // Create new CSV content with semicolon separator (European format)
+      const csvContent = [
+        newHeaders.join(';'),
+        ...newRows.map(row => 
+          newHeaders.map(header => {
+            let value = row[header] || '';
+            
+            // Convert decimal numbers from US format (19.9) to European format (19,9)
+            if (typeof value === 'number' || (typeof value === 'string' && /^\d+\.?\d*$/.test(value))) {
+              value = String(value).replace('.', ',');
+            }
+            
+            // Handle empty values - leave empty instead of quotes
+            if (value === '' || value === null || value === undefined) {
+              return '';
+            }
+            
+            // Escape values that contain semicolons, quotes, or newlines  
+            if (typeof value === 'string' && (value.includes(';') || value.includes('"') || value.includes('\n'))) {
+              return `"${value.replace(/"/g, '""')}"`;
+            }
+            
+            return value;
+          }).join(';')
+        )
+      ].join('\n');
+      
+      // Log CSV preview for debugging
+      console.log('📝 Generated CSV preview (first 3 lines):');
+      const csvLines = csvContent.split('\n');
+      csvLines.slice(0, 3).forEach((line, idx) => {
+        console.log(`Line ${idx}: ${line}`);
+      });
+      
+      // Create new file with API-compliant structure with proper UTF-8 BOM
+      // Add UTF-8 BOM to ensure proper encoding
+      const BOM = '\uFEFF';
+      const csvContentWithBOM = BOM + csvContent;
+      
+      const transformedFile = new File([csvContentWithBOM], `api_compliant_${file.name.replace(/\.(xlsx?|xls)$/, '.csv')}`, {
+        type: 'text/csv;charset=utf-8'
+      });
+      
+      console.log('✅ File transformation successful:', {
+        originalSize: file.size,
+        newSize: transformedFile.size,
+        newFileName: transformedFile.name,
+        columnMapping: columnMapping
+      });
+      
+      return transformedFile;
+    } catch (error) {
+      console.error('❌ File transformation failed:', error);
+      throw error;
+    }
+  };
+
   const handleFieldMapping = (header: string, field: ProductField | '') => {
     if (field === '') {
       // Remove mapping
@@ -479,11 +630,9 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     
     setIsProcessing(true);
     setProcessedProducts([]);
-    let allProducts: ProductFormData[] = [];
+    setFileError(null);
     
     try {
-<<<<<<< Updated upstream
-=======
       // Try new API-based upload with progress tracking (for single CSV or Excel files)
       if (selectedFile && selectedFile.name.match(/\.(csv|xlsx?|xls)$/i)) {
         console.log('🚀 Attempting API-based upload with progress tracking...');
@@ -586,7 +735,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       console.log('🔄 Using client-side file processing...');
       let allProducts: ProductFormData[] = [];
       
->>>>>>> Stashed changes
       // Process each file sequentially
       // Process single file
       if (selectedFile) {
@@ -655,20 +803,23 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         
         if (value !== undefined && value !== null) {
           // Convert the value to the appropriate type
-          if (field === 'productCode' || field === 'productName' || field === 'manufacturer') {
+                    if (field === 'productCode' || field === 'sku' || field === 'ean' || field === 'minsan' ||
+              field === 'name' || field === 'productName' || field === 'manufacturer') {
             newProduct[field] = String(value).trim();
           } else {
-            // For numeric fields, parse as float
+            // For numeric fields (price, publicPrice, stock, stockQuantity, stockPrice, vat), parse as float
             const numValue = parseFloat(String(value).replace(',', '.'));
             if (!isNaN(numValue)) {
               newProduct[field] = numValue;
+            } else {
+              newProduct[field] = 0; // Default to 0 for invalid numeric values
             }
           }
         }
       });
       
-      // Validate the product has at least name and code
-      if (newProduct.productName && newProduct.productCode) {
+      // Validate the product has at least name and some kind of product identifier
+      if ((newProduct.name || newProduct.productName) && (newProduct.productCode || newProduct.sku || newProduct.ean || newProduct.minsan)) {
         products.push(newProduct);
       }
     });
@@ -677,61 +828,91 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   };
 
   const handleCancel = () => {
-<<<<<<< Updated upstream
-    setFormData(initialFormData);
-    setErrors({});
-    setSelectedFiles([]);
-=======
     // Stop any ongoing progress polling
     uploadProgress.stopPolling();
     
     setSelectedFile(null);
->>>>>>> Stashed changes
     setFilePreview(null);
     setFileError(null);
     setMappedFields({});
     setProcessedProducts([]);
-<<<<<<< Updated upstream
-=======
     setIsProcessing(false);
     setActiveStep(0);
->>>>>>> Stashed changes
     onClose();
   };
 
-  // Helper to get field selection options
+  // Helper to get field selection options - Updated to match API expectations
   const getFieldOptions = () => {
     return [
       { value: '', label: 'Ignore this column' },
-      { value: 'productCode', label: 'Product Code (EAN/Code)' },
-      { value: 'productName', label: 'Product Name' },
-      { value: 'publicPrice', label: 'Public Price' },
-      { value: 'stockQuantity', label: 'Stock Quantity' },
+      { value: 'sku', label: 'SKU/Product Code' },
+      { value: 'ean', label: 'EAN Code' },
+      { value: 'minsan', label: 'MINSAN Code' },
+      { value: 'name', label: 'Product Name' },
+      { value: 'price', label: 'Price' },
+      { value: 'stock', label: 'Stock Quantity' },
       { value: 'stockPrice', label: 'Stock Price' },
       { value: 'manufacturer', label: 'Manufacturer' },
-      { value: 'vat', label: 'VAT %' }
+      { value: 'vat', label: 'VAT %' },
+      // Legacy fields for backward compatibility
+      { value: 'productCode', label: 'Product Code (Legacy)' },
+      { value: 'productName', label: 'Product Name (Legacy)' },
+      { value: 'publicPrice', label: 'Public Price (Legacy)' },
+      { value: 'stockQuantity', label: 'Stock Quantity (Legacy)' }
     ];
   };
 
-  // Template for Excel/CSV file
+  // Template for Excel/CSV file - Updated column names to match API
   const downloadTemplate = () => {
-    const template = [
+    const template: Record<string, string>[] = [
       {
-        'Product Code': 'EAN123456789',
-        'Product Name': 'Example Product',
-        'Public Price': '19.99',
-        'Stock Quantity': '50',
-        'Stock Price': '9.99',
-        'Manufacturer': 'Example Brand',
-        'VAT': '10'
+        'sku': '935621793',
+        'name': '5D Depuradren TÃ¨ alla Pesca Integratore Depurativo Drenante 500 ml',
+        'ean': '8032628862878',
+        'vat': '10',
+        'price': '19,9'
+      },
+      {
+        'sku': '909125460',
+        'name': 'Acarostop Fodera Cuscino Antiacaro 50 x 80 cm',
+        'ean': '',
+        'vat': '22',
+        'price': '39,9'
+      },
+      {
+        'sku': '902603303',
+        'name': 'Acidif Retard Integratore Per Apparato Urinario Mirtillo Rosso 30 Compresse',
+        'ean': '8058341430071',
+        'vat': '10',
+        'price': '24,5'
       }
     ];
     
-    // Use XLSX write functionality with proper typings
-    const ws = XLSX.utils.json_to_sheet(template);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Products');
-    XLSX.writeFile(wb, 'product_import_template.xlsx');
+    // Create CSV content with semicolon separator (European format)
+    const headers = ['sku', 'name', 'ean', 'vat', 'price'];
+    const csvContent = [
+      headers.join(';'),
+      ...template.map(row => 
+        headers.map(header => {
+          const value = row[header] || '';
+          // Escape values that contain semicolons, quotes, or newlines
+          if (typeof value === 'string' && (value.includes(';') || value.includes('"') || value.includes('\n'))) {
+            return `"${value.replace(/"/g, '""')}"`;
+          }
+          return value;
+        }).join(';')
+      )
+    ].join('\n');
+    
+    // Create and download CSV file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'product_import_template.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
   };
 
   return (
@@ -887,6 +1068,15 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                 <Typography variant="body2">{fileError}</Typography>
               </Box>
             )}
+
+            {/* Upload Progress Bar for API-based uploads */}
+            <UploadProgressBar
+              progress={uploadProgress.progress}
+              isPolling={uploadProgress.isPolling}
+              error={uploadProgress.error}
+              onRetry={uploadProgress.retry}
+              showDetails={true}
+            />
             
             {/* Show file preview and column mapping for the selected file */}
             

@@ -140,7 +140,7 @@ const ActivitiesTable: React.FC<ActivitiesTableProps> = ({
   useEffect(() => {
     let result = [...activities];
     
-        // Filter by user name
+    // Filter by user name
     if (filters.userName) {
       result = result.filter(activity => {
         const fullName = `${activity.user.name} ${activity.user.surname}`;
@@ -385,7 +385,7 @@ const ActivitiesTable: React.FC<ActivitiesTableProps> = ({
         </div>
       </div>
 
-          {/* Activity counter */}
+      {/* Activity counter */}
     <div className="flex items-center justify-between mb-2 px-2">
       <div className="flex items-center gap-2">
         <div className="text-xs text-slate-600 dark:text-dark-text-muted bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded flex items-center border dark:border-blue-800/30">
@@ -413,7 +413,7 @@ const ActivitiesTable: React.FC<ActivitiesTableProps> = ({
           Download CSV
         </button>
       )}
-    </div>
+      </div>
 
       {/* Table container */}
       <div 
@@ -445,7 +445,7 @@ const ActivitiesTable: React.FC<ActivitiesTableProps> = ({
               <h3 className="text-lg font-medium text-gray-700 dark:text-dark-text-primary">No activities found</h3>
               <p className="text-gray-500 dark:text-dark-text-muted mt-1 max-w-md">Try adjusting your search or filter criteria.</p>
             </div>
-                      ) : (
+          ) : (
               filteredActivities.map((activity, idx) => {
               const actionClasses = getActionColorClasses(activity.action);
               
@@ -467,12 +467,12 @@ const ActivitiesTable: React.FC<ActivitiesTableProps> = ({
                   {/* User */}
                   <div className="w-[25%]">
                     <div className="flex flex-col">
-                      <span className="font-medium text-sm text-slate-800 dark:text-dark-text-primary">
+                    <span className="font-medium text-sm text-slate-800 dark:text-dark-text-primary">
                         {activity.user.name} {activity.user.surname}
                       </span>
                       <span className="text-xs text-gray-500 dark:text-dark-text-muted">
                         {activity.user.email}
-                      </span>
+                    </span>
                     </div>
                   </div>
                   
@@ -510,7 +510,7 @@ const ActivitiesTable: React.FC<ActivitiesTableProps> = ({
             <svg className="animate-spin -ml-1 mr-3 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
+                  </svg>
             <span className="text-sm">Loading more activities...</span>
           </div>
         </div>

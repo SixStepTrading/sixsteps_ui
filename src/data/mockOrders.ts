@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+
 
 // Definizione dei tipi di dato
 export type OrderStatus = 'Draft' | 'Pending Approval' | 'Processing' | 'Approved' | 'Rejected' | 'Counter Offer' | 'Picking Required' | 'Partial Approved';
