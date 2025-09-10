@@ -7,7 +7,7 @@ import {
   LinearProgress
 } from '@mui/material';
 import { uploadSuppliesCSV } from '../../../utils/api';
-import { useUploadProgress } from '../../../hooks/useUploadProgress';
+import { useUploadProgress } from '../../../hooks';
 import { ModernDialog, FileUploadArea, ColumnMappingTable, DataPreviewTable } from './upload';
 import * as XLSX from 'xlsx';
 
