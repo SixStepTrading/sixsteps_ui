@@ -13,6 +13,7 @@ interface MenuItem {
   path?: string;
   badgeContent?: number;
   onClick?: () => void;
+  disabled?: boolean;
 }
 
 interface ModernSidebarProps {
@@ -77,7 +78,8 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
         </svg>
       ), 
-      path: '/purchase-orders' 
+      path: '/purchase-orders',
+      disabled: true // Disabled - not clickable
     },
     // Show User Management only to Admin users
     ...(userRole === 'Admin' ? [
@@ -137,6 +139,7 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({
             isSelected={location.pathname === item.path}
             isCollapsed={isCollapsed}
             onClick={item.onClick}
+            disabled={item.disabled}
           />
           </li>
         ))}

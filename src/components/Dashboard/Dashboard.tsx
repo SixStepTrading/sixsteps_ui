@@ -1331,6 +1331,29 @@ const Dashboard: React.FC = () => {
         onClose={handleCloseAddProductModal}
         onAddProduct={handleAddProduct}
       />
+<<<<<<< Updated upstream
+=======
+
+      {/* Supplier Stock Upload Modal */}
+      <SupplierStockUploadModal
+        open={isSupplierStockModalOpen}
+        onClose={handleCloseSupplierStockModal}
+        onSuccess={handleStockUploadSuccess}
+      />
+
+      {/* Admin Stock Management Modal */}
+      <AdminStockManagementModal
+        open={isAdminStockModalOpen}
+        onClose={handleCloseAdminStockModal}
+        onSuccess={handleStockUploadSuccess}
+      />
+
+      {/* Active Uploads Modal */}
+      <ActiveUploadsModal
+        open={isActiveUploadsModalOpen}
+        onClose={handleCloseActiveUploadsModal}
+      />
+>>>>>>> Stashed changes
     </div>
   );
 };

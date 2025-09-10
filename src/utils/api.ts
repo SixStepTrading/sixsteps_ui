@@ -174,7 +174,19 @@ export interface LoginResponse {
 
 export interface Entity {
   id: string;
+<<<<<<< Updated upstream
   entityType: 'PHARMA' | 'LANDLORD' | 'TENANT' | 'ADMIN' | 'PHARMACY' | 'SUPPLIER';
+=======
+  entityType:
+    | "PHARMA"
+    | "LANDLORD"
+    | "TENANT"
+    | "ADMIN"
+    | "PHARMACY"
+    | "SUPPLIER"
+    | "company"
+    | "MANAGER";
+>>>>>>> Stashed changes
   entityName: string;
   country?: string;
   notes?: string;
@@ -192,7 +204,15 @@ export interface CreateEntityData {
   entityName: string;
   country: string;
   notes?: string;
+<<<<<<< Updated upstream
   status: 'ACTIVE' | 'INACTIVE';
+=======
+  status: "ACTIVE" | "INACTIVE";
+  address?: string;
+  vatNumber?: string;
+  email?: string;
+  phone?: string;
+>>>>>>> Stashed changes
 }
 
 export interface CreateUserData {
@@ -356,10 +376,30 @@ export const updateEntity = async (entityData: Partial<Entity> & { entityId: str
 // Create new entity
 export const createEntity = async (entityData: CreateEntityData): Promise<Entity> => {
   try {
+<<<<<<< Updated upstream
     console.log('Creating entity with data:', entityData);
     const response = await sixstepClient.post('/entities/create', entityData);
     console.log('Raw Create Entity API response:', response.data);
     
+=======
+    console.log("Creating entity with data:", entityData);
+    
+    // Map frontend data to backend format
+    const backendPayload = {
+      entityName: entityData.entityName,
+      entityType: "company", // Backend expects "company" instead of specific types
+      country: entityData.country,
+      address: entityData.address || "",
+      vatNumber: entityData.vatNumber || "",
+      email: entityData.email || "",
+      phone: entityData.phone || ""
+    };
+    
+    console.log("Mapped payload for backend:", backendPayload);
+    const response = await sixstepClient.post("/entities/create", backendPayload);
+    console.log("Raw Create Entity API response:", response.data);
+
+>>>>>>> Stashed changes
     // Handle different response structures
     if (response.data) {
       // If response has entity wrapped (like other APIs)
@@ -779,4 +819,399 @@ export const downloadLogs = async (): Promise<void> => {
     console.error('Error downloading logs:', error);
     throw error;
   }
+<<<<<<< Updated upstream
 }; 
+=======
+};
+
+// ===== UPLOAD ENDPOINTS =====
+
+// Interface for column mapping
+export interface ColumnMapping {
+  [key: string]: string; // column header -> field name
+}
+
+// Interface for upload validation response
+export interface UploadValidationResponse {
+  success: boolean;
+  message: string;
+  detectedColumns: string[];
+  suggestedMappings?: ColumnMapping;
+  previewData?: any[];
+}
+
+// Interface for upload response
+export interface UploadResponse {
+  success: boolean;
+  message: string;
+  processedRows?: number;
+  errors?: string[];
+  uploadId?: string; // Upload ID for progress tracking
+  error?: boolean; // For error responses
+  reason?: string; // Error reason
+  upload_id?: string; // Alternative uploadId format
+  id?: string; // Alternative ID format
+}
+
+// Interface for upload progress response
+export interface UploadProgressResponse {
+  uploadId: string;
+  status: "pending" | "processing" | "completed" | "failed";
+  progress: number; // 0-100
+  currentStep: string;
+  totalSteps: number;
+  currentStepIndex: number;
+  processedRows?: number;
+  totalRows?: number;
+  errors?: string[];
+  message: string;
+  estimatedTimeRemaining?: number; // in seconds
+}
+
+// Interface for active upload
+export interface ActiveUpload {
+  uploadId: string;
+  status: "pending" | "processing" | "completed" | "failed";
+  progress: number;
+  totalRows: number;
+  processedRows: number;
+  created: number;
+  updated: number;
+  skipped: number;
+  errors: string[];
+  message: string;
+  startTime: number;
+  estimatedTimeRemaining: number;
+}
+
+// Interface for active uploads response
+export interface ActiveUploadsResponse {
+  message: string;
+  error: boolean;
+  uploads: ActiveUpload[];
+}
+
+// Upload Products CSV (Admin only) - for updating general product database
+export const uploadProductsCSV = async (
+  file: File,
+  columnMapping: ColumnMapping
+): Promise<UploadResponse> => {
+  try {
+    console.log("🚀 Starting products file upload...", {
+      fileName: file.name,
+      mapping: columnMapping,
+    });
+
+    const formData = new FormData();
+    formData.append("csvFile", file);
+    // formData.append("columnMapping", JSON.stringify(columnMapping));
+
+    const response = await sixstepClient.post("/upload/products", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    console.log("✅ Products file uploaded successfully:", response.data);
+    console.log("🔍 Raw API Response Details:", {
+      status: response.status,
+      statusText: response.statusText,
+      data: response.data,
+      dataType: typeof response.data,
+      dataKeys: Object.keys(response.data || {}),
+      hasUploadId: !!(response.data && response.data.uploadId),
+      uploadId: response.data?.uploadId,
+      success: response.data?.success,
+      error: response.data?.error,
+    });
+
+    // Check if server returned an error even with 200 status
+    if (response.data?.error || response.data?.success === false) {
+      console.error(
+        "❌ Server returned error in response body:",
+        response.data
+      );
+      throw new Error(
+        response.data?.message ||
+          response.data?.reason ||
+          "Server returned error"
+      );
+    }
+
+    return response.data;
+  } catch (error) {
+    console.error("❌ Error uploading products:", error);
+    throw error;
+  }
+};
+
+// Upload Supplies CSV (Supplier) - for updating own stock levels
+export const uploadSuppliesCSV = async (
+  file: File,
+  columnMapping: ColumnMapping
+): Promise<UploadResponse> => {
+  try {
+    console.log("🚀 Starting supplies CSV upload...", {
+      fileName: file.name,
+      mapping: columnMapping,
+    });
+
+    const formData = new FormData();
+    formData.append("csvFile", file);
+    // formData.append("columnMapping", JSON.stringify(columnMapping));
+
+    const response = await sixstepClient.post("/upload/supplies", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    console.log("✅ Supplies uploaded successfully:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Error uploading supplies:", error);
+    throw error;
+  }
+};
+
+// Upload Supplies CSV (Admin) - for updating specific supplier's stock levels
+export const uploadSuppliesAdminCSV = async (
+  file: File,
+  columnMapping: ColumnMapping,
+  supplierId: string
+): Promise<UploadResponse> => {
+  try {
+    console.log("🚀 Starting admin supplies file upload...", {
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type,
+      mapping: columnMapping,
+      entityId: supplierId,
+    });
+
+    const formData = new FormData();
+    formData.append("csvFile", file);
+    // formData.append("columnMapping", JSON.stringify(columnMapping));
+    formData.append("entityId", supplierId);
+
+    console.log("📤 FormData prepared:", {
+      fileAppended: formData.has("csvFile"),
+      mappingAppended: false, // Column mapping disabled - file should have correct headers
+      entityAppended: formData.has("entityId"),
+    });
+
+    console.log("🌐 Making API request to: POST /upload/supplies/admin");
+    console.log(
+      "📡 Request headers will include: Content-Type: multipart/form-data"
+    );
+
+    const response = await sixstepClient.post(
+      "/upload/supplies/admin",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+
+    console.log("✅ Admin supplies uploaded successfully!");
+    console.log("📊 API Response status:", response.status);
+    console.log("📊 API Response data:", response.data);
+    console.log("📊 API Response headers:", response.headers);
+
+    return response.data;
+  } catch (error: any) {
+    console.error("❌ Error uploading admin supplies:", error);
+
+    if (error.response) {
+      console.error("📍 API Error Details:");
+      console.error("  Status:", error.response.status);
+      console.error("  Status Text:", error.response.statusText);
+      console.error("  Data:", error.response.data);
+      console.error("  Headers:", error.response.headers);
+    } else if (error.request) {
+      console.error("📍 Network Error - No response received:");
+      console.error("  Request:", error.request);
+    } else {
+      console.error("📍 Request Setup Error:", error.message);
+    }
+
+    throw error;
+  }
+};
+
+// Validate CSV/Excel file and get column headers (reads only first row for performance)
+export const validateCSVHeaders = async (
+  file: File
+): Promise<UploadValidationResponse> => {
+  return new Promise((resolve, reject) => {
+    const isExcelFile = file.name.match(/\.(xlsx?|xls)$/i);
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      try {
+        console.log("📋 Validating file headers for:", file.name);
+        let headers: string[] = [];
+
+        if (isExcelFile) {
+          // Handle Excel files using XLSX library
+          console.log("📊 Processing Excel file...");
+          const data = e.target?.result as ArrayBuffer;
+          const workbook = XLSX.read(data, { type: "array" });
+
+          // Get first worksheet
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+          // Extract headers from first row
+          headers = (jsonData[0] as string[]) || [];
+          console.log("📊 Excel headers detected:", headers);
+        } else {
+          // Handle CSV files as text
+          console.log("📊 Processing CSV file...");
+          const content = e.target?.result as string;
+
+          // Get only first line for performance (as requested)
+          const firstLine = content.split("\n")[0];
+
+          // Try different separators (comma, semicolon)
+          let separator = ",";
+          if (
+            firstLine.includes(";") &&
+            firstLine.split(";").length > firstLine.split(",").length
+          ) {
+            separator = ";";
+            console.log("📊 Detected semicolon separator");
+          } else {
+            console.log("📊 Using comma separator");
+          }
+
+          headers = firstLine
+            .split(separator)
+            .map((h) => h.trim().replace(/['"]/g, ""));
+          console.log("📊 CSV headers detected:", headers);
+        }
+
+        // Suggest mappings based on common column patterns
+        const suggestedMappings: ColumnMapping = {};
+        headers.forEach((header) => {
+          const lowerHeader = header.toLowerCase();
+
+          // Common product field mappings (English and Italian) - Updated for separate SKU/EAN
+          if (
+            lowerHeader === "name" ||
+            lowerHeader.includes("nome") ||
+            lowerHeader.includes("descrizione")
+          ) {
+            suggestedMappings[header] = "name";
+          } else if (
+            lowerHeader === "sku" ||
+            lowerHeader.includes("code") ||
+            lowerHeader.includes("codice")
+          ) {
+            suggestedMappings[header] = "sku";
+          } else if (lowerHeader.includes("minsan")) {
+            suggestedMappings[header] = "minsan";
+          } else if (lowerHeader === "ean") {
+            suggestedMappings[header] = "ean";
+          } else if (
+            lowerHeader === "price" ||
+            lowerHeader.includes("prezzo")
+          ) {
+            suggestedMappings[header] = "price";
+          } else if (
+            lowerHeader.includes("stock") ||
+            lowerHeader.includes("giacenza") ||
+            lowerHeader.includes("quantit")
+          ) {
+            suggestedMappings[header] = "quantity"; // Changed from 'stock' to 'quantity' for backend API
+          } else if (
+            lowerHeader.includes("manufacturer") ||
+            lowerHeader.includes("produttore") ||
+            lowerHeader.includes("ditta")
+          ) {
+            suggestedMappings[header] = "manufacturer";
+          } else if (lowerHeader === "vat" || lowerHeader.includes("iva")) {
+            suggestedMappings[header] = "vat";
+          } else if (
+            lowerHeader.includes("currency") ||
+            lowerHeader.includes("valuta") ||
+            lowerHeader.includes("moneta")
+          ) {
+            suggestedMappings[header] = "currency";
+          } else if (
+            lowerHeader.includes("unit") ||
+            lowerHeader.includes("unità") ||
+            lowerHeader.includes("misura") ||
+            lowerHeader.includes("um")
+          ) {
+            suggestedMappings[header] = "unit";
+          } else if (
+            lowerHeader.includes("supplier") ||
+            lowerHeader.includes("fornitore")
+          ) {
+            suggestedMappings[header] = "supplier";
+          }
+        });
+
+        console.log("🎯 Suggested mappings:", suggestedMappings);
+
+        resolve({
+          success: true,
+          message: "File headers detected successfully",
+          detectedColumns: headers,
+          suggestedMappings,
+        });
+      } catch (error) {
+        console.error("❌ Error parsing file:", error);
+        reject(new Error(`Error parsing file: ${error}`));
+      }
+    };
+
+    reader.onerror = () => {
+      console.error("❌ Error reading file");
+      reject(new Error("Error reading file"));
+    };
+
+    // Use appropriate reader method based on file type
+    if (isExcelFile) {
+      reader.readAsArrayBuffer(file);
+    } else {
+      reader.readAsText(file);
+    }
+  });
+};
+
+// Get upload progress by upload ID
+export const getUploadProgress = async (
+  uploadId: string
+): Promise<UploadProgressResponse> => {
+  try {
+    console.log(`📊 Getting upload progress for ID: ${uploadId}`);
+
+    const response = await sixstepClient.post("/upload/progress", {
+      uploadId,
+    });
+
+    console.log("✅ Upload progress response:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Error getting upload progress:", error);
+    throw error;
+  }
+};
+
+// Get active uploads
+export const getActiveUploads = async (): Promise<ActiveUploadsResponse> => {
+  try {
+    console.log("🔄 Getting active uploads...");
+    const response = await sixstepClient.post("/upload/active");
+    console.log("✅ Active uploads retrieved:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Error getting active uploads:", error);
+    throw error;
+  }
+};
+>>>>>>> Stashed changes
