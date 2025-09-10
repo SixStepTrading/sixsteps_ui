@@ -256,7 +256,9 @@ export interface Entity {
     | "TENANT"
     | "ADMIN"
     | "PHARMACY"
-    | "SUPPLIER";
+    | "SUPPLIER"
+    | "company"
+    | "MANAGER";
   entityName: string;
   country?: string;
   notes?: string;
@@ -281,6 +283,10 @@ export interface CreateEntityData {
   country: string;
   notes?: string;
   status: "ACTIVE" | "INACTIVE";
+  address?: string;
+  vatNumber?: string;
+  email?: string;
+  phone?: string;
 }
 
 export interface CreateUserData {
@@ -458,7 +464,20 @@ export const createEntity = async (
 ): Promise<Entity> => {
   try {
     console.log("Creating entity with data:", entityData);
-    const response = await sixstepClient.post("/entities/create", entityData);
+    
+    // Map frontend data to backend format
+    const backendPayload = {
+      entityName: entityData.entityName,
+      entityType: "company", // Backend expects "company" instead of specific types
+      country: entityData.country,
+      address: entityData.address || "",
+      vatNumber: entityData.vatNumber || "",
+      email: entityData.email || "",
+      phone: entityData.phone || ""
+    };
+    
+    console.log("Mapped payload for backend:", backendPayload);
+    const response = await sixstepClient.post("/entities/create", backendPayload);
     console.log("Raw Create Entity API response:", response.data);
 
     // Handle different response structures
@@ -1070,18 +1089,18 @@ export const uploadSuppliesAdminCSV = async (
       fileSize: file.size,
       fileType: file.type,
       mapping: columnMapping,
-      supplierId,
+      entityId: supplierId,
     });
 
     const formData = new FormData();
     formData.append("csvFile", file);
     // formData.append("columnMapping", JSON.stringify(columnMapping));
-    formData.append("supplierId", supplierId);
+    formData.append("entityId", supplierId);
 
     console.log("📤 FormData prepared:", {
-      fileAppended: formData.has("file"),
+      fileAppended: formData.has("csvFile"),
       mappingAppended: false, // Column mapping disabled - file should have correct headers
-      supplierAppended: formData.has("supplierId"),
+      entityAppended: formData.has("entityId"),
     });
 
     console.log("🌐 Making API request to: POST /upload/supplies/admin");

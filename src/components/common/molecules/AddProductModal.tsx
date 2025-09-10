@@ -5,14 +5,10 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  TextField,
   Button,
   IconButton,
   Typography,
-  InputAdornment,
   Box,
-  Tabs,
-  Tab,
   Paper,
   Chip,
   Divider,
@@ -22,22 +18,21 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
-  CircularProgress
+  Stepper,
+  Step,
+  StepLabel
 } from '@mui/material';
 import { 
   Close as CloseIcon, 
   CloudUpload as CloudUploadIcon,
   FileCopy as FileCopyIcon,
   Download as DownloadIcon,
-  Add as AddIcon,
-  Delete as DeleteIcon
+  Delete as DeleteIcon,
+  Settings as SettingsIcon,
+  Visibility as VisibilityIcon
 } from '@mui/icons-material';
 import * as XLSX from 'xlsx';
-import { uploadProductsCSV, validateCSVHeaders, ColumnMapping } from '../../../utils/api';
+import { uploadProductsCSV, ColumnMapping } from '../../../utils/api';
 import { useUploadProgress } from '../../../hooks/useUploadProgress';
 import UploadProgressBar from '../../common/atoms/UploadProgressBar';
 
@@ -97,17 +92,36 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   };
 
   // State variables
-  const [formData, setFormData] = useState<ProductFormData>(initialFormData);
-  const [errors, setErrors] = useState<Partial<Record<keyof ProductFormData, string>>>({});
-  const [activeTab, setActiveTab] = useState(0);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [filePreview, setFilePreview] = useState<FilePreviewData | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [mappedFields, setMappedFields] = useState<Record<string, ProductField | ''>>({});
   const [isProcessing, setIsProcessing] = useState(false);
-  const [processingFileIndex, setProcessingFileIndex] = useState<number>(-1);
   const [processedProducts, setProcessedProducts] = useState<ProductFormData[]>([]);
+  const [activeStep, setActiveStep] = useState(0);
+  
+  // Stepper configuration
+  const steps = ['Upload Files', 'Map Columns', 'Preview & Import'];
+  
+  // Step navigation handlers
+  const handleNext = () => {
+    if (activeStep === 0 && selectedFile) {
+      setActiveStep(1);
+    } else if (activeStep === 1 && Object.keys(mappedFields).length > 0) {
+      setActiveStep(2);
+    }
+  };
+  
+  const handleBack = () => {
+    setActiveStep(activeStep - 1);
+  };
+  
+  const canProceed = () => {
+    if (activeStep === 0) return selectedFile !== null;
+    if (activeStep === 1) return Object.keys(mappedFields).filter(key => mappedFields[key]).length > 0;
+    return true;
+  };
   
   // References
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -117,7 +131,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     onComplete: (result) => {
       console.log('📊 Bulk import completed via progress tracking:', result);
       setIsProcessing(false);
-      setProcessingFileIndex(-1);
       
       // Reset form and close
       handleCancel();
@@ -125,80 +138,9 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     onError: (error) => {
       console.error('📊 Bulk import progress error:', error);
       setIsProcessing(false);
-      setProcessingFileIndex(-1);
       setFileError(error.message);
     }
   });
-
-  // Handle tab changes
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setActiveTab(newValue);
-  };
-
-  // Single product form handlers
-  const handleChange = (field: keyof ProductFormData) => (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = field === 'productCode' || field === 'sku' || field === 'ean' || field === 'minsan' ||
-                  field === 'name' || field === 'productName' || field === 'manufacturer'
-      ? event.target.value 
-      : parseFloat(event.target.value) || 0;
-    
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-
-    // Clear error when field is changed
-    if (errors[field]) {
-      setErrors(prev => ({
-        ...prev,
-        [field]: undefined
-      }));
-    }
-  };
-
-  const validateForm = (): boolean => {
-    const newErrors: Partial<Record<keyof ProductFormData, string>> = {};
-    
-    // Require at least one product identifier
-    if (!formData.productCode.trim() && !formData.sku.trim() && !formData.ean.trim() && !formData.minsan.trim()) {
-      newErrors.productCode = 'At least one product identifier (Product Code, SKU, EAN, or MINSAN) is required';
-    }
-    
-    if (!formData.productName.trim() && !formData.name.trim()) {
-      newErrors.productName = 'Product name is required';
-    }
-    
-    if (formData.publicPrice <= 0 && formData.price <= 0) {
-      newErrors.publicPrice = 'Price must be greater than zero';
-    }
-    
-    if (formData.stockQuantity < 0 && formData.stock < 0) {
-      newErrors.stockQuantity = 'Stock quantity cannot be negative';
-    }
-    
-    if (formData.stockPrice <= 0) {
-      newErrors.stockPrice = 'Stock price must be greater than zero';
-    }
-
-    if (!formData.manufacturer.trim()) {
-      newErrors.manufacturer = 'Manufacturer is required';
-    }
-    
-    if (formData.vat <= 0 || formData.vat > 100) {
-      newErrors.vat = 'VAT must be between 1 and 100';
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmitSingle = () => {
-    if (validateForm()) {
-      onAddProduct(formData);
-      setFormData(initialFormData);
-      onClose();
-    }
-  };
 
   // File upload handlers
   const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
@@ -225,28 +167,20 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
-      // Convert FileList to array and add to selected files
-      const newFiles = Array.from(files);
-      setSelectedFiles(prev => [...prev, ...newFiles]);
-      
-      // If no file is currently previewed, preview the first new file
-      if (!filePreview && newFiles.length > 0) {
-        handleFileSelect(newFiles[0]);
-      }
+      // Take only the first file
+      const file = files[0];
+      setSelectedFile(file);
+      handleFileSelect(file);
     }
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      // Convert FileList to array and add to selected files
-      const newFiles = Array.from(files);
-      setSelectedFiles(prev => [...prev, ...newFiles]);
-      
-      // If no file is currently previewed, preview the first new file
-      if (!filePreview && newFiles.length > 0) {
-        handleFileSelect(newFiles[0]);
-      }
+      // Take only the first file
+      const file = files[0];
+      setSelectedFile(file);
+      handleFileSelect(file);
     }
   };
 
@@ -294,6 +228,12 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       });
       
       setMappedFields(newMapping);
+      
+      // Auto-advance to next step if we have a file
+      if (selectedFile && activeStep === 0) {
+        setActiveStep(1);
+      }
+      
     } catch (error) {
       console.error('Error reading file:', error);
       setFileError('Error reading file. Please check the file format.');
@@ -642,23 +582,42 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     }
   };
 
-  const handleRemoveFile = (index: number) => {
-    setSelectedFiles(prev => {
-      const newFiles = [...prev];
-      newFiles.splice(index, 1);
+  const suggestMapping = () => {
+    if (!filePreview) return;
+    
+    const newMapping: Record<string, ProductField | ''> = {};
+    filePreview.headers.forEach(header => {
+      const lowerHeader = header.toLowerCase().trim();
       
-      // If we removed the currently previewed file, clear the preview
-      // or preview a different file if there are any left
-      if (newFiles.length === 0) {
-        setFilePreview(null);
-      } else if (index === 0 && filePreview) {
-        // If we removed the first file and it was being previewed,
-        // preview the new first file
-        handleFileSelect(newFiles[0]);
+      if (lowerHeader === 'sku' || lowerHeader.includes('code') || lowerHeader.includes('codice')) {
+        newMapping[header] = 'sku';
+      } else if (lowerHeader === 'ean') {
+        newMapping[header] = 'ean';
+      } else if (lowerHeader.includes('minsan')) {
+        newMapping[header] = 'minsan';
+      } else if (lowerHeader.includes('name') || lowerHeader.includes('product') || lowerHeader.includes('descrizione')) {
+        newMapping[header] = 'name';
+      } else if (lowerHeader.includes('public') && lowerHeader.includes('price')) {
+        newMapping[header] = 'price';
+      } else if (lowerHeader.includes('stock') && lowerHeader.includes('quantity')) {
+        newMapping[header] = 'stock';
+      } else if (lowerHeader.includes('stock') && lowerHeader.includes('price')) {
+        newMapping[header] = 'stockPrice';
+      } else if (lowerHeader.includes('manufacturer') || lowerHeader.includes('brand')) {
+        newMapping[header] = 'manufacturer';
+      } else if (lowerHeader.includes('vat') || lowerHeader.includes('iva')) {
+        newMapping[header] = 'vat';
       }
-      
-      return newFiles;
     });
+    
+    setMappedFields(newMapping);
+  };
+
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+        setFilePreview(null);
+    setMappedFields({});
+    setFileError(null);
     
     // Reset the input value to allow selecting the same file again
     if (fileInputRef.current) {
@@ -667,7 +626,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   };
 
   const handleImportProducts = async () => {
-    if (selectedFiles.length === 0) return;
+    if (!selectedFile) return;
     
     setIsProcessing(true);
     setProcessedProducts([]);
@@ -675,7 +634,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     
     try {
       // Try new API-based upload with progress tracking (for single CSV or Excel files)
-      if (selectedFiles.length === 1 && selectedFiles[0].name.match(/\.(csv|xlsx?|xls)$/i)) {
+      if (selectedFile && selectedFile.name.match(/\.(csv|xlsx?|xls)$/i)) {
         console.log('🚀 Attempting API-based upload with progress tracking...');
         
         try {
@@ -690,7 +649,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
           console.log('📋 Column mapping:', columnMapping);
           
           // Transform file with correct column names that API expects
-          const transformedFile = await transformFileWithCorrectColumns(selectedFiles[0], columnMapping);
+          const transformedFile = await transformFileWithCorrectColumns(selectedFile, columnMapping);
           console.log('🔄 File transformed with API-compliant column names');
           
           // Debug: Log transformed file details
@@ -751,7 +710,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
             
             // Handle immediate processing completion
             setIsProcessing(false);
-            setProcessingFileIndex(-1);
             handleCancel(); // Reset form and close
             return; // Exit early, processing complete
           } else {
@@ -778,13 +736,15 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       let allProducts: ProductFormData[] = [];
       
       // Process each file sequentially
-      for (let i = 0; i < selectedFiles.length; i++) {
-        setProcessingFileIndex(i);
-        const file = selectedFiles[i];
+      // Process single file
+      if (selectedFile) {
+        const file = selectedFile;
         
         // Skip unsupported file types
         if (!file.name.match(/\.(xlsx|xls|csv)$/i)) {
-          continue;
+          setFileError('Unsupported file type. Please upload Excel or CSV files.');
+          setIsProcessing(false);
+          return;
         }
         
         try {
@@ -823,7 +783,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       setFileError('Error processing products. Please check file formats and field mappings.');
     } finally {
       setIsProcessing(false);
-      setProcessingFileIndex(-1);
     }
   };
   
@@ -872,15 +831,13 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     // Stop any ongoing progress polling
     uploadProgress.stopPolling();
     
-    setFormData(initialFormData);
-    setErrors({});
-    setSelectedFiles([]);
+    setSelectedFile(null);
     setFilePreview(null);
     setFileError(null);
     setMappedFields({});
     setProcessedProducts([]);
     setIsProcessing(false);
-    setProcessingFileIndex(-1);
+    setActiveStep(0);
     onClose();
   };
 
@@ -962,51 +919,85 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     <Dialog 
       open={open} 
       onClose={onClose}
-      maxWidth="md"
+      maxWidth="lg"
       fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 3,
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+          overflow: 'hidden'
+        }
+      }}
     >
-      <DialogTitle sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Typography variant="h6" component="div">
+      <DialogTitle sx={{ 
+        p: 3, 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between',
+        bgcolor: 'primary.main',
+        color: 'primary.contrastText',
+        borderBottom: '1px solid',
+        borderColor: 'divider'
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant="h5" component="div" sx={{ fontWeight: 600 }}>
           Add Products
         </Typography>
-        <IconButton onClick={handleCancel} size="small">
+        </Box>
+        <IconButton 
+          onClick={handleCancel} 
+          size="small"
+          sx={{ 
+            color: 'primary.contrastText',
+            '&:hover': {
+              bgcolor: 'rgba(255, 255, 255, 0.1)'
+            }
+          }}
+        >
           <CloseIcon />
         </IconButton>
       </DialogTitle>
       
-      <Tabs value={activeTab} onChange={handleTabChange} variant="fullWidth" sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <Tab label="Bulk Import" />
-        <Tab label="Single Product" />
-      </Tabs>
+      {/* Stepper */}
+      <Box sx={{ p: 2, bgcolor: 'grey.50' }}>
+        <Stepper activeStep={activeStep} alternativeLabel>
+          {steps.map((label) => (
+            <Step key={label}>
+              <StepLabel>{label}</StepLabel>
+            </Step>
+          ))}
+        </Stepper>
+      </Box>
       
-      <DialogContent dividers>
-        {activeTab === 0 ? (
-          // Bulk import form - updated for multiple files
-          <Box sx={{ p: 1 }}>
+      <DialogContent dividers sx={{ p: 0, bgcolor: 'background.paper' }}>
+        <Box sx={{ p: 3 }}>
+          {/* Step 0: Upload Files */}
+          {activeStep === 0 && (
+            <>
             <input
               ref={fileInputRef}
               type="file"
               accept=".xlsx,.xls,.csv"
               style={{ display: 'none' }}
               onChange={handleFileInputChange}
-              multiple // Allow multiple file selection
             />
             
-            {/* File drop area - show when no files or always available */}
+            {/* File drop area */}
             <Box
               sx={{
                 width: '100%',
-                height: selectedFiles.length === 0 ? 200 : 100,
+                height: selectedFile === null ? 120 : 60,
                 border: `2px dashed ${isDragging ? 'primary.main' : 'grey.300'}`,
                 borderRadius: 2,
                 display: 'flex',
-                flexDirection: 'column',
+                flexDirection: 'row',
                 justifyContent: 'center',
                 alignItems: 'center',
                 backgroundColor: isDragging ? 'rgba(25, 118, 210, 0.04)' : 'grey.50',
                 transition: 'all 0.2s ease-in-out',
                 cursor: 'pointer',
-                mb: 3
+                mb: 2,
+                gap: 1
               }}
               onClick={handleFileClick}
               onDragEnter={handleDragEnter}
@@ -1014,71 +1005,62 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
               onDragOver={handleDragOver}
               onDrop={handleDrop}
             >
-              <CloudUploadIcon sx={{ fontSize: selectedFiles.length === 0 ? 48 : 32, color: 'grey.400', mb: 1 }} />
-              <Typography variant={selectedFiles.length === 0 ? "subtitle1" : "body2"}>
-                {selectedFiles.length === 0 ? 'Drag & Drop your files here' : 'Add more files'}
+              <CloudUploadIcon sx={{ fontSize: selectedFile === null ? 32 : 20, color: 'grey.400' }} />
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                {selectedFile === null ? 'Drag & Drop file or click to select' : 'Replace file'}
               </Typography>
-              {selectedFiles.length === 0 && (
-                <>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    or click to select files
-                  </Typography>
-                  <Button variant="outlined" size="small">
-                    Select Files
-                  </Button>
-                </>
-              )}
             </Box>
             
-            {/* List of selected files */}
-            {selectedFiles.length > 0 && (
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="subtitle2" gutterBottom>
-                  Selected Files ({selectedFiles.length})
+            {/* Selected file display */}
+            {selectedFile && (
+              <Box sx={{ mb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                    Selected File
                 </Typography>
-                
-                <List dense sx={{ bgcolor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: 1 }}>
-                  {selectedFiles.map((file, index) => (
-                    <ListItem
-                      key={index}
-                      sx={{ 
-                        cursor: 'pointer',
-                        backgroundColor: filePreview && index === 0 ? 'rgba(25, 118, 210, 0.08)' : 'inherit'
-                      }}
-                      onClick={() => handleFileSelect(file)}
-                    >
-                      <ListItemText
-                        primary={file.name}
-                        secondary={`${(file.size / 1024).toFixed(2)} KB`}
-                      />
-                      {isProcessing && processingFileIndex === index && (
-                        <CircularProgress size={20} sx={{ ml: 1 }} />
-                      )}
-                      <ListItemSecondaryAction>
-                        <IconButton edge="end" aria-label="delete" onClick={(e) => {
-                          e.stopPropagation();
-                          handleRemoveFile(index);
-                        }}>
-                          <DeleteIcon />
-                        </IconButton>
-                      </ListItemSecondaryAction>
-                    </ListItem>
-                  ))}
-                </List>
-              </Box>
-            )}
-            
-            {/* Download template button */}
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
               <Button
                 variant="text"
                 startIcon={<DownloadIcon />}
                 onClick={downloadTemplate}
                 size="small"
+                    sx={{ textTransform: 'none', fontSize: '0.75rem' }}
               >
-                Download Template
+                    Template
               </Button>
             </Box>
+                
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between',
+                  p: 1.5,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: 1,
+                  bgcolor: 'background.paper'
+                }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flex: 1 }}>
+                    <FileCopyIcon color="primary" sx={{ fontSize: 16 }} />
+                    <Box sx={{ minWidth: 0, flex: 1 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {selectedFile.name}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {(selectedFile.size / 1024).toFixed(2)} KB
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <IconButton 
+                    size="small" 
+                    onClick={handleRemoveFile}
+                    color="error"
+                    sx={{ ml: 1 }}
+                  >
+                    <DeleteIcon sx={{ fontSize: 16 }} />
+                  </IconButton>
+                </Box>
+              </Box>
+            )}
             
             {/* File error message */}
             {fileError && (
@@ -1097,81 +1079,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
             />
             
             {/* Show file preview and column mapping for the selected file */}
-            {filePreview && (
-              <>
-                <Divider sx={{ my: 3 }} />
-                
-                <Typography variant="subtitle1" gutterBottom>
-                  Map file columns to product fields
-                </Typography>
-                <Typography variant="body2" color="text.secondary" paragraph>
-                  Select which column in your file corresponds to each product field
-                </Typography>
-                
-                <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>File Column</TableCell>
-                        <TableCell>Map To</TableCell>
-                        <TableCell>Preview</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {filePreview.headers.map((header, index) => (
-                        <TableRow key={index}>
-                          <TableCell>{header}</TableCell>
-                          <TableCell>
-                            <select 
-                              className="w-full p-1 border border-gray-300 rounded"
-                              value={mappedFields[header] || ''}
-                              onChange={(e) => handleFieldMapping(header, e.target.value as ProductField | '')}
-                            >
-                              {getFieldOptions().map(option => (
-                                <option key={option.value} value={option.value}>{option.label}</option>
-                              ))}
-                            </select>
-                          </TableCell>
-                          <TableCell>
-                            {filePreview.rows[0] && filePreview.rows[0][index] ? (
-                              filePreview.rows[0][index]
-                            ) : (
-                              <Typography variant="body2" color="text.secondary">
-                                (empty)
-                              </Typography>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-                
-                <Typography variant="subtitle2" gutterBottom>
-                  Data Preview (first 5 rows)
-                </Typography>
-                <TableContainer component={Paper} variant="outlined" sx={{ mb: 3, maxHeight: 300 }}>
-                  <Table size="small" stickyHeader>
-                    <TableHead>
-                      <TableRow>
-                        {filePreview.headers.map((header, index) => (
-                          <TableCell key={index}>{header}</TableCell>
-                        ))}
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {filePreview.rows.map((row, rowIndex) => (
-                        <TableRow key={rowIndex}>
-                          {row.map((cell, cellIndex) => (
-                            <TableCell key={cellIndex}>{cell || ''}</TableCell>
-                          ))}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </>
-            )}
             
             {/* Show processed products count if any */}
             {processedProducts.length > 0 && (
@@ -1183,7 +1090,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
             )}
             
             {/* File format information and expected columns - same as before */}
-            {selectedFiles.length === 0 && (
+            {!selectedFile && (
               <>
                 <Divider sx={{ my: 3 }} />
                 
@@ -1241,150 +1148,202 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                 </TableContainer>
               </>
             )}
-          </Box>
-        ) : (
-          // Single product form
-          <Box sx={{ p: 1 }}>
-            {/* First row */}
-            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3, mb: 3 }}>
-              <Box sx={{ flex: 1 }}>
-                <TextField
-                  fullWidth
-                  label="Product Code"
+            </>
+          )}
+
+          {/* Step 1: Map Columns */}
+          {activeStep === 1 && filePreview && (
+            <>
+              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <SettingsIcon color="primary" />
+                Map File Columns to Product Fields
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Select which column in your file corresponds to each product field
+              </Typography>
+              
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                <Button
                   variant="outlined"
-                  value={formData.productCode}
-                  onChange={handleChange('productCode')}
-                  error={!!errors.productCode}
-                  helperText={errors.productCode}
-                  required
-                />
+                  size="small"
+                  onClick={suggestMapping}
+                  sx={{ 
+                    textTransform: 'none',
+                    fontWeight: 500,
+                    borderRadius: 2
+                  }}
+                >
+                  Auto Suggest Mapping
+                </Button>
               </Box>
               
-              <Box sx={{ flex: 1 }}>
-                <TextField
-                  fullWidth
-                  label="Product Name"
-                  variant="outlined"
-                  value={formData.productName}
-                  onChange={handleChange('productName')}
-                  error={!!errors.productName}
-                  helperText={errors.productName}
-                  required
-                />
-              </Box>
-            </Box>
-            
-            {/* Second row - Manufacturer and VAT */}
-            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3, mb: 3 }}>
-              <Box sx={{ flex: 1 }}>
-                <TextField
-                  fullWidth
-                  label="Manufacturer"
-                  variant="outlined"
-                  value={formData.manufacturer}
-                  onChange={handleChange('manufacturer')}
-                  error={!!errors.manufacturer}
-                  helperText={errors.manufacturer}
-                  required
-                />
-              </Box>
+              <TableContainer component={Paper} variant="outlined">
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 600 }}>File Column</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Map To</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Preview</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filePreview.headers.map((header, index) => (
+                      <TableRow key={index}>
+                        <TableCell sx={{ fontWeight: 500 }}>{header}</TableCell>
+                        <TableCell>
+                          <select 
+                            className="w-full p-1 border border-gray-300 rounded"
+                            value={mappedFields[header] || ''}
+                            onChange={(e) => handleFieldMapping(header, e.target.value as ProductField | '')}
+                          >
+                            {getFieldOptions().map(option => (
+                              <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                          </select>
+                        </TableCell>
+                        <TableCell>
+                          {filePreview.rows[0] && filePreview.rows[0][index] ? (
+                            <Typography variant="body2" sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {filePreview.rows[0][index]}
+                            </Typography>
+                          ) : (
+                            <Typography variant="body2" color="text.secondary">(empty)</Typography>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </>
+          )}
+
+          {/* Step 2: Preview & Import */}
+          {activeStep === 2 && filePreview && (
+            <>
+              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <VisibilityIcon color="primary" />
+                Preview & Import Products
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Review the mapped data and import your products
+              </Typography>
               
-              <Box sx={{ flex: 1 }}>
-                <TextField
-                  fullWidth
-                  label="VAT"
-                  variant="outlined"
-                  type="number"
-                  InputProps={{
-                    endAdornment: <InputAdornment position="end">%</InputAdornment>,
-                    inputProps: { min: 1, max: 100, step: 1 }
-                  }}
-                  value={formData.vat}
-                  onChange={handleChange('vat')}
-                  error={!!errors.vat}
-                  helperText={errors.vat}
-                  required
-                />
-              </Box>
-            </Box>
-            
-            {/* Third row */}
-            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3 }}>
-              <Box sx={{ flex: 1 }}>
-                <TextField
-                  fullWidth
-                  label="Public Price"
-                  variant="outlined"
-                  type="number"
-                  InputProps={{
-                    startAdornment: <InputAdornment position="start">€</InputAdornment>,
-                    inputProps: { min: 0, step: 0.01 }
-                  }}
-                  value={formData.publicPrice}
-                  onChange={handleChange('publicPrice')}
-                  error={!!errors.publicPrice}
-                  helperText={errors.publicPrice}
-                  required
-                />
-              </Box>
+              <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 400, mb: 3 }}>
+                <Table size="small" stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      {filePreview.headers.map((header, index) => (
+                        <TableCell key={index} sx={{ fontWeight: 600 }}>
+                          {mappedFields[header] ? `${header} → ${mappedFields[header]}` : header}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filePreview.rows.slice(0, 10).map((row, rowIndex) => (
+                      <TableRow key={rowIndex}>
+                        {row.map((cell, cellIndex) => (
+                          <TableCell key={cellIndex}>
+                            {cell ? (
+                              <Typography variant="body2" sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {cell}
+                              </Typography>
+                            ) : (
+                              <Typography variant="body2" color="text.secondary">(empty)</Typography>
+                            )}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
               
-              <Box sx={{ flex: 1 }}>
-                <TextField
-                  fullWidth
-                  label="Stock Quantity"
-                  variant="outlined"
-                  type="number"
-                  InputProps={{
-                    inputProps: { min: 0 }
-                  }}
-                  value={formData.stockQuantity}
-                  onChange={handleChange('stockQuantity')}
-                  error={!!errors.stockQuantity}
-                  helperText={errors.stockQuantity}
-                  required
-                />
+              {filePreview.rows.length > 10 && (
+                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mb: 2 }}>
+                  Showing first 10 rows of {filePreview.rows.length} total rows
+                </Typography>
+              )}
+            </>
+          )}
               </Box>
-              
-              <Box sx={{ flex: 1 }}>
-                <TextField
-                  fullWidth
-                  label="Stock Price"
-                  variant="outlined"
-                  type="number"
-                  InputProps={{
-                    startAdornment: <InputAdornment position="start">€</InputAdornment>,
-                    inputProps: { min: 0, step: 0.01 }
-                  }}
-                  value={formData.stockPrice}
-                  onChange={handleChange('stockPrice')}
-                  error={!!errors.stockPrice}
-                  helperText={errors.stockPrice}
-                  required
-                />
-              </Box>
-            </Box>
-          </Box>
-        )}
       </DialogContent>
       
-      <DialogActions>
-        <Button onClick={handleCancel}>Cancel</Button>
-        {activeTab === 0 ? (
+      <DialogActions sx={{ 
+        p: 2, 
+        bgcolor: 'grey.50', 
+        borderTop: '1px solid',
+        borderColor: 'divider',
+        gap: 2
+      }}>
+        <Button 
+          onClick={handleCancel}
+                  variant="outlined"
+          sx={{ 
+            borderRadius: 2,
+            textTransform: 'none',
+            fontWeight: 500,
+            px: 3
+          }}
+        >
+          Cancel
+        </Button>
+        
+        {activeStep > 0 && (
+          <Button 
+            onClick={handleBack}
+                  variant="outlined"
+            sx={{ 
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 500,
+              px: 3
+            }}
+          >
+            Back
+          </Button>
+        )}
+        
+        {activeStep < 2 ? (
           <Button 
             variant="contained" 
             color="primary"
-            onClick={handleImportProducts}
-            disabled={isProcessing || selectedFiles.length === 0 || Object.keys(mappedFields).length === 0}
+            onClick={handleNext}
+            disabled={!canProceed()}
+            sx={{ 
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 600,
+              px: 4,
+              py: 1.5,
+              boxShadow: 'none',
+              '&:hover': {
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
+              }
+            }}
           >
-            {isProcessing ? 'Processing...' : `Import Products (${selectedFiles.length} file${selectedFiles.length !== 1 ? 's' : ''})`}
+            {activeStep === 0 ? 'Next: Map Columns' : 'Next: Preview & Import'}
           </Button>
         ) : (
           <Button 
             variant="contained" 
-            onClick={handleSubmitSingle}
-            startIcon={<AddIcon />}
+            color="primary"
+            onClick={handleImportProducts}
+            disabled={isProcessing || !selectedFile || Object.keys(mappedFields).length === 0}
+            sx={{ 
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 600,
+              px: 4,
+              py: 1.5,
+              boxShadow: 'none',
+              '&:hover': {
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
+              }
+            }}
           >
-            Add Product
+            {isProcessing ? 'Processing...' : 'Import Products'}
           </Button>
         )}
       </DialogActions>

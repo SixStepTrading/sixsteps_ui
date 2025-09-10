@@ -337,101 +337,190 @@ const ProductTable: React.FC<ProductTableProps> = ({
             userRole={userRole}
           />
           
-          {/* Action buttons moved from Dashboard */}
-          {userRole === 'Admin' && onAddProduct && (
-            <button
-              className="flex items-center gap-1 bg-blue-600 dark:bg-blue-700 text-white text-sm py-1 px-3 rounded hover:bg-blue-700 dark:hover:bg-blue-800 transition-colors"
-              onClick={onAddProduct}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-              </svg>
-              Add Product
-            </button>
-          )}
-          
           {onUploadProduct && (
-            <button
-              className={`flex items-center gap-1 border text-sm py-1 px-3 rounded 
-                ${loading || fileUploading 
-                  ? 'border-gray-300 dark:border-dark-border-primary text-gray-400 dark:text-dark-text-disabled cursor-not-allowed' 
-                  : 'border-blue-600 dark:border-blue-500 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors'}
-              `}
-              onClick={onUploadProduct}
-              disabled={loading || fileUploading}
+            <Tooltip 
+              text="Upload a CSV/Excel file to find your products in the platform database. Check availability and get product information."
+              position="top"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
-              </svg>
-              {fileUploading ? 'Processing...' : 'Upload Products'}
-            </button>
-          )}
-
-          {/* Upload Stock Button - For All Users */}
-          {(userRole === 'Supplier' || userRole === 'Admin' || userRole === 'Pharmacy') && onUploadStock && (
-            <button
-              className={`flex items-center gap-1 bg-green-600 dark:bg-green-700 text-white text-sm py-1 px-3 rounded hover:bg-green-700 dark:hover:bg-green-800 transition-colors
-                ${loading || fileUploading ? 'opacity-50 cursor-not-allowed' : ''}
-              `}
-              onClick={onUploadStock}
-              disabled={loading || fileUploading}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
-              </svg>
-              Upload Stock
-            </button>
-          )}
-
-          {/* Manage Stock Button - Only for Admin */}
-          {userRole === 'Admin' && onManageStock && (
-            <button
-              className={`flex items-center gap-1 bg-orange-600 dark:bg-orange-700 text-white text-sm py-1 px-3 rounded hover:bg-orange-700 dark:hover:bg-orange-800 transition-colors
-                ${loading || fileUploading ? 'opacity-50 cursor-not-allowed' : ''}
-              `}
-              onClick={onManageStock}
-              disabled={loading || fileUploading}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.107-1.204l-.527-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              Manage Stock
-            </button>
-                      )}
-            
-            {onViewActiveUploads && (
               <button
                 className={`flex items-center gap-1 border text-sm py-1 px-3 rounded 
                   ${loading || fileUploading 
                     ? 'border-gray-300 dark:border-dark-border-primary text-gray-400 dark:text-dark-text-disabled cursor-not-allowed' 
-                    : 'border-purple-500 dark:border-purple-400 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors'}
+                    : 'border-blue-600 dark:border-blue-500 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors'}
                 `}
-                onClick={onViewActiveUploads}
+                onClick={onUploadProduct}
                 disabled={loading || fileUploading}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
                 </svg>
-                Active Uploads
+                {fileUploading ? 'Processing...' : 'Find Products'}
               </button>
-            )}
+            </Tooltip>
+          )}
+
+          {/* Separator for admin/special user functions */}
+          {((userRole === 'Supplier' || userRole === 'Admin' || userRole === 'Pharmacy') && onUploadStock) || 
+           (userRole === 'Admin' && onManageStock) || 
+           (userRole === 'Admin' && onAddProduct) ||
+           onViewActiveUploads ? (
+            <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-2"></div>
+          ) : null}
+
+          {/* Manage Products & Supply Dropdown */}
+          {((userRole === 'Admin' && onAddProduct) || 
+            ((userRole === 'Supplier' || userRole === 'Admin' || userRole === 'Pharmacy') && onUploadStock) || 
+            (userRole === 'Admin' && onManageStock) || 
+            onViewActiveUploads) && (
+            <div className="relative group">
+              <button
+                className={`flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-800 text-white text-sm py-2 px-4 rounded-lg hover:from-blue-700 hover:to-blue-800 dark:hover:from-blue-800 dark:hover:to-blue-900 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5
+                  ${loading || fileUploading ? 'opacity-50 cursor-not-allowed transform-none hover:shadow-md' : ''}
+                `}
+                disabled={loading || fileUploading}
+              >
+                Manage Products & Supply
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-3 h-3 transition-transform duration-200 group-hover:rotate-180">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                </svg>
+              </button>
+              
+              {/* Dropdown Menu */}
+              <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-dark-bg-secondary border border-gray-200 dark:border-dark-border-primary rounded-xl shadow-xl z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform scale-95 group-hover:scale-100 backdrop-blur-sm">
+                <div className="py-2">
+                  {/* Header */}
+                  <div className="px-4 py-2 border-b border-gray-100 dark:border-dark-border-primary">
+                    <h3 className="text-sm font-semibold text-gray-700 dark:text-dark-text-primary">Product Management</h3>
+                    <p className="text-xs text-gray-500 dark:text-dark-text-muted">Manage platform products and inventory</p>
+                  </div>
+                  {/* Add Products - Admin Only */}
+                  {userRole === 'Admin' && onAddProduct && (
+                    <div className="relative group/item">
+                      <button
+                        className="w-full text-left px-4 py-3 text-sm text-gray-700 dark:text-dark-text-primary hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center gap-3 transition-all duration-200"
+                        onClick={onAddProduct}
+                      >
+                        <div className="flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center group-hover/item:bg-blue-200 dark:group-hover/item:bg-blue-800/40 transition-colors">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4 text-blue-600 dark:text-blue-400">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium">Add Products</div>
+                          <div className="text-xs text-gray-500 dark:text-dark-text-muted">Create new products</div>
+                        </div>
+                      </button>
+                      {/* Tooltip */}
+                      <div className="absolute z-50 right-full top-0 mr-2 px-3 py-1.5 text-xs bg-gray-900 text-white rounded-md whitespace-normal opacity-0 invisible group-hover/item:opacity-100 group-hover/item:visible transition-all duration-200 transform scale-90 group-hover/item:scale-100 pointer-events-none shadow-lg w-max max-w-[200px]">
+                        Add a new product manually to the database. You can enter product details directly or import multiple products from a CSV/Excel file.
+                        <div className="absolute top-2 -right-1 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Upload Stock - Supplier, Admin, Pharmacy */}
+                  {(userRole === 'Supplier' || userRole === 'Admin' || userRole === 'Pharmacy') && onUploadStock && (
+                    <div className="relative group/item">
+                      <button
+                        className="w-full text-left px-4 py-3 text-sm text-gray-700 dark:text-dark-text-primary hover:bg-green-50 dark:hover:bg-green-900/20 flex items-center gap-3 transition-all duration-200"
+                        onClick={onUploadStock}
+                        disabled={loading || fileUploading}
+                      >
+                        <div className="flex-shrink-0 w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center group-hover/item:bg-green-200 dark:group-hover/item:bg-green-800/40 transition-colors">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4 text-green-600 dark:text-green-400">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium">Upload Stock</div>
+                          <div className="text-xs text-gray-500 dark:text-dark-text-muted">Update inventory levels</div>
+                        </div>
+                      </button>
+                      {/* Tooltip */}
+                      <div className="absolute z-50 right-full top-0 mr-2 px-3 py-1.5 text-xs bg-gray-900 text-white rounded-md whitespace-normal opacity-0 invisible group-hover/item:opacity-100 group-hover/item:visible transition-all duration-200 transform scale-90 group-hover/item:scale-100 pointer-events-none shadow-lg w-max max-w-[200px]">
+                        Upload your stock levels from a CSV/Excel file. This will update your inventory quantities and prices for existing products in the system.
+                        <div className="absolute top-2 -right-1 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Manage Stock - Admin Only */}
+                  {userRole === 'Admin' && onManageStock && (
+                    <div className="relative group/item">
+                      <button
+                        className="w-full text-left px-4 py-3 text-sm text-gray-700 dark:text-dark-text-primary hover:bg-orange-50 dark:hover:bg-orange-900/20 flex items-center gap-3 transition-all duration-200"
+                        onClick={onManageStock}
+                        disabled={loading || fileUploading}
+                      >
+                        <div className="flex-shrink-0 w-8 h-8 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center group-hover/item:bg-orange-200 dark:group-hover/item:bg-orange-800/40 transition-colors">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4 text-orange-600 dark:text-orange-400">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.107-1.204l-.527-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium">Manage Stock</div>
+                          <div className="text-xs text-gray-500 dark:text-dark-text-muted">Admin stock management</div>
+                        </div>
+                      </button>
+                      {/* Tooltip */}
+                      <div className="absolute z-50 right-full top-0 mr-2 px-3 py-1.5 text-xs bg-gray-900 text-white rounded-md whitespace-normal opacity-0 invisible group-hover/item:opacity-100 group-hover/item:visible transition-all duration-200 transform scale-90 group-hover/item:scale-100 pointer-events-none shadow-lg w-max max-w-[200px]">
+                        Manage stock levels for any supplier in the system. Select a supplier and upload their stock data to update their inventory quantities and prices.
+                        <div className="absolute top-2 -right-1 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Active Uploads - All Users */}
+                  {onViewActiveUploads && (
+                    <div className="relative group/item">
+                      <button
+                        className="w-full text-left px-4 py-3 text-sm text-gray-700 dark:text-dark-text-primary hover:bg-purple-50 dark:hover:bg-purple-900/20 flex items-center gap-3 transition-all duration-200"
+                        onClick={onViewActiveUploads}
+                        disabled={loading || fileUploading}
+                      >
+                        <div className="flex-shrink-0 w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center group-hover/item:bg-purple-200 dark:group-hover/item:bg-purple-800/40 transition-colors">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4 text-purple-600 dark:text-purple-400">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium">Active Uploads</div>
+                          <div className="text-xs text-gray-500 dark:text-dark-text-muted">Monitor upload progress</div>
+                        </div>
+                      </button>
+                      {/* Tooltip */}
+                      <div className="absolute z-50 right-full top-0 mr-2 px-3 py-1.5 text-xs bg-gray-900 text-white rounded-md whitespace-normal opacity-0 invisible group-hover/item:opacity-100 group-hover/item:visible transition-all duration-200 transform scale-90 group-hover/item:scale-100 pointer-events-none shadow-lg w-max max-w-[200px]">
+                        View all currently active uploads in the system. Monitor the progress of file uploads and check for any errors or completion status.
+                        <div className="absolute top-2 -right-1 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
             {onRefresh && (
-            <button 
-              className={`flex items-center gap-1 border text-sm py-1 px-3 rounded 
-                ${loading || fileUploading 
-                  ? 'border-gray-300 dark:border-dark-border-primary text-gray-400 dark:text-dark-text-disabled cursor-not-allowed' 
-                  : 'border-gray-500 dark:border-dark-border-secondary text-gray-700 dark:text-dark-text-secondary hover:bg-gray-50 dark:hover:bg-dark-bg-hover transition-colors'}
-              `}
-              onClick={onRefresh}
-              disabled={loading || fileUploading}
+            <Tooltip 
+              text="Reset all filters, clear product selections, and refresh the product list to its default state."
+              position="top"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-              </svg>
-              Refresh
-            </button>
+              <button 
+                className={`flex items-center gap-1 border text-sm py-1 px-3 rounded 
+                  ${loading || fileUploading 
+                    ? 'border-gray-300 dark:border-dark-border-primary text-gray-400 dark:text-dark-text-disabled cursor-not-allowed' 
+                    : 'border-gray-500 dark:border-dark-border-secondary text-gray-700 dark:text-dark-text-secondary hover:bg-gray-50 dark:hover:bg-dark-bg-hover transition-colors'}
+                `}
+                onClick={onRefresh}
+                disabled={loading || fileUploading}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+                Refresh
+              </button>
+            </Tooltip>
           )}
         </div>
       </div>

@@ -1468,7 +1468,6 @@ const Dashboard: React.FC = () => {
         open={isAdminStockModalOpen}
         onClose={handleCloseAdminStockModal}
         onSuccess={handleStockUploadSuccess}
-        suppliers={suppliers}
       />
 
       {/* Active Uploads Modal */}

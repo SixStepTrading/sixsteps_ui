@@ -10,6 +10,7 @@ interface SidebarItemProps {
   isCollapsed?: boolean;
   badgeContent?: number;
   onClick?: () => void;
+  disabled?: boolean;
 }
 
 const SidebarItem: React.FC<SidebarItemProps> = ({
@@ -19,7 +20,8 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
   isSelected = false,
   isCollapsed = false,
   badgeContent,
-  onClick
+  onClick,
+  disabled = false
 }) => {
   // Base classes for the button
   const buttonClasses = `
@@ -33,9 +35,11 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
     rounded
     transition-colors
     duration-150
-    ${isSelected 
-      ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30' 
-      : 'hover:bg-gray-100 dark:hover:bg-dark-bg-hover text-gray-700 dark:text-dark-text-secondary'
+    ${disabled 
+      ? 'opacity-50 cursor-not-allowed text-gray-400 dark:text-gray-600' 
+      : isSelected 
+        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30' 
+        : 'hover:bg-gray-100 dark:hover:bg-dark-bg-hover text-gray-700 dark:text-dark-text-secondary'
     }
     ${isCollapsed ? 'justify-center mx-1' : 'justify-start mx-2'}
   `;
@@ -43,7 +47,12 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
   // Classes for the icon
   const iconClasses = `
     ${isCollapsed ? '' : 'mr-3'}
-    ${isSelected ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-dark-text-muted'}
+    ${disabled 
+      ? 'text-gray-400 dark:text-gray-600' 
+      : isSelected 
+        ? 'text-blue-600 dark:text-blue-400' 
+        : 'text-gray-500 dark:text-dark-text-muted'
+    }
     flex-shrink-0
   `;
 
@@ -51,7 +60,7 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
   const content = (
     <div
       className={buttonClasses}
-      onClick={onClick}
+      onClick={disabled ? undefined : onClick}
     >
       {/* Indicator for selected item */}
       {isSelected && (
@@ -92,8 +101,8 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
     </div>
   ) : content;
 
-  // Render as Link if 'to' prop is provided, otherwise as a div
-  return to ? (
+  // Render as Link if 'to' prop is provided and not disabled, otherwise as a div
+  return to && !disabled ? (
     <Link to={to} className="block no-underline">
       {wrappedContent}
     </Link>
