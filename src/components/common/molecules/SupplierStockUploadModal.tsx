@@ -44,7 +44,7 @@ const SupplierStockUploadModal: React.FC<SupplierStockUploadModalProps> = ({
 
   // Upload progress tracking
   const uploadProgress = useUploadProgress({
-    onComplete: (result) => {
+    onComplete: (result: any) => {
       console.log('📊 Stock upload completed via progress tracking:', result);
       setIsProcessing(false);
       if (result) {
@@ -52,7 +52,7 @@ const SupplierStockUploadModal: React.FC<SupplierStockUploadModalProps> = ({
         handleCancel();
       }
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error('❌ Stock upload error via progress tracking:', error);
       setIsProcessing(false);
       setFileError(error.message);
