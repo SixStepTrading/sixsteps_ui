@@ -12,6 +12,7 @@ import EditUserModal from './EditUserModal';
 import DeleteUserModal from './DeleteUserModal';
 import { User } from './UserTableRow';
 import { UserActivity } from './ActivityTableRow';
+import ApiErrorMessage from '../common/atoms/ApiErrorMessage';
 
 // Types for API data (different from UI components)
 interface ApiUser {
@@ -152,6 +153,7 @@ const UserManagement: React.FC = () => {
   const [apiUsers, setApiUsers] = useState<ApiUser[]>([]);
   const [entities, setEntities] = useState<Entity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   const [filters, setFilters] = useState<UserFilterValues>({
     search: '',
@@ -238,15 +240,18 @@ const UserManagement: React.FC = () => {
       
       if (Array.isArray(usersData)) {
         setApiUsers(usersData);
+        setApiError(null); // Reset error when API call succeeds
         console.log('Users set successfully:', usersData.length, 'users');
       } else {
         console.warn('API returned non-array data:', usersData);
         setApiUsers([]);
+        setApiError('USERS_API_ERROR');
         showToast('Invalid response format from server', 'warning');
       }
     } catch (error: any) {
       console.error('Error loading users:', error);
       setApiUsers([]);
+      setApiError('USERS_API_ERROR');
       showToast('Failed to load users from server', 'error');
     } finally {
       setLoading(false);
@@ -656,14 +661,23 @@ const UserManagement: React.FC = () => {
             </div>
           </div>
           
-          {/* Users Table */}
-          <UsersTable 
-            users={filteredUsers}
-            totalUsers={users.length}
-            hasActiveFilters={!!(filters.search || filters.role || filters.status || filters.entity)}
-            onEditUser={handleEditUser}
-            onDeleteUser={handleDeleteUser}
-          />
+          {/* Users Table or API Error Message */}
+          {apiError === 'USERS_API_ERROR' ? (
+            <ApiErrorMessage
+              title="Servizio Gestione Utenti Non Disponibile"
+              description="Il sistema di gestione utenti non è attualmente raggiungibile. Questo impedisce la visualizzazione e la gestione degli account utente."
+              endpoint="/users/getAll"
+              className="min-h-[400px]"
+            />
+          ) : (
+            <UsersTable 
+              users={filteredUsers}
+              totalUsers={users.length}
+              hasActiveFilters={!!(filters.search || filters.role || filters.status || filters.entity)}
+              onEditUser={handleEditUser}
+              onDeleteUser={handleDeleteUser}
+            />
+          )}
         </div>
       )}
       

@@ -1,7 +1,6 @@
 import axios from "axios";
 import * as XLSX from "xlsx";
 import { Product, ProductPrice } from "../data/mockProducts";
-import { staticMockProducts } from "../data/staticMockData";
 
 // Sixstep Core API Configuration
 const SIXSTEP_CORE_URL =
@@ -185,43 +184,6 @@ export const fetchProducts = async (
   }
 };
 
-// Fallback function to use mock data when API is not available
-export const getFallbackProducts = async (): Promise<{
-  products: Product[];
-  totalCount: number;
-  categories: string[];
-  manufacturers: string[];
-  suppliers: string[];
-}> => {
-  // Use the static mock products directly
-  console.log(`Using ${staticMockProducts.length} static mock products`);
-
-  // Extract unique categories, manufacturers, and suppliers
-  const categories = Array.from(
-    new Set(staticMockProducts.map((p) => p.category))
-  ).sort();
-  const manufacturers = Array.from(
-    new Set(staticMockProducts.map((p) => p.manufacturer))
-  ).sort();
-
-  // Extract unique suppliers from all products
-  const allSuppliers = new Set<string>();
-  staticMockProducts.forEach((product) => {
-    product.bestPrices.forEach((price) => {
-      if (price.supplier) {
-        allSuppliers.add(price.supplier);
-      }
-    });
-  });
-
-  return {
-    products: staticMockProducts,
-    totalCount: staticMockProducts.length,
-    categories,
-    manufacturers,
-    suppliers: Array.from(allSuppliers).sort(),
-  };
-};
 
 // Authentication Types
 export interface LoginCredentials {

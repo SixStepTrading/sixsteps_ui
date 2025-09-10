@@ -5,7 +5,7 @@ import StatCard from '../common/StatCard';
 import { useToast } from '../../contexts/ToastContext';
 import { useUser } from '../../contexts/UserContext';
 import { Product } from '../../data/mockProducts';
-import { fetchProducts, getFallbackProducts } from '../../utils/api';
+import { fetchProducts } from '../../utils/api';
 import { ProductRow, ActionBar } from '../common/reusable';
 import { calculateAveragePrice } from '../common/utils';
 import SortableColumnHeader from '../common/reusable/SortableColumnHeader';
@@ -24,6 +24,7 @@ import ActiveUploadsModal from '../common/molecules/ActiveUploadsModal';
 import { v4 as uuid } from 'uuid';
 import ProductTable from './ProductTable';
 import TableSkeleton from '../common/atoms/TableSkeleton';
+import ApiErrorMessage from '../common/atoms/ApiErrorMessage';
 
 // Icons (we'll use SVG or Heroicons)
 const ShoppingCartIcon = () => (
@@ -276,40 +277,13 @@ const Dashboard: React.FC = () => {
       });
     } catch (err) {
       console.error('Failed to fetch products from API:', err);
-      setError('Failed to load products from API. Using fallback data instead.');
-      
-      try {
-        // Fallback to mock data
-        const fallbackData = await getFallbackProducts();
-        
-        // Add quantity and averagePrice properties to mock products
-        const productsWithQuantity = fallbackData.products.map(product => ({
-          ...product,
-          quantity: 0,
-          averagePrice: null,
-          showAllPrices: false,
-          targetPrice: null
-        }));
-        
-        setProducts(productsWithQuantity);
-        setFilteredProducts(productsWithQuantity);
-        setTotalCount(fallbackData.totalCount);
-        setCategories(fallbackData.categories || []);
-        setManufacturers(fallbackData.manufacturers || []);
-        
-        // Use the suppliers returned directly from the fallback data
-        setSuppliers((fallbackData.suppliers || []).map(supplier => ({ value: supplier, label: supplier })));
-        
-        setUsingMockData(true);
-        
-        // If using mock data, we need to apply client-side filtering
-        if (filterValues.searchTerm || filterValues.category || filterValues.manufacturer || filterValues.supplier) {
-          applyClientFilters(productsWithQuantity);
-        }
-      } catch (fallbackErr) {
-        console.error('Failed to load fallback data:', fallbackErr);
-        setError('Failed to load products. Please try again later.');
-      }
+      setError('API_ERROR'); // Set a specific error state to show the error message
+      setProducts([]);
+      setFilteredProducts([]);
+      setTotalCount(0);
+      setCategories([]);
+      setManufacturers([]);
+      setSuppliers([]);
     } finally {
       setLoading(false);
     }
@@ -1398,45 +1372,56 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* ProductTable component (nuova tabella) */}
-      <ProductTable
-        products={filteredProducts}
-        selected={selected}
-        onSelect={(id) => handleSelectClick({} as any, id)}
-        onQuantityChange={handleQuantityChange}
-        onTargetPriceChange={handleTargetPriceChange}
-        isSelected={isSelected}
-        onToggleAllPrices={handleToggleAllPrices}
-        onSelectionWithProblemsChange={handleSelectionWithProblemsChange}
-        userRole={userRole}
-        resetFilters={resetFilters}
-        loading={loading}
-        filteringLoading={filteringLoading}
-        sortingLoading={sortingLoading}
-        fileUploading={fileUploading}
-        onAddProduct={handleOpenAddProductModal}
-        onUploadProduct={handleUploadButtonClick}
-        onUploadStock={handleOpenSupplierStockModal}
-        onManageStock={handleOpenAdminStockModal}
-        onViewActiveUploads={handleOpenActiveUploadsModal}
-        onRefresh={handleRefresh}
-        filterValues={filterValues}
-        onFilterChange={setFilterValues}
-      />
+      {/* ProductTable component or API Error Message */}
+      {error === 'API_ERROR' ? (
+        <ApiErrorMessage
+          title="Servizio Prodotti Non Disponibile"
+          description="Il sistema di gestione prodotti non è attualmente raggiungibile. Questo impedisce la visualizzazione e la gestione del catalogo prodotti."
+          endpoint="/products/fetch"
+          className="min-h-[400px]"
+        />
+      ) : (
+        <ProductTable
+          products={filteredProducts}
+          selected={selected}
+          onSelect={(id) => handleSelectClick({} as any, id)}
+          onQuantityChange={handleQuantityChange}
+          onTargetPriceChange={handleTargetPriceChange}
+          isSelected={isSelected}
+          onToggleAllPrices={handleToggleAllPrices}
+          onSelectionWithProblemsChange={handleSelectionWithProblemsChange}
+          userRole={userRole}
+          resetFilters={resetFilters}
+          loading={loading}
+          filteringLoading={filteringLoading}
+          sortingLoading={sortingLoading}
+          fileUploading={fileUploading}
+          onAddProduct={handleOpenAddProductModal}
+          onUploadProduct={handleUploadButtonClick}
+          onUploadStock={handleOpenSupplierStockModal}
+          onManageStock={handleOpenAdminStockModal}
+          onViewActiveUploads={handleOpenActiveUploadsModal}
+          onRefresh={handleRefresh}
+          filterValues={filterValues}
+          onFilterChange={setFilterValues}
+        />
+      )}
       
-      {/* Add the ActionBar component outside the Card */}
-      <ActionBar 
-        selectedCount={selected.length}
-        totalItems={getTotalQuantity()}
-        totalAmount={totalAmount}
-        onSaveAsDraft={() => showToast('Draft saved successfully', 'success')}
-        onCreateOda={handleCreateOda}
-        hasSelectionProblems={selectionWithProblems}
-        belowTargetCount={belowTargetCount}
-        aboveTargetCount={aboveTargetCount}
-        stockIssuesCount={stockIssuesCount}
-        selectedProducts={selectedProducts}
-      />
+      {/* Add the ActionBar component outside the Card - only show when no API error */}
+      {error !== 'API_ERROR' && (
+        <ActionBar 
+          selectedCount={selected.length}
+          totalItems={getTotalQuantity()}
+          totalAmount={totalAmount}
+          onSaveAsDraft={() => showToast('Draft saved successfully', 'success')}
+          onCreateOda={handleCreateOda}
+          hasSelectionProblems={selectionWithProblems}
+          belowTargetCount={belowTargetCount}
+          aboveTargetCount={aboveTargetCount}
+          stockIssuesCount={stockIssuesCount}
+          selectedProducts={selectedProducts}
+        />
+      )}
 
       {/* Order Confirmation Modal */}
       <OrderConfirmationModal
