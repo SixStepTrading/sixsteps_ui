@@ -499,6 +499,30 @@ export const createEntity = async (
         console.log("Processed created entity:", entity);
         return entity;
       }
+
+      // If response is success message format (new API structure)
+      if (response.data.message && response.data.error === false) {
+        console.log("Entity created successfully, fetching updated entities list");
+        // Since the API only returns a success message, we need to fetch the entities
+        // to get the newly created one. We'll return a temporary entity object
+        // and let the UI refresh the entities list
+        const tempEntity = {
+          id: `temp-${Date.now()}`, // Temporary ID
+          entityType: backendPayload.entityType as Entity['entityType'],
+          entityName: backendPayload.entityName,
+          country: backendPayload.country || "Unknown",
+          notes: "",
+          status: "ACTIVE" as const,
+          referralName: "",
+          referralContacts: "",
+          username: "",
+          crmId: "",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        console.log("Returning temporary entity for UI refresh:", tempEntity);
+        return tempEntity;
+      }
     }
 
     console.error(
@@ -754,7 +778,10 @@ export const deleteUserById = async (
 // Delete entity
 export const deleteEntity = async (entityId: string): Promise<void> => {
   try {
-    await sixstepClient.delete(`/entities/delete/${entityId}`);
+    const response = await sixstepClient.post("/entities/delete", {
+      entityId: entityId
+    });
+    console.log("Delete Entity API response:", response.data);
   } catch (error: any) {
     console.error("Delete entity error:", error);
     throw new Error(

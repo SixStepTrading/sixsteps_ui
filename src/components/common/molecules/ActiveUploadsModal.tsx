@@ -180,7 +180,7 @@ const ActiveUploadsModal: React.FC<ActiveUploadsModalProps> = ({
         borderColor: 'divider'
       }}>
         <Typography variant="h5" component="div" sx={{ fontWeight: 600 }}>
-          Active Uploads {result?.uploads ? `(${result.uploads.length})` : ''}
+          Monitor Active Uploads in the System {result?.uploads ? `(${result.uploads.length})` : ''}
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Button 
