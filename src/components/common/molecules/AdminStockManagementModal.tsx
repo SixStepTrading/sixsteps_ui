@@ -266,28 +266,42 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
     if (!filePreview) return;
     
     const newMapping: Record<string, string> = {};
+    console.log('🔍 Available headers for auto-mapping:', filePreview.headers);
+    
     filePreview.headers.forEach(header => {
       const lowerHeader = header.toLowerCase().trim();
+      console.log(`🔍 Checking header: "${header}" (lowercase: "${lowerHeader}")`);
       
-      if (lowerHeader === 'sku' || lowerHeader.includes('minsan') || lowerHeader.includes('ean') || lowerHeader.includes('code')) {
+      if (lowerHeader === 'sku' || lowerHeader.includes('minsan') || lowerHeader.includes('ean') || lowerHeader.includes('code') || lowerHeader.includes('barcode')) {
         newMapping[header] = 'sku';
-      } else if (lowerHeader.includes('price') || lowerHeader.includes('eti') || lowerHeader.includes('prezzo')) {
+        console.log(`✅ Mapped "${header}" → sku`);
+      } else if (lowerHeader.includes('price') || lowerHeader.includes('eti') || lowerHeader.includes('prezzo') || lowerHeader.includes('pubblico')) {
         newMapping[header] = 'price';
-      } else if (lowerHeader.includes('vat') || lowerHeader.includes('iva')) {
+        console.log(`✅ Mapped "${header}" → price`);
+      } else if (lowerHeader.includes('vat') || lowerHeader.includes('iva') || lowerHeader.includes('aliquota') || lowerHeader.includes('imposta')) {
         newMapping[header] = 'vat';
-      } else if (lowerHeader.includes('currency') || lowerHeader.includes('valuta')) {
+        console.log(`✅ Mapped "${header}" → vat`);
+      } else if (lowerHeader.includes('currency') || lowerHeader.includes('valuta') || lowerHeader.includes('euro') || lowerHeader.includes('eur')) {
         newMapping[header] = 'currency';
-      } else if (lowerHeader.includes('quantity') || lowerHeader.includes('stock') || lowerHeader.includes('qty')) {
+        console.log(`✅ Mapped "${header}" → currency`);
+      } else if (lowerHeader.includes('quantity') || lowerHeader.includes('stock') || lowerHeader.includes('qty') || lowerHeader.includes('quantita') || lowerHeader.includes('scorte')) {
         newMapping[header] = 'quantity';
-      } else if (lowerHeader.includes('unit') || lowerHeader.includes('unita') || lowerHeader.includes('measure')) {
+        console.log(`✅ Mapped "${header}" → quantity`);
+      } else if (lowerHeader.includes('unit') || lowerHeader.includes('unita') || lowerHeader.includes('measure') || lowerHeader.includes('misura') || lowerHeader.includes('pezzi')) {
         newMapping[header] = 'unit';
-      } else if (lowerHeader.includes('notes') || lowerHeader.includes('note') || lowerHeader.includes('comment')) {
+        console.log(`✅ Mapped "${header}" → unit`);
+      } else if (lowerHeader.includes('notes') || lowerHeader.includes('note') || lowerHeader.includes('comment') || lowerHeader.includes('note') || lowerHeader.includes('osservazioni')) {
         newMapping[header] = 'notes';
+        console.log(`✅ Mapped "${header}" → notes`);
       } else if (lowerHeader.includes('supplier') && (lowerHeader.includes('id') || lowerHeader.includes('code'))) {
         newMapping[header] = 'supplierId';
+        console.log(`✅ Mapped "${header}" → supplierId`);
+      } else {
+        console.log(`❌ No mapping found for "${header}"`);
       }
     });
     
+    console.log('🔍 Final auto-mapping result:', newMapping);
     setMappedFields(newMapping);
   };
 
