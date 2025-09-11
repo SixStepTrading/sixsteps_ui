@@ -514,7 +514,7 @@ const SupplierStockUploadModal: React.FC<SupplierStockUploadModalProps> = ({
       <ModernDialog
         open={open}
         onClose={handleCancel}
-        title="Upload Stock Levels"
+        title="Upload your Stock Levels"
         steps={steps}
         activeStep={activeStep}
         actions={dialogActions}

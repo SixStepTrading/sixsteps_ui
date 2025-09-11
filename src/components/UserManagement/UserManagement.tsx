@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from '../../contexts/ToastContext';
 import { useUser } from '../../contexts/UserContext';
-import { SearchIcon, PlusIcon, FilterIcon } from '@heroicons/react/outline';
-import { getAllEntities, getAllUsers, createEntity, updateEntity, deleteEntity, Entity, createUser, UserResponse, CreateUserData, getLogs, downloadLogs } from '../../utils/api';
-import Stepper from '../common/Stepper';
-import EntitySelectionStep from './EntitySelectionStep';
-import UserCreationStep from './UserCreationStep';
+import { SearchIcon, PlusIcon } from '@heroicons/react/outline';
+import { getAllEntities, getAllUsers, Entity, getLogs, downloadLogs } from '../../utils/api';
 import UsersTable from './UsersTable';
 import ActivitiesTable from './ActivitiesTable';
 import EditUserModal from './EditUserModal';
 import DeleteUserModal from './DeleteUserModal';
+import CreateUserModal from './CreateUserModal';
+import EntityManagement from './EntityManagement';
 import { User } from './UserTableRow';
 import { UserActivity } from './ActivityTableRow';
 import ApiErrorMessage from '../common/atoms/ApiErrorMessage';
@@ -33,126 +32,14 @@ interface UserFilterValues {
   entity: string;
 }
 
-// Enhanced Create User Form with 2-step process
-const CreateUserForm: React.FC<{
-  onCreateUser: (userData: any) => void;
-}> = ({ onCreateUser }) => {
-  const [currentStep, setCurrentStep] = useState('entity');
-  const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null);
-  const [createdUser, setCreatedUser] = useState<UserResponse | null>(null);
-  
-  const steps = [
-    {
-      id: 'entity',
-      title: 'Select Entity',
-      description: 'Choose or create business entity'
-    },
-    {
-      id: 'user',
-      title: 'Create User', 
-      description: 'Add user details and credentials'
-    }
-  ];
-
-  const completedSteps = currentStep === 'user' && selectedEntity ? ['entity'] : [];
-
-  const handleEntitySelected = (entity: Entity) => {
-    setSelectedEntity(entity);
-  };
-
-  const handleNextStep = () => {
-    setCurrentStep('user');
-  };
-
-  const handleBackStep = () => {
-    setCurrentStep('entity');
-  };
-
-  const handleUserCreated = (user: UserResponse) => {
-    setCreatedUser(user);
-  };
-
-  const handleComplete = () => {
-    // Call the parent callback if needed
-    if (createdUser) {
-      onCreateUser({
-        firstName: createdUser.name,
-        lastName: createdUser.surname,
-        email: createdUser.email,
-        userRole: createdUser.role,
-        associatedEntity: selectedEntity?.entityName || '',
-        id: createdUser.id
-      });
-    }
-  };
-
-  return (
-    <div className="max-w-4xl mx-auto">
-      {/* Header Card */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-6 mb-6">
-        <div className="flex items-center justify-between">
-            <div>
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-              Create New User
-            </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Add a new user to the Six Steps - FarmaAggregator platform
-            </p>
-            </div>
-          <div className="flex items-center space-x-2">
-            <div className="flex items-center justify-center w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-            </div>
-          </div>
-        </div>
-            </div>
-            
-      {/* Progress Steps */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-6 mb-6">
-        <Stepper 
-          steps={steps} 
-          currentStep={currentStep} 
-          completedSteps={completedSteps}
-              />
-            </div>
-            
-      {/* Step Content Card */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700">
-        {currentStep === 'entity' && (
-          <div className="p-6">
-            <EntitySelectionStep
-              selectedEntity={selectedEntity}
-              onEntitySelected={handleEntitySelected}
-              onNext={handleNextStep}
-            />
-              </div>
-        )}
-
-        {currentStep === 'user' && selectedEntity && (
-          <div className="p-6">
-            <UserCreationStep
-              selectedEntity={selectedEntity}
-              onUserCreated={handleUserCreated}
-              onBack={handleBackStep}
-              onComplete={handleComplete}
-            />
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
 
 // Main Component
 const UserManagement: React.FC = () => {
   const { showToast } = useToast();
-  const { user: currentUser, userRole } = useUser();
+  const { userRole } = useUser();
   const [activeTab, setActiveTab] = useState('users');
   const [apiUsers, setApiUsers] = useState<ApiUser[]>([]);
   const [entities, setEntities] = useState<Entity[]>([]);
-  const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
 
   const [filters, setFilters] = useState<UserFilterValues>({
@@ -166,6 +53,8 @@ const UserManagement: React.FC = () => {
   // Modal states
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [showCreateUserModal, setShowCreateUserModal] = useState(false);
+  const [openEntityCreateModal, setOpenEntityCreateModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   // Activities state - loaded from API
@@ -179,6 +68,12 @@ const UserManagement: React.FC = () => {
     loadEntities();
     loadActivities(true); // true = reset
   }, []);
+
+  useEffect(() => {
+    if (activeTab !== 'entities') {
+      setOpenEntityCreateModal(false);
+    }
+  }, [activeTab]);
 
   // Early return if not admin - additional security check (AFTER all hooks)
   if (userRole !== 'Admin') {
@@ -233,7 +128,6 @@ const UserManagement: React.FC = () => {
 
   const loadUsers = async () => {
     try {
-      setLoading(true);
       console.log('Loading users...');
       const usersData = await getAllUsers();
       console.log('Users API response:', usersData);
@@ -253,8 +147,6 @@ const UserManagement: React.FC = () => {
       setApiUsers([]);
       setApiError('USERS_API_ERROR');
       showToast('Failed to load users from server', 'error');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -279,20 +171,6 @@ const UserManagement: React.FC = () => {
     }
   };
 
-  const handleCreateUser = async (userData: any) => {
-    try {
-      showToast(`User ${userData.firstName} ${userData.lastName} created successfully!`, 'success');
-      
-      // Reload users to reflect changes
-      await loadUsers();
-      
-      // Switch back to user management tab
-      setActiveTab('users');
-    } catch (error: any) {
-      console.error('Error creating user:', error);
-      showToast(error.message || 'Failed to create user', 'error');
-    }
-  };
 
   const handleEditUser = (user: User) => {
     setSelectedUser(user);
@@ -352,7 +230,13 @@ const UserManagement: React.FC = () => {
   };
 
   const handleCreateNewUser = () => {
-    setActiveTab('create');
+    setShowCreateUserModal(true);
+  };
+
+  const handleNavigateToEntityManagement = () => {
+    setShowCreateUserModal(false);
+    setOpenEntityCreateModal(true);
+    setActiveTab('entities');
   };
 
   // Apply filters to users
@@ -438,7 +322,7 @@ const UserManagement: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">User Management</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">User & Entities Management</h1>
           <p className="text-gray-600 dark:text-gray-400">
           Manage users, permissions, and monitor activity
         </p>
@@ -461,21 +345,19 @@ const UserManagement: React.FC = () => {
             </svg>
             User Management
           </button>
-          {currentUser?.entityType === 'ADMIN' && (
-            <button 
-              onClick={() => setActiveTab('create')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center ${
-                activeTab === 'create'
-                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-              }`}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Create New User
-            </button>
-          )}
+          <button
+            onClick={() => setActiveTab('entities')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center ${
+              activeTab === 'entities'
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+            }`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+            Entity Management
+          </button>
           <button
             onClick={() => setActiveTab('activity')}
             className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center ${
@@ -635,15 +517,7 @@ const UserManagement: React.FC = () => {
                   Reset
                 </button>
                 
-              <button
-                  onClick={handleCreateNewUser}
-                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
-                >
-                  <PlusIcon className="h-4 w-4 mr-2" />
-                New User
-              </button>
-              
-              <button 
+                <button 
                   onClick={handleRefresh}
                   disabled={isRefreshing}
                   className="flex items-center px-4 py-2 text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -653,10 +527,18 @@ const UserManagement: React.FC = () => {
                   ) : (
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
+                    </svg>
                   )}
-                Refresh
-              </button>
+                  Refresh
+                </button>
+                
+                <button
+                  onClick={handleCreateNewUser}
+                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                >
+                  <PlusIcon className="h-4 w-4 mr-2" />
+                  New User
+                </button>
               </div>
             </div>
           </div>
@@ -681,8 +563,9 @@ const UserManagement: React.FC = () => {
         </div>
       )}
       
-      {activeTab === 'create' && currentUser?.entityType === 'ADMIN' && (
-            <CreateUserForm onCreateUser={handleCreateUser} />
+      
+      {activeTab === 'entities' && (
+        <EntityManagement openCreateModal={openEntityCreateModal} />
       )}
       
       {activeTab === 'activity' && (
@@ -708,6 +591,13 @@ const UserManagement: React.FC = () => {
         onClose={handleCloseDeleteModal}
         user={selectedUser}
         onUserDeleted={handleUserDeleted}
+      />
+
+      <CreateUserModal
+        isOpen={showCreateUserModal}
+        onClose={() => setShowCreateUserModal(false)}
+        onUserCreated={loadUsers}
+        onNavigateToEntityManagement={handleNavigateToEntityManagement}
       />
     </div>
   );

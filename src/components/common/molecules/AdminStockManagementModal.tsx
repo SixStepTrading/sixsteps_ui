@@ -5,14 +5,20 @@ import {
   Typography,
   Alert,
   LinearProgress,
+  TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   FormControl,
   InputLabel,
   Select,
   MenuItem
 } from '@mui/material';
-import { uploadSuppliesAdminCSV, getAllEntities, Entity } from '../../../utils/api';
+import { uploadSuppliesAdminCSV, getAllEntities, createEntity, Entity } from '../../../utils/api';
 import { useUploadProgress } from '../../../hooks';
 import { ModernDialog, FileUploadArea, ColumnMappingTable, DataPreviewTable } from './upload';
+import SearchableDropdown from './SearchableDropdown';
 import * as XLSX from 'xlsx';
 
 interface AdminStockManagementModalProps {
@@ -43,6 +49,20 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
   const [entities, setEntities] = useState<Entity[]>([]);
   const [loadingEntities, setLoadingEntities] = useState(false);
   
+  // New entity creation states
+  const [showCreateEntityDialog, setShowCreateEntityDialog] = useState(false);
+  const [newEntityData, setNewEntityData] = useState({
+    entityName: '',
+    entityType: 'PHARMA' as 'PHARMA' | 'LANDLORD' | 'TENANT' | 'ADMIN',
+    country: '',
+    address: '',
+    vatNumber: '',
+    email: '',
+    phone: '',
+    status: 'ACTIVE' as const
+  });
+  const [creatingEntity, setCreatingEntity] = useState(false);
+  
   // Stepper configuration
   const steps = ['Select Supplier', 'Upload File', 'Map Columns', 'Preview & Upload'];
   
@@ -70,6 +90,68 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
       fetchEntities();
     }
   }, [open]);
+
+  // Handle new entity creation
+  const handleCreateEntity = async () => {
+    if (!newEntityData.entityName.trim()) {
+      setFileError('Entity name is required');
+      return;
+    }
+
+    setCreatingEntity(true);
+    setFileError(null);
+
+    try {
+      const createdEntity = await createEntity(newEntityData);
+      console.log('✅ New entity created:', createdEntity);
+      
+      // Refresh entities list
+      await fetchEntities();
+      
+      // Select the newly created entity
+      setSelectedSupplier(createdEntity.id);
+      
+      // Close dialog and reset form
+      setShowCreateEntityDialog(false);
+      setNewEntityData({
+        entityName: '',
+        entityType: 'PHARMA' as 'PHARMA' | 'LANDLORD' | 'TENANT' | 'ADMIN',
+        country: '',
+        address: '',
+        vatNumber: '',
+        email: '',
+        phone: '',
+        status: 'ACTIVE' as const
+      });
+      
+    } catch (error) {
+      console.error('❌ Error creating entity:', error);
+      setFileError(error instanceof Error ? error.message : 'Failed to create entity');
+    } finally {
+      setCreatingEntity(false);
+    }
+  };
+
+  const handleNewEntityDataChange = (field: string, value: string) => {
+    setNewEntityData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const resetNewEntityForm = () => {
+    setNewEntityData({
+      entityName: '',
+      entityType: 'PHARMA' as 'PHARMA' | 'LANDLORD' | 'TENANT' | 'ADMIN',
+      country: '',
+      address: '',
+      vatNumber: '',
+      email: '',
+      phone: '',
+      status: 'ACTIVE' as const
+    });
+    setFileError(null);
+  };
 
   // Upload progress tracking
   const uploadProgress = useUploadProgress({
@@ -462,6 +544,8 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
     setActiveStep(0);
     setSelectedSupplier('');
     setEntities([]);
+    setShowCreateEntityDialog(false);
+    resetNewEntityForm();
     onClose();
   };
 
@@ -553,56 +637,103 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
       <ModernDialog
         open={open}
         onClose={handleCancel}
-        title="Manage Supplier Stock"
+        title="Manage Supplier Stock for a 3rd party Entity"
         steps={steps}
         activeStep={activeStep}
         actions={dialogActions}
       >
         {/* Step 0: Select Supplier */}
         {activeStep === 0 && (
-          <>
-            <Typography variant="h6" gutterBottom>
+          <Box sx={{ py: 1 }}>
+            <Typography variant="h6" sx={{ mb: 1, fontSize: '1.1rem' }}>
               Select Supplier
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontSize: '0.875rem' }}>
               Choose the supplier whose stock you want to manage
             </Typography>
             
-            <FormControl fullWidth sx={{ mb: 3 }}>
-              <InputLabel>Supplier</InputLabel>
-                          <Select
-                value={selectedSupplier}
-                label="Supplier"
-                onChange={(e) => setSelectedSupplier(e.target.value)}
-                disabled={loadingEntities}
+            <SearchableDropdown
+              options={entities
+                .filter(entity => 
+                  (entity.entityType === 'SUPPLIER' || 
+                   entity.entityType === 'PHARMA' || 
+                   entity.entityType === 'company') &&
+                  (entity.status === 'ACTIVE' || !entity.status)
+                )
+                .map(entity => ({
+                  id: entity.id,
+                  name: entity.entityName,
+                  type: entity.entityType,
+                  country: entity.country,
+                  status: entity.status
+                }))
+              }
+              selectedId={selectedSupplier}
+              onSelect={setSelectedSupplier}
+              placeholder="Select a supplier"
+              searchPlaceholder="Search suppliers..."
+              loading={loadingEntities}
+            />
+            
+            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1.5, mt: 2 }}>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => {
+                  setSelectedSupplier('');
+                  setFileError(null);
+                }}
+                sx={{
+                  borderRadius: 1.5,
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  px: 2,
+                  py: 0.5,
+                  fontSize: '0.875rem'
+                }}
               >
-                {(() => {
-                  console.log('🔍 All entities before filtering:', entities.map(e => ({ id: e.id, name: e.entityName, type: e.entityType })));
-                  const filteredEntities = entities.filter(entity => 
-                    entity.entityType === 'SUPPLIER' || 
-                    entity.entityType === 'PHARMA' || 
-                    entity.entityType === 'company'
-                  );
-                  console.log('🔍 Filtered entities for dropdown:', filteredEntities.map(e => ({ id: e.id, name: e.entityName, type: e.entityType })));
-                  
-                  if (filteredEntities.length === 0) {
-                    console.warn('⚠️ No entities match the filter criteria. Available entity types:', Array.from(new Set(entities.map(e => e.entityType))));
-                  }
-                  
-                  return filteredEntities.map((entity) => (
-                    <MenuItem key={entity.id} value={entity.id}>
-                      {entity.entityName} ({entity.entityType})
-                    </MenuItem>
-                  ));
-                })()}
-              </Select>
-                        </FormControl>
-          </>
+                Reset
+              </Button>
+              
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={fetchEntities}
+                disabled={loadingEntities}
+                sx={{
+                  borderRadius: 1.5,
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  px: 2,
+                  py: 0.5,
+                  fontSize: '0.875rem'
+                }}
+              >
+                Refresh
+              </Button>
+              
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => setShowCreateEntityDialog(true)}
+                sx={{
+                  borderRadius: 1.5,
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  px: 2,
+                  py: 0.5,
+                  fontSize: '0.875rem'
+                }}
+              >
+                + New Entity
+              </Button>
+            </Box>
+          </Box>
         )}
 
         {/* Step 1: Upload File */}
         {activeStep === 1 && (
-          <>
+          <Box sx={{ py: 1 }}>
             <FileUploadArea
               selectedFile={selectedFile}
               isDragging={isDragging}
@@ -618,16 +749,16 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
             />
             
             {fileError && (
-              <Alert severity="error" sx={{ mt: 2 }}>
+              <Alert severity="error" sx={{ mt: 1.5, py: 1 }}>
                 {fileError}
-          </Alert>
+              </Alert>
             )}
-          </>
+          </Box>
         )}
 
         {/* Step 2: Map Columns */}
         {activeStep === 2 && filePreview && (
-          <>
+          <Box sx={{ py: 1 }}>
             <ColumnMappingTable
               headers={filePreview.headers}
               mappedFields={mappedFields}
@@ -639,16 +770,16 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
             />
             
             {fileError && (
-              <Alert severity="error" sx={{ mt: 2 }}>
+              <Alert severity="error" sx={{ mt: 1.5, py: 1 }}>
                 {fileError}
               </Alert>
             )}
-          </>
+          </Box>
         )}
 
         {/* Step 3: Preview & Upload */}
         {activeStep === 3 && filePreview && (
-          <>
+          <Box sx={{ py: 1 }}>
             <DataPreviewTable
               headers={filePreview.headers}
               data={filePreview.rows}
@@ -658,22 +789,140 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
             />
             
             {fileError && (
-              <Alert severity="error" sx={{ mt: 2 }}>
+              <Alert severity="error" sx={{ mt: 1.5, py: 1 }}>
                 {fileError}
               </Alert>
             )}
             
             {isProcessing && (
-              <Box sx={{ mt: 2 }}>
+              <Box sx={{ mt: 1.5 }}>
                 <LinearProgress />
-                <Typography variant="body2" sx={{ mt: 1, textAlign: 'center' }}>
+                <Typography variant="body2" sx={{ mt: 0.5, textAlign: 'center', fontSize: '0.875rem' }}>
                   Uploading stock data for {entities.find(e => e.id === selectedSupplier)?.entityName}...
                 </Typography>
               </Box>
             )}
-          </>
+          </Box>
         )}
       </ModernDialog>
+
+      {/* Create New Entity Dialog */}
+      <Dialog
+        open={showCreateEntityDialog}
+        onClose={() => {
+          setShowCreateEntityDialog(false);
+          resetNewEntityForm();
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ pb: 1, fontSize: '1.1rem' }}>New Entity</DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            <Box sx={{ display: 'flex', gap: 1.5 }}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Entity Name *"
+                value={newEntityData.entityName}
+                onChange={(e) => handleNewEntityDataChange('entityName', e.target.value)}
+                required
+              />
+              <FormControl fullWidth size="small">
+                <InputLabel>Entity Type *</InputLabel>
+                <Select
+                  value={newEntityData.entityType}
+                  label="Entity Type *"
+                  onChange={(e) => handleNewEntityDataChange('entityType', e.target.value)}
+                >
+                  <MenuItem value="PHARMA">Pharma</MenuItem>
+                  <MenuItem value="LANDLORD">Landlord</MenuItem>
+                  <MenuItem value="TENANT">Tenant</MenuItem>
+                  <MenuItem value="ADMIN">Admin</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+            
+            <Box sx={{ display: 'flex', gap: 1.5 }}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Country"
+                value={newEntityData.country}
+                onChange={(e) => handleNewEntityDataChange('country', e.target.value)}
+              />
+              <TextField
+                fullWidth
+                size="small"
+                label="VAT Number"
+                value={newEntityData.vatNumber}
+                onChange={(e) => handleNewEntityDataChange('vatNumber', e.target.value)}
+              />
+            </Box>
+            
+            <TextField
+              fullWidth
+              size="small"
+              label="Address"
+              value={newEntityData.address}
+              onChange={(e) => handleNewEntityDataChange('address', e.target.value)}
+              multiline
+              rows={2}
+            />
+            
+            <Box sx={{ display: 'flex', gap: 1.5 }}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Email"
+                type="email"
+                value={newEntityData.email}
+                onChange={(e) => handleNewEntityDataChange('email', e.target.value)}
+              />
+              <TextField
+                fullWidth
+                size="small"
+                label="Phone"
+                value={newEntityData.phone}
+                onChange={(e) => handleNewEntityDataChange('phone', e.target.value)}
+              />
+            </Box>
+          </Box>
+          
+          {fileError && (
+            <Alert severity="error" sx={{ mt: 1.5, py: 1 }}>
+              {fileError}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ pt: 1, pb: 2 }}>
+          <Button
+            size="small"
+            onClick={() => {
+              setShowCreateEntityDialog(false);
+              resetNewEntityForm();
+            }}
+            disabled={creatingEntity}
+            sx={{ textTransform: 'none' }}
+          >
+            Cancel
+          </Button>
+          <Button
+            size="small"
+            onClick={handleCreateEntity}
+            variant="contained"
+            disabled={creatingEntity || !newEntityData.entityName.trim()}
+            sx={{
+              borderRadius: 1.5,
+              textTransform: 'none',
+              fontWeight: 600,
+              px: 3
+            }}
+          >
+            {creatingEntity ? 'Creating...' : 'Create Entity'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 };

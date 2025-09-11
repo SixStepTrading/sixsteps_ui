@@ -934,7 +934,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Typography variant="h5" component="div" sx={{ fontWeight: 600 }}>
-          Add Products
+          Add Products in the Database
         </Typography>
         </Box>
         <IconButton 
