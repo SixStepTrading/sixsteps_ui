@@ -574,12 +574,18 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
                 disabled={loadingEntities}
               >
                 {(() => {
+                  console.log('🔍 All entities before filtering:', entities.map(e => ({ id: e.id, name: e.entityName, type: e.entityType })));
                   const filteredEntities = entities.filter(entity => 
                     entity.entityType === 'SUPPLIER' || 
                     entity.entityType === 'PHARMA' || 
                     entity.entityType === 'company'
                   );
-                  console.log('🔍 Filtered entities for dropdown:', filteredEntities);
+                  console.log('🔍 Filtered entities for dropdown:', filteredEntities.map(e => ({ id: e.id, name: e.entityName, type: e.entityType })));
+                  
+                  if (filteredEntities.length === 0) {
+                    console.warn('⚠️ No entities match the filter criteria. Available entity types:', Array.from(new Set(entities.map(e => e.entityType))));
+                  }
+                  
                   return filteredEntities.map((entity) => (
                     <MenuItem key={entity.id} value={entity.id}>
                       {entity.entityName} ({entity.entityType})
