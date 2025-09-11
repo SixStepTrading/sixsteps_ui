@@ -3,6 +3,7 @@ import { isStockExceeded } from '../common/utils/priceCalculations';
 import { Product } from '../../data/mockProducts';
 import { SidebarContext } from '../../contexts/SidebarContext';
 import ExportButton from '../common/molecules/ExportButton';
+import TableSkeleton from '../common/atoms/TableSkeleton';
 
 export interface ProductWithQuantity extends Product {
   quantity: number;
@@ -22,12 +23,26 @@ type ProductTableProps = {
   onSelectionWithProblemsChange?: (hasProblems: boolean) => void;
   userRole?: string;
   resetFilters?: number; // Trigger to reset filters
-  // New props for buttons
+  // Loading states
   loading?: boolean;
+  filteringLoading?: boolean;
+  sortingLoading?: boolean;
   fileUploading?: boolean;
   onAddProduct?: () => void;
   onUploadProduct?: () => void;
+  onUploadStock?: () => void;      // New: Supplier stock upload
+  onManageStock?: () => void;      // New: Admin stock management  
+  onViewActiveUploads?: () => void; // New: View active uploads
   onRefresh?: () => void;
+  // Filter controls
+  filterValues?: {
+    searchTerm: string;
+    category: string;
+    manufacturer: string;
+    supplier: string;
+    onlyAvailableStock: boolean;
+  };
+  onFilterChange?: (filters: any) => void;
 };
 
 interface PriceModalProps {
@@ -138,10 +153,17 @@ const ProductTable: React.FC<ProductTableProps> = ({
   userRole = 'Buyer',
   resetFilters,
   loading = false,
+  filteringLoading = false,
+  sortingLoading = false,
   fileUploading = false,
   onAddProduct,
   onUploadProduct,
+  onUploadStock,
+  onManageStock,
+  onViewActiveUploads,
   onRefresh,
+  filterValues,
+  onFilterChange,
 }) => {
   const [modalProduct, setModalProduct] = useState<ProductWithQuantity | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -152,28 +174,41 @@ const ProductTable: React.FC<ProductTableProps> = ({
   const [sortBy, setSortBy] = useState<string>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
-  // Medicine placeholder images array
-  const medicineImages = [
-    'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=100&h=100&fit=crop&crop=center', // Pills
-    'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=100&h=100&fit=crop&crop=center', // Medicine bottles
-    'https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=100&h=100&fit=crop&crop=center', // Capsules
-    'https://images.unsplash.com/photo-1576671081837-49000212a370?w=100&h=100&fit=crop&crop=center', // Tablets
-    'https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=100&h=100&fit=crop&crop=center', // Medicine packaging
-    'https://images.unsplash.com/photo-1559757175-0eb30cd8c063?w=100&h=100&fit=crop&crop=center', // Pills in blister pack
-    'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=100&h=100&fit=crop&crop=center', // Medicine vials
-    'https://images.unsplash.com/photo-1550572017-edd951b55104?w=100&h=100&fit=crop&crop=center', // Pharmacy bottles
-  ];
 
-  // Function to get medicine image for a product
-  const getMedicineImage = (productId: string) => {
-    const index = productId.charCodeAt(0) % medicineImages.length;
-    return medicineImages[index];
-  };
 
   // Filter products based on selection
-  const filteredProducts = showSelectedOnly 
+  const baseFilteredProducts = showSelectedOnly 
     ? products.filter(product => selected.includes(product.id))
     : products;
+
+  // Add pagination state with user-selectable items per page
+  const [currentPage, setCurrentPage] = useState(0);
+  const [itemsPerPage, setItemsPerPage] = useState(100); // Default to 100 for good performance
+  
+  // Available options for items per page
+  const itemsPerPageOptions = [
+    { value: 50, label: '50' },
+    { value: 100, label: '100' },
+    { value: 200, label: '200' },
+    { value: 500, label: '500' },
+    { value: 1000, label: '1000' },
+    { value: -1, label: 'Tutti' }, // -1 means show all
+  ];
+  
+  // Reset page to 0 when products change (filters applied) or items per page changes
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [products.length, showSelectedOnly, itemsPerPage]);
+  
+  // Calculate pagination (handle "show all" case)
+  const showAll = itemsPerPage === -1;
+  const actualItemsPerPage = showAll ? baseFilteredProducts.length : itemsPerPage;
+  const totalPages = showAll ? 1 : Math.ceil(baseFilteredProducts.length / actualItemsPerPage);
+  const startIndex = showAll ? 0 : currentPage * actualItemsPerPage;
+  const endIndex = showAll ? baseFilteredProducts.length : startIndex + actualItemsPerPage;
+  
+  // Get only the products for current page (or all if "show all" is selected)
+  const filteredProducts = baseFilteredProducts.slice(startIndex, endIndex);
 
   // Determina se ci sono prodotti selezionati con problemi
   const selectionWithProblems = selected.some(id => {
@@ -199,7 +234,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
     setIsModalOpen(true);
   };
 
-  const totalProductCount = filteredProducts.length;
+  const totalProductCount = baseFilteredProducts.length;
 
   const calculateDiscounts = (publicPrice: number, supplierPrice: number, vatPercentage: number) => {
     const grossDiscount = publicPrice - supplierPrice;
@@ -302,51 +337,190 @@ const ProductTable: React.FC<ProductTableProps> = ({
             userRole={userRole}
           />
           
-          {/* Action buttons moved from Dashboard */}
-          {userRole === 'Admin' && onAddProduct && (
-            <button
-              className="flex items-center gap-1 bg-blue-600 dark:bg-blue-700 text-white text-sm py-1 px-3 rounded hover:bg-blue-700 dark:hover:bg-blue-800 transition-colors"
-              onClick={onAddProduct}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-              </svg>
-              Add Product
-            </button>
-          )}
-          
           {onUploadProduct && (
-            <button
-              className={`flex items-center gap-1 border text-sm py-1 px-3 rounded 
-                ${loading || fileUploading 
-                  ? 'border-gray-300 dark:border-dark-border-primary text-gray-400 dark:text-dark-text-disabled cursor-not-allowed' 
-                  : 'border-blue-600 dark:border-blue-500 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors'}
-              `}
-              onClick={onUploadProduct}
-              disabled={loading || fileUploading}
+            <Tooltip 
+              text="Upload a CSV/Excel file to find your products in the platform database. Check availability and get product information."
+              position="top"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
-              </svg>
-              {fileUploading ? 'Processing...' : 'Upload Products'}
-            </button>
+              <button
+                className={`flex items-center gap-1 border text-sm py-1 px-3 rounded 
+                  ${loading || fileUploading 
+                    ? 'border-gray-300 dark:border-dark-border-primary text-gray-400 dark:text-dark-text-disabled cursor-not-allowed' 
+                    : 'border-blue-600 dark:border-blue-500 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors'}
+                `}
+                onClick={onUploadProduct}
+                disabled={loading || fileUploading}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                </svg>
+                {fileUploading ? 'Processing...' : 'Find Products'}
+              </button>
+            </Tooltip>
           )}
-          
-          {onRefresh && (
-            <button 
-              className={`flex items-center gap-1 border text-sm py-1 px-3 rounded 
-                ${loading || fileUploading 
-                  ? 'border-gray-300 dark:border-dark-border-primary text-gray-400 dark:text-dark-text-disabled cursor-not-allowed' 
-                  : 'border-gray-500 dark:border-dark-border-secondary text-gray-700 dark:text-dark-text-secondary hover:bg-gray-50 dark:hover:bg-dark-bg-hover transition-colors'}
-              `}
-              onClick={onRefresh}
-              disabled={loading || fileUploading}
+
+          {/* Separator for admin/special user functions */}
+          {((userRole === 'Supplier' || userRole === 'Admin' || userRole === 'Pharmacy') && onUploadStock) || 
+           (userRole === 'Admin' && onManageStock) || 
+           (userRole === 'Admin' && onAddProduct) ||
+           onViewActiveUploads ? (
+            <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-2"></div>
+          ) : null}
+
+          {/* Manage Products & Supply Dropdown */}
+          {((userRole === 'Admin' && onAddProduct) || 
+            ((userRole === 'Supplier' || userRole === 'Admin' || userRole === 'Pharmacy') && onUploadStock) || 
+            (userRole === 'Admin' && onManageStock) || 
+            onViewActiveUploads) && (
+            <div className="relative group">
+              <button
+                className={`flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-800 text-white text-sm py-2 px-4 rounded-lg hover:from-blue-700 hover:to-blue-800 dark:hover:from-blue-800 dark:hover:to-blue-900 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5
+                  ${loading || fileUploading ? 'opacity-50 cursor-not-allowed transform-none hover:shadow-md' : ''}
+                `}
+                disabled={loading || fileUploading}
+              >
+                Manage Products & Supply
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-3 h-3 transition-transform duration-200 group-hover:rotate-180">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                </svg>
+              </button>
+              
+              {/* Dropdown Menu */}
+              <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-dark-bg-secondary border border-gray-200 dark:border-dark-border-primary rounded-xl shadow-xl z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform scale-95 group-hover:scale-100 backdrop-blur-sm">
+                <div className="py-2">
+                  {/* Header */}
+                  <div className="px-4 py-2 border-b border-gray-100 dark:border-dark-border-primary">
+                    <h3 className="text-sm font-semibold text-gray-700 dark:text-dark-text-primary">Product Management</h3>
+                    <p className="text-xs text-gray-500 dark:text-dark-text-muted">Manage platform products and inventory</p>
+                  </div>
+                  {/* Add Products - Admin Only */}
+                  {userRole === 'Admin' && onAddProduct && (
+                    <div className="relative group/item">
+                      <button
+                        className="w-full text-left px-4 py-3 text-sm text-gray-700 dark:text-dark-text-primary hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center gap-3 transition-all duration-200"
+                        onClick={onAddProduct}
+                      >
+                        <div className="flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center group-hover/item:bg-blue-200 dark:group-hover/item:bg-blue-800/40 transition-colors">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4 text-blue-600 dark:text-blue-400">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium">Add Products</div>
+                          <div className="text-xs text-gray-500 dark:text-dark-text-muted">Create new products</div>
+                        </div>
+                      </button>
+                      {/* Tooltip */}
+                      <div className="absolute z-50 right-full top-0 mr-2 px-3 py-1.5 text-xs bg-gray-900 text-white rounded-md whitespace-normal opacity-0 invisible group-hover/item:opacity-100 group-hover/item:visible transition-all duration-200 transform scale-90 group-hover/item:scale-100 pointer-events-none shadow-lg w-max max-w-[200px]">
+                        Add a new product manually to the database. You can enter product details directly or import multiple products from a CSV/Excel file.
+                        <div className="absolute top-2 -right-1 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Upload Stock - Supplier, Admin, Pharmacy */}
+                  {(userRole === 'Supplier' || userRole === 'Admin' || userRole === 'Pharmacy') && onUploadStock && (
+                    <div className="relative group/item">
+                      <button
+                        className="w-full text-left px-4 py-3 text-sm text-gray-700 dark:text-dark-text-primary hover:bg-green-50 dark:hover:bg-green-900/20 flex items-center gap-3 transition-all duration-200"
+                        onClick={onUploadStock}
+                        disabled={loading || fileUploading}
+                      >
+                        <div className="flex-shrink-0 w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center group-hover/item:bg-green-200 dark:group-hover/item:bg-green-800/40 transition-colors">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4 text-green-600 dark:text-green-400">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium">Upload Stock</div>
+                          <div className="text-xs text-gray-500 dark:text-dark-text-muted">Update inventory levels</div>
+                        </div>
+                      </button>
+                      {/* Tooltip */}
+                      <div className="absolute z-50 right-full top-0 mr-2 px-3 py-1.5 text-xs bg-gray-900 text-white rounded-md whitespace-normal opacity-0 invisible group-hover/item:opacity-100 group-hover/item:visible transition-all duration-200 transform scale-90 group-hover/item:scale-100 pointer-events-none shadow-lg w-max max-w-[200px]">
+                        Upload your stock levels from a CSV/Excel file. This will update your inventory quantities and prices for existing products in the system.
+                        <div className="absolute top-2 -right-1 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Manage Stock - Admin Only */}
+                  {userRole === 'Admin' && onManageStock && (
+                    <div className="relative group/item">
+                      <button
+                        className="w-full text-left px-4 py-3 text-sm text-gray-700 dark:text-dark-text-primary hover:bg-orange-50 dark:hover:bg-orange-900/20 flex items-center gap-3 transition-all duration-200"
+                        onClick={onManageStock}
+                        disabled={loading || fileUploading}
+                      >
+                        <div className="flex-shrink-0 w-8 h-8 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center group-hover/item:bg-orange-200 dark:group-hover/item:bg-orange-800/40 transition-colors">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4 text-orange-600 dark:text-orange-400">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.107-1.204l-.527-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium">Manage Stock</div>
+                          <div className="text-xs text-gray-500 dark:text-dark-text-muted">Admin stock management</div>
+                        </div>
+                      </button>
+                      {/* Tooltip */}
+                      <div className="absolute z-50 right-full top-0 mr-2 px-3 py-1.5 text-xs bg-gray-900 text-white rounded-md whitespace-normal opacity-0 invisible group-hover/item:opacity-100 group-hover/item:visible transition-all duration-200 transform scale-90 group-hover/item:scale-100 pointer-events-none shadow-lg w-max max-w-[200px]">
+                        Manage stock levels for any supplier in the system. Select a supplier and upload their stock data to update their inventory quantities and prices.
+                        <div className="absolute top-2 -right-1 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Active Uploads - All Users */}
+                  {onViewActiveUploads && (
+                    <div className="relative group/item">
+                      <button
+                        className="w-full text-left px-4 py-3 text-sm text-gray-700 dark:text-dark-text-primary hover:bg-purple-50 dark:hover:bg-purple-900/20 flex items-center gap-3 transition-all duration-200"
+                        onClick={onViewActiveUploads}
+                        disabled={loading || fileUploading}
+                      >
+                        <div className="flex-shrink-0 w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center group-hover/item:bg-purple-200 dark:group-hover/item:bg-purple-800/40 transition-colors">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4 text-purple-600 dark:text-purple-400">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium">Active Uploads</div>
+                          <div className="text-xs text-gray-500 dark:text-dark-text-muted">Monitor upload progress</div>
+                        </div>
+                      </button>
+                      {/* Tooltip */}
+                      <div className="absolute z-50 right-full top-0 mr-2 px-3 py-1.5 text-xs bg-gray-900 text-white rounded-md whitespace-normal opacity-0 invisible group-hover/item:opacity-100 group-hover/item:visible transition-all duration-200 transform scale-90 group-hover/item:scale-100 pointer-events-none shadow-lg w-max max-w-[200px]">
+                        View all currently active uploads in the system. Monitor the progress of file uploads and check for any errors or completion status.
+                        <div className="absolute top-2 -right-1 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+            {onRefresh && (
+            <Tooltip 
+              text="Reset all filters, clear product selections, and refresh the product list to its default state."
+              position="top"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-              </svg>
-              Refresh
-            </button>
+              <button 
+                className={`flex items-center gap-1 border text-sm py-1 px-3 rounded 
+                  ${loading || fileUploading 
+                    ? 'border-gray-300 dark:border-dark-border-primary text-gray-400 dark:text-dark-text-disabled cursor-not-allowed' 
+                    : 'border-gray-500 dark:border-dark-border-secondary text-gray-700 dark:text-dark-text-secondary hover:bg-gray-50 dark:hover:bg-dark-bg-hover transition-colors'}
+                `}
+                onClick={onRefresh}
+                disabled={loading || fileUploading}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+                Refresh
+              </button>
+            </Tooltip>
           )}
         </div>
       </div>
@@ -360,46 +534,46 @@ const ProductTable: React.FC<ProductTableProps> = ({
           }}
         >
           {/* Header columns - sortable */}
-          <div className="flex items-center px-3 py-2 text-xs uppercase text-slate-500 dark:text-dark-text-muted font-semibold tracking-wider bg-gray-50 dark:bg-dark-bg-tertiary rounded-t-lg rounded-xl my-1.5 border-b border-gray-200 dark:border-dark-border-primary">
-            <div className={`${isDrawerCollapsed ? 'w-[3.5%]' : 'w-[4%]'} text-center`}>#</div>
-            <div className={`${isDrawerCollapsed ? 'w-[12%]' : 'w-[13%]'} cursor-pointer select-none flex items-center`} onClick={() => {
+          <div className="flex items-center gap-2 px-4 py-3 text-xs uppercase text-slate-500 dark:text-dark-text-muted font-semibold tracking-wider bg-gray-50 dark:bg-dark-bg-tertiary rounded-t-lg rounded-xl my-1.5 border-b border-gray-200 dark:border-dark-border-primary">
+            <div className={`${isDrawerCollapsed ? 'w-[6%]' : 'w-[6.5%]'} text-center px-1`}>#</div>
+            <div className={`${isDrawerCollapsed ? 'w-[10%]' : 'w-[11%]'} cursor-pointer select-none flex items-center px-2`} onClick={() => {
               if (sortBy === 'codes') setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
               else { setSortBy('codes'); setSortDirection('asc'); }
             }}>
               Codes {renderSortIcon('codes')}
             </div>
-            <div className="w-[3%]"></div>
-            <div className={`${isDrawerCollapsed ? 'w-[19%]' : 'w-[20%]'} cursor-pointer select-none flex items-center`} onClick={() => {
+
+            <div className={`${isDrawerCollapsed ? 'w-[19%]' : 'w-[20%]'} cursor-pointer select-none flex items-center px-2`} onClick={() => {
               if (sortBy === 'name') setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
               else { setSortBy('name'); setSortDirection('asc'); }
             }}>
               Product Name {renderSortIcon('name')}
             </div>
-            <div className={`${isDrawerCollapsed ? 'w-[11%]' : 'w-[12%]'} text-right cursor-pointer select-none flex items-center justify-end`} onClick={() => {
+            <div className={`${isDrawerCollapsed ? 'w-[11%]' : 'w-[12%]'} text-right cursor-pointer select-none flex items-center justify-end px-2`} onClick={() => {
               if (sortBy === 'publicPrice') setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
               else { setSortBy('publicPrice'); setSortDirection('asc'); }
             }}>
               Public Price {renderSortIcon('publicPrice')}
             </div>
-            <div className={`${isDrawerCollapsed ? 'w-[9%]' : 'w-[10%]'} text-right cursor-pointer select-none flex items-center justify-end`} onClick={() => {
+            <div className={`${isDrawerCollapsed ? 'w-[9%]' : 'w-[10%]'} text-right cursor-pointer select-none flex items-center justify-end px-2`} onClick={() => {
               if (sortBy === 'qty') setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
               else { setSortBy('qty'); setSortDirection('asc'); }
             }}>
               Qty {renderSortIcon('qty')}
             </div>
-            <div className={`${isDrawerCollapsed ? 'w-[9%]' : 'w-[9%]'} text-center cursor-pointer select-none flex items-center justify-center`} onClick={() => {
+            <div className={`${isDrawerCollapsed ? 'w-[9%]' : 'w-[9%]'} text-center cursor-pointer select-none flex items-center justify-center px-2`} onClick={() => {
               if (sortBy === 'targetPrice') setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
               else { setSortBy('targetPrice'); setSortDirection('asc'); }
             }}>
               Target Price {renderSortIcon('targetPrice')}
             </div>
-            <div className={`${isDrawerCollapsed ? 'w-[20%]' : 'w-[21%]'} text-right cursor-pointer select-none flex items-center justify-end`} onClick={() => {
+            <div className={`${isDrawerCollapsed ? 'w-[20%]' : 'w-[21%]'} text-right cursor-pointer select-none flex items-center justify-end px-2`} onClick={() => {
               if (sortBy === 'prices') setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
               else { setSortBy('prices'); setSortDirection('asc'); }
             }}>
               Prices {renderSortIcon('prices')}
             </div>
-            <div className={`${isDrawerCollapsed ? 'w-[7.5%]' : 'w-[8%]'} text-right cursor-pointer select-none flex items-center justify-end`} onClick={() => {
+            <div className={`${isDrawerCollapsed ? 'w-[7.5%]' : 'w-[8%]'} text-right cursor-pointer select-none flex items-center justify-end px-2`} onClick={() => {
               if (sortBy === 'stock') setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
               else { setSortBy('stock'); setSortDirection('asc'); }
             }}>
@@ -407,8 +581,23 @@ const ProductTable: React.FC<ProductTableProps> = ({
             </div>
           </div>
 
-          {/* Rows - simplified with no extra bottom margins */}
-          {sortedProducts.length === 0 ? (
+          {/* Rows - Show skeleton during loading/filtering/sorting or table content */}
+          {loading || filteringLoading || sortingLoading ? (
+            // Show skeleton during initial loading, filtering, or sorting
+            <div className="relative">
+              <TableSkeleton rows={15} columns={8} />
+              {filteringLoading && (
+                <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-blue-500 text-white px-3 py-2 rounded-md text-sm font-medium shadow-lg">
+                  🔍 Filtering products...
+                </div>
+              )}
+              {sortingLoading && (
+                <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-purple-500 text-white px-3 py-2 rounded-md text-sm font-medium shadow-lg">
+                  🔄 Sorting products...
+                </div>
+              )}
+            </div>
+          ) : sortedProducts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center bg-white dark:bg-dark-bg-secondary rounded-xl shadow border border-slate-100 dark:border-dark-border-primary">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12 text-gray-300 dark:text-dark-text-disabled mb-3">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3 3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
@@ -431,7 +620,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
                 <div
                   key={product.id}
                   className={`
-                    flex items-center px-3 py-2 bg-white dark:bg-dark-bg-secondary border border-gray-100 dark:border-dark-border-primary
+                    flex items-center gap-2 px-4 py-3 bg-white dark:bg-dark-bg-secondary border border-gray-100 dark:border-dark-border-primary
                     ${idx === products.length - 1 ? 'rounded-b-lg' : ''}
                     ${isProductSelected ? 'bg-blue-50 dark:bg-blue-900/20' : ''}
                     ${isExceeded ? 'bg-amber-50 dark:bg-amber-900/20 border-l-4 border-l-amber-500 dark:border-l-amber-400' : ''}
@@ -445,9 +634,9 @@ const ProductTable: React.FC<ProductTableProps> = ({
                   }}
                 >
                   {/* Row number and Checkbox combined */}
-                  <div className={`${isDrawerCollapsed ? 'w-[3.5%]' : 'w-[4%]'} flex items-start pt-1`}>
-                    <div className="flex items-center">
-                      <span className="w-5 text-xs text-gray-600 dark:text-dark-text-muted font-medium text-center">{idx + 1}</span>
+                  <div className={`${isDrawerCollapsed ? 'w-[6%]' : 'w-[6.5%]'} flex items-start pt-1 px-1`}>
+                    <div className="flex items-center gap-1">
+                      <span className="w-12 text-xs text-gray-600 dark:text-dark-text-muted font-medium text-left">{startIndex + idx + 1}</span>
                       {isExceeded ? (
                         <Tooltip text={errorMessage} position="top">
                           <div className="flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-white text-xs font-bold">
@@ -470,7 +659,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
                   </div>
 
                   {/* Codes */}
-                  <div className={`${isDrawerCollapsed ? 'w-[12%]' : 'w-[13%]'} flex flex-col text-xs text-slate-500 dark:text-dark-text-muted pt-1`}>
+                  <div className={`${isDrawerCollapsed ? 'w-[10%]' : 'w-[11%]'} flex flex-col text-xs text-slate-500 dark:text-dark-text-muted pt-1 px-2`}>
                     <div className="flex mb-1">
                       <span className="font-semibold text-slate-700 dark:text-dark-text-secondary w-14">EAN:</span> {product.ean}
                     </div>
@@ -479,28 +668,16 @@ const ProductTable: React.FC<ProductTableProps> = ({
                     </div>
                   </div>
 
-                  {/* Product Image */}
-                  <div className="w-[3%] flex justify-center items-start pt-1 mr-2">
-                    <img 
-                      src={product.image || getMedicineImage(product.id)} 
-                      alt={product.name}
-                      className="w-[40px] h-[40px] object-cover rounded-md shadow-sm border border-gray-200 dark:border-dark-border-primary hover:scale-110 transition-transform duration-200"
-                      onError={(e) => {
-                        // If image fails to load, use a different medicine placeholder
-                        const fallbackIndex = (product.id.charCodeAt(1) || 0) % medicineImages.length;
-                        (e.target as HTMLImageElement).src = medicineImages[fallbackIndex];
-                      }}
-                    />
-                  </div>
+
 
                   {/* Name */}
-                  <div className={`${isDrawerCollapsed ? 'w-[19%]' : 'w-[20%]'} flex flex-col pt-1`}>
+                  <div className={`${isDrawerCollapsed ? 'w-[19%]' : 'w-[20%]'} flex flex-col pt-1 px-2`}>
                     <span className="font-medium text-sm text-slate-800 dark:text-dark-text-primary truncate">{product.name}</span>
                     <span className="text-xs text-slate-400 dark:text-dark-text-muted mt-1">{product.manufacturer}</span>
                   </div>
 
                   {/* Price */}
-                  <div className={`${isDrawerCollapsed ? 'w-[11%]' : 'w-[12%]'} text-right pt-1 pr-4`}>
+                  <div className={`${isDrawerCollapsed ? 'w-[11%]' : 'w-[12%]'} text-right pt-1 px-2`}>
                     <span className="font-semibold text-sm text-slate-700 dark:text-dark-text-primary">€{product.publicPrice.toFixed(2)}</span>
                     <div className="text-xs text-slate-400 dark:text-dark-text-muted mt-1">VAT {product.vat}%</div>
                   </div>
@@ -639,7 +816,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
                   </div>
 
                   {/* Prices */}
-                  <div className={`${isDrawerCollapsed ? 'w-[20%]' : 'w-[21%]'} flex flex-wrap justify-end gap-1 pt-1 pl-3`}>
+                  <div className={`${isDrawerCollapsed ? 'w-[20%]' : 'w-[21%]'} flex flex-wrap justify-end gap-1 pt-1 px-2`}>
                     {product.bestPrices.slice(0, 3).map((price, i) => {
                       const { grossDiscountPercent, netDiscountPercent } = calculateDiscounts(
                         product.publicPrice, 
@@ -655,8 +832,8 @@ const ProductTable: React.FC<ProductTableProps> = ({
                         ${userRole === 'Admin' && price.supplier ? `<div>Supplier: <span style='color:#047857'>${price.supplier}</span></div>` : ''}
                       `;
                       return (
-                        <Tooltip text={tooltipContent} position="left" html>
-                          <div key={i} className={`rounded px-2 py-1 text-xs transition-all duration-150 hover:shadow-md dark:hover:shadow-dark-md
+                        <Tooltip key={i} text={tooltipContent} position="left" html>
+                          <div className={`rounded px-2 py-1 text-xs transition-all duration-150 hover:shadow-md dark:hover:shadow-dark-md
                             ${i === 0 ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/50' : 
                               i === 1 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50' : 
                               'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50'}`}
@@ -676,7 +853,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
                   
                   {/* Total Stock + Show more prices */}
                   <div 
-                    className={`${isDrawerCollapsed ? 'w-[7.5%]' : 'w-[8%]'} flex flex-col items-end text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-bg-hover p-1 rounded transition-colors pt-1`}
+                    className={`${isDrawerCollapsed ? 'w-[7.5%]' : 'w-[8%]'} flex flex-col items-end text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-bg-hover rounded transition-colors pt-1 px-2`}
                     onClick={e => {
                       e.stopPropagation();
                       openPriceModal(product);
@@ -702,6 +879,156 @@ const ProductTable: React.FC<ProductTableProps> = ({
         </div>
       </div>
       
+      {/* Enhanced Controls Panel */}
+      <div className="bg-white dark:bg-dark-bg-secondary border-t border-gray-200 dark:border-dark-border-primary">
+        {/* Main Controls Row */}
+        <div className="flex items-center justify-between px-6 py-4">
+          {/* Left Side - Display Controls */}
+          <div className="flex items-center gap-6">
+            {/* Results Counter */}
+            <div className="text-sm font-medium text-gray-900 dark:text-dark-text-primary">
+              Showing {startIndex + 1} to {Math.min(endIndex, baseFilteredProducts.length)} of {baseFilteredProducts.length.toLocaleString()} products
+            </div>
+            
+            {/* Items per page selector with improved styling */}
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-gray-600 dark:text-dark-text-muted">Rows per page:</span>
+              <div className="relative">
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => setItemsPerPage(parseInt(e.target.value))}
+                  className="appearance-none bg-white dark:bg-dark-bg-tertiary border border-gray-300 dark:border-dark-border-primary rounded-lg px-4 py-2 pr-8 text-sm text-gray-700 dark:text-dark-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  {itemsPerPageOptions.map(option => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                {/* Custom dropdown arrow */}
+                <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Center - Filter Toggles */}
+          <div className="flex items-center gap-6">
+            {/* Only Available Stock Toggle */}
+            {filterValues && onFilterChange && (
+              <div className="flex items-center gap-3">
+                <label className="flex items-center cursor-pointer">
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      checked={filterValues.onlyAvailableStock}
+                      onChange={(e) => onFilterChange({
+                        ...filterValues,
+                        onlyAvailableStock: e.target.checked
+                      })}
+                      className="sr-only"
+                    />
+                    <div className={`block w-12 h-6 rounded-full transition-colors duration-200 ${
+                      filterValues.onlyAvailableStock 
+                        ? 'bg-blue-500' 
+                        : 'bg-gray-300 dark:bg-gray-600'
+                    }`}>
+                      <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-200 ${
+                        filterValues.onlyAvailableStock ? 'transform translate-x-6' : ''
+                      }`}></div>
+                    </div>
+                  </div>
+                  <span className="ml-3 text-sm font-medium text-gray-700 dark:text-dark-text-primary">
+                    In Stock Only
+                  </span>
+                </label>
+              </div>
+            )}
+            
+            {/* Selected Only Toggle */}
+            <div className="flex items-center gap-3">
+              <label className="flex items-center cursor-pointer">
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    checked={showSelectedOnly}
+                    onChange={(e) => setShowSelectedOnly(e.target.checked)}
+                    className="sr-only"
+                  />
+                  <div className={`block w-12 h-6 rounded-full transition-colors duration-200 ${
+                    showSelectedOnly 
+                      ? 'bg-green-500' 
+                      : 'bg-gray-300 dark:bg-gray-600'
+                  }`}>
+                    <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-200 ${
+                      showSelectedOnly ? 'transform translate-x-6' : ''
+                    }`}></div>
+                  </div>
+                </div>
+                <span className="ml-3 text-sm font-medium text-gray-700 dark:text-dark-text-primary">
+                  Selected Only
+                </span>
+              </label>
+            </div>
+          </div>
+          
+          {/* Right Side - Navigation */}
+          {!showAll && totalPages > 1 && (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+                disabled={currentPage === 0}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-dark-text-primary bg-white dark:bg-dark-bg-tertiary border border-gray-300 dark:border-dark-border-primary rounded-lg hover:bg-gray-50 dark:hover:bg-dark-bg-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Previous
+              </button>
+              
+              <span className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-dark-text-muted bg-gray-50 dark:bg-dark-bg-tertiary rounded-lg">
+                Page {currentPage + 1} of {totalPages}
+              </span>
+              
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
+                disabled={currentPage >= totalPages - 1}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-dark-text-primary bg-white dark:bg-dark-bg-tertiary border border-gray-300 dark:border-dark-border-primary rounded-lg hover:bg-gray-50 dark:hover:bg-dark-bg-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+              >
+                Next
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+          )}
+        </div>
+        
+        {/* Performance Warning */}
+        {showAll && baseFilteredProducts.length > 1000 && (
+          <div className="px-6 pb-4">
+            <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+              <div className="flex-shrink-0">
+                <svg className="w-5 h-5 text-amber-600 dark:text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                  Performance Notice
+                </p>
+                <p className="text-sm text-amber-700 dark:text-amber-300">
+                  Displaying {baseFilteredProducts.length.toLocaleString()} products may impact performance. Consider using pagination for better experience.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Modal per i dettagli prezzi */}
       <PriceModal 
         isOpen={isModalOpen} 

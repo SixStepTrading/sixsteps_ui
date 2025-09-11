@@ -5,7 +5,7 @@ import StatCard from '../common/StatCard';
 import { useToast } from '../../contexts/ToastContext';
 import { useUser } from '../../contexts/UserContext';
 import { Product } from '../../data/mockProducts';
-import { fetchProducts, getFallbackProducts } from '../../utils/api';
+import { fetchProducts } from '../../utils/api';
 import { ProductRow, ActionBar } from '../common/reusable';
 import { calculateAveragePrice } from '../common/utils';
 import SortableColumnHeader from '../common/reusable/SortableColumnHeader';
@@ -18,8 +18,13 @@ import * as XLSX from 'xlsx';
 import FileUploadModal from '../common/reusable/FileUploadModal';
 import OrderConfirmationModal, { ProductItem, OrderData } from '../common/molecules/OrderConfirmationModal';
 import AddProductModal, { ProductFormData } from '../common/molecules/AddProductModal';
+import SupplierStockUploadModal from '../common/molecules/SupplierStockUploadModal';
+import AdminStockManagementModal from '../common/molecules/AdminStockManagementModal';
+import ActiveUploadsModal from '../common/molecules/ActiveUploadsModal';
 import { v4 as uuid } from 'uuid';
 import ProductTable from './ProductTable';
+import TableSkeleton from '../common/atoms/TableSkeleton';
+import ApiErrorMessage from '../common/atoms/ApiErrorMessage';
 
 // Icons (we'll use SVG or Heroicons)
 const ShoppingCartIcon = () => (
@@ -126,6 +131,10 @@ const Dashboard: React.FC = () => {
   const [filteredProducts, setFilteredProducts] = useState<ProductWithQuantity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // New loading states for operations
+  const [filteringLoading, setFilteringLoading] = useState(false);
+  const [sortingLoading, setSortingLoading] = useState(false);
   const [page, setPage] = useState(0);
   const [priceDetailsOpen, setPriceDetailsOpen] = useState<string | null>(null);
   
@@ -163,7 +172,8 @@ const Dashboard: React.FC = () => {
     searchTerm: '',
     category: '',
     manufacturer: '',
-    supplier: ''
+    supplier: '',
+    onlyAvailableStock: true // ON BY DEFAULT - show only products with stock
   });
   
   // Available filter options derived from product data
@@ -184,6 +194,13 @@ const Dashboard: React.FC = () => {
 
   // State per la modale di aggiunta prodotto
   const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
+
+  // New state for stock upload modals
+  const [isSupplierStockModalOpen, setIsSupplierStockModalOpen] = useState(false);
+  const [isAdminStockModalOpen, setIsAdminStockModalOpen] = useState(false);
+
+  // State for Active Uploads modal
+  const [isActiveUploadsModalOpen, setIsActiveUploadsModalOpen] = useState(false);
 
   // New state for selection problems
   const [selectionWithProblems, setSelectionWithProblems] = useState(false);
@@ -215,28 +232,23 @@ const Dashboard: React.FC = () => {
     setPriceDetailsOpen(priceDetailsOpen === productId ? null : productId);
   };
 
-  // Load products
+  // Load products with two-phase approach for better performance
   const loadProducts = useCallback(async (useServerFiltering = false) => {
     setLoading(true);
     setError(null);
     
     try {
-      // Build filter object for API request
+      console.log('🚀 Loading products with integrated supplies...');
+      
+      // SINGLE API CALL: Load products with integrated supplies
       const filters = {
-        searchTerm: useServerFiltering ? filterValues.searchTerm : undefined,
-        category: useServerFiltering ? filterValues.category : undefined,
-        manufacturer: useServerFiltering ? filterValues.manufacturer : undefined,
-        supplier: useServerFiltering ? filterValues.supplier : undefined
+        searchTerm: filterValues.searchTerm
       };
       
-      // Calculate page number for API (1-indexed vs 0-indexed)
-      const apiPage = useServerFiltering ? page + 1 : 1;
-      
-      // Fetch data from API
-      const result = await fetchProducts(apiPage, rowsPerPage, filters);
+      const result = await fetchProducts(1, 999999, filters); // Get all products
       
       // Add quantity and averagePrice properties to products
-      const productsWithQuantity = result.products.map(product => ({
+      const productsWithQuantity = result.products.map((product: Product) => ({
         ...product,
         quantity: 0,
         averagePrice: null,
@@ -244,150 +256,151 @@ const Dashboard: React.FC = () => {
         targetPrice: null
       }));
       
+      // Set all data (products with integrated supplies)
       setProducts(productsWithQuantity);
       setTotalCount(result.totalCount);
       setCategories(result.categories || []);
       setManufacturers(result.manufacturers || []);
+      setSuppliers((result.suppliers || []).map(supplier => ({ value: supplier, label: supplier }))); // Now populated from integrated supplies
       
-      // Extract unique suppliers and VAT rates from products
-      const uniqueSuppliers = new Set<string>();
-      
-      result.products.forEach(product => {
-        product.bestPrices.forEach(price => {
-          uniqueSuppliers.add(price.supplier);
-        });
-      });
-      
-      setSuppliers(Array.from(uniqueSuppliers).map(supplier => ({ value: supplier, label: supplier })));
-      
-      // If using server filtering, filtered products = products returned
-      if (useServerFiltering) {
-        setFilteredProducts(productsWithQuantity);
-      } else {
-        // Otherwise, we need to apply client-side filtering
-        applyClientFilters(productsWithQuantity);
-      }
+      // Apply client-side filtering
+      await applyClientFilters(productsWithQuantity);
       
       setUsingMockData(false);
+      setLoading(false);
+      
+      console.log('✅ Products loaded with integrated supplies', {
+        total: result.totalCount,
+        categories: result.categories?.length || 0,
+        manufacturers: result.manufacturers?.length || 0,
+        suppliers: result.suppliers?.length || 0
+      });
     } catch (err) {
       console.error('Failed to fetch products from API:', err);
-      setError('Failed to load products from API. Using fallback data instead.');
-      
-      try {
-        // Fallback to mock data
-        const fallbackData = await getFallbackProducts();
-        
-        // Add quantity and averagePrice properties to mock products
-        const productsWithQuantity = fallbackData.products.map(product => ({
-          ...product,
-          quantity: 0,
-          averagePrice: null,
-          showAllPrices: false,
-          targetPrice: null
-        }));
-        
-        setProducts(productsWithQuantity);
-        setFilteredProducts(productsWithQuantity);
-        setTotalCount(fallbackData.totalCount);
-        setCategories(fallbackData.categories || []);
-        setManufacturers(fallbackData.manufacturers || []);
-        
-        // Extract unique suppliers from products
-        const uniqueSuppliers = new Set<string>();
-        
-        fallbackData.products.forEach(product => {
-          product.bestPrices.forEach(price => {
-            uniqueSuppliers.add(price.supplier);
-          });
-        });
-        
-        setSuppliers(Array.from(uniqueSuppliers).map(supplier => ({ value: supplier, label: supplier })));
-        
-        setUsingMockData(true);
-        
-        // If using mock data, we need to apply client-side filtering
-        if (filterValues.searchTerm || filterValues.category || filterValues.manufacturer || filterValues.supplier) {
-          applyClientFilters(productsWithQuantity);
-        }
-      } catch (fallbackErr) {
-        console.error('Failed to load fallback data:', fallbackErr);
-        setError('Failed to load products. Please try again later.');
-      }
+      setError('API_ERROR'); // Set a specific error state to show the error message
+      setProducts([]);
+      setFilteredProducts([]);
+      setTotalCount(0);
+      setCategories([]);
+      setManufacturers([]);
+      setSuppliers([]);
     } finally {
       setLoading(false);
     }
-  }, [filterValues, page, rowsPerPage]);
+  }, [filterValues.searchTerm]); // Keep minimal dependencies to avoid loops
   
-  // Initial load of products
+  // Initial load of products (only on mount)
   useEffect(() => {
     loadProducts(true);
-  }, [loadProducts]);
+  }, []); // Empty dependency array to run only on mount
   
-  // Apply client-side filters to products
-  const applyClientFilters = useCallback((productsList: ProductWithQuantity[]) => {
-    // Filter products
-    let filtered = [...productsList];
+  // Apply client-side filters to products (ASYNC - NON-BLOCKING)
+  const applyClientFilters = useCallback(async (productsList: ProductWithQuantity[]) => {
+    console.log('🔍 Starting client-side filtering...', { total: productsList.length });
+    setFilteringLoading(true);
+    
+    return new Promise<void>((resolve) => {
+      // Use setTimeout to make operation non-blocking
+      setTimeout(() => {
+        try {
+          // Filter products
+          let filtered = [...productsList];
 
-    // Apply search filter
-    if (filterValues.searchTerm) {
-      const term = filterValues.searchTerm.toLowerCase();
-      filtered = filtered.filter(product => 
-        product.name.toLowerCase().includes(term) || 
-        product.ean.includes(term) || 
-        product.minsan.includes(term) ||
-        product.manufacturer.toLowerCase().includes(term)
-      );
-    }
-    
-    // Apply category filter - now supporting multi-selection
-    if (filterValues.category) {
-      if (Array.isArray(filterValues.category) && filterValues.category.length > 0) {
-        filtered = filtered.filter(product => 
-          filterValues.category.includes(product.category)
-      );
-      } else if (typeof filterValues.category === 'string' && filterValues.category !== '') {
-        // Backward compatibility for single selection
-        filtered = filtered.filter(product => product.category === filterValues.category);
-      }
-    }
-    
-    // Apply manufacturer filter - now supporting multi-selection
-    if (filterValues.manufacturer) {
-      if (Array.isArray(filterValues.manufacturer) && filterValues.manufacturer.length > 0) {
-        filtered = filtered.filter(product => 
-          filterValues.manufacturer.includes(product.manufacturer)
-        );
-      } else if (typeof filterValues.manufacturer === 'string' && filterValues.manufacturer !== '') {
-        // Backward compatibility for single selection
-        filtered = filtered.filter(product => product.manufacturer === filterValues.manufacturer);
-      }
-    }
-    
-    // Apply supplier filter - now supporting multi-selection
-    if (filterValues.supplier) {
-      if (Array.isArray(filterValues.supplier) && filterValues.supplier.length > 0) {
-    filtered = filtered.filter(product => 
-          product.bestPrices.some(price => 
-            filterValues.supplier.includes(price.supplier)
-          )
-        );
-      } else if (typeof filterValues.supplier === 'string' && filterValues.supplier !== '') {
-        // Backward compatibility for single selection
-        filtered = filtered.filter(product => 
-          product.bestPrices.some(price => price.supplier === filterValues.supplier)
-        );
-      }
-    }
-    
-    // Apply sorting if needed
-    if (sortBy && sortDirection) {
-      filtered = applySorting(filtered, sortBy, sortDirection);
-    }
-    
-    setFilteredProducts(filtered);
+          // Apply search filter
+          if (filterValues.searchTerm) {
+            const term = filterValues.searchTerm.toLowerCase();
+            filtered = filtered.filter(product => 
+              product.name.toLowerCase().includes(term) || 
+              product.ean.includes(term) || 
+              product.minsan.includes(term) ||
+              product.manufacturer.toLowerCase().includes(term)
+            );
+          }
+          
+          // Apply category filter - now supporting multi-selection
+          if (filterValues.category) {
+            if (Array.isArray(filterValues.category) && filterValues.category.length > 0) {
+              filtered = filtered.filter(product => 
+                filterValues.category.includes(product.category)
+            );
+            } else if (typeof filterValues.category === 'string' && filterValues.category !== '') {
+              // Backward compatibility for single selection
+              filtered = filtered.filter(product => product.category === filterValues.category);
+            }
+          }
+          
+          // Apply manufacturer filter - now supporting multi-selection
+          if (filterValues.manufacturer) {
+            if (Array.isArray(filterValues.manufacturer) && filterValues.manufacturer.length > 0) {
+              filtered = filtered.filter(product => 
+                filterValues.manufacturer.includes(product.manufacturer)
+              );
+            } else if (typeof filterValues.manufacturer === 'string' && filterValues.manufacturer !== '') {
+              // Backward compatibility for single selection
+              filtered = filtered.filter(product => product.manufacturer === filterValues.manufacturer);
+            }
+          }
+          
+          // Apply supplier filter - now supporting multi-selection
+          if (filterValues.supplier) {
+            if (Array.isArray(filterValues.supplier) && filterValues.supplier.length > 0) {
+          filtered = filtered.filter(product => 
+                product.bestPrices.some(price => 
+                  filterValues.supplier.includes(price.supplier)
+                )
+              );
+            } else if (typeof filterValues.supplier === 'string' && filterValues.supplier !== '') {
+              // Backward compatibility for single selection
+              filtered = filtered.filter(product => 
+                product.bestPrices.some(price => price.supplier === filterValues.supplier)
+              );
+            }
+          }
+          
+          // Apply stock filter - show only products with stock > 0 (if enabled)
+          if (filterValues.onlyAvailableStock) {
+            console.log('🔍 Applying stock filter...');
+            const beforeCount = filtered.length;
+            
+            filtered = filtered.filter(product => {
+              const totalStock = product.bestPrices.reduce((sum, price) => sum + (price.stock || 0), 0);
+              const hasStock = totalStock > 0;
+              
+              // Debug logging for first few products
+              if (beforeCount <= 5) {
+                console.log(`📦 Product "${product.name}" - Stock: ${totalStock}, Prices: ${product.bestPrices.length}, HasStock: ${hasStock}`);
+              }
+              
+              return hasStock;
+            });
+            
+            console.log(`📊 Stock filter applied: ${beforeCount} → ${filtered.length} products`);
+          }
+          
+          // Apply sorting if needed
+          if (sortBy && sortDirection) {
+            filtered = applySorting(filtered, sortBy, sortDirection);
+          }
+          
+          setFilteredProducts(filtered);
+          setFilteringLoading(false);
+          
+          console.log('✅ Filtering completed', { 
+            filtered: filtered.length, 
+            total: productsList.length 
+          });
+          
+          resolve();
+        } catch (error) {
+          console.error('❌ Filtering error:', error);
+          setFilteringLoading(false);
+          resolve();
+        }
+      }, 10); // Small delay to prevent UI blocking
+    });
   }, [filterValues, sortBy, sortDirection]);
   
-  // Function to handle sorting
+  // Function to handle sorting (SYNCHRONOUS - used internally)
   const applySorting = (products: ProductWithQuantity[], sortBy: string, direction: SortDirection) => {
     if (!direction) return products;
     
@@ -441,15 +454,37 @@ const Dashboard: React.FC = () => {
       return 0;
     });
   };
+
+  // Function to handle sorting (ASYNC - NON-BLOCKING)
+  const applySortingAsync = useCallback(async (products: ProductWithQuantity[], column: string, direction: SortDirection) => {
+    console.log('🔄 Starting async sorting...', { column, direction, count: products.length });
+    setSortingLoading(true);
+    
+    return new Promise<ProductWithQuantity[]>((resolve) => {
+      setTimeout(() => {
+        try {
+          const sorted = applySorting(products, column, direction);
+          setSortingLoading(false);
+          console.log('✅ Sorting completed');
+          resolve(sorted);
+        } catch (error) {
+          console.error('❌ Sorting error:', error);
+          setSortingLoading(false);
+          resolve(products); // Return original if error
+        }
+      }, 10); // Small delay to prevent UI blocking
+    });
+  }, []);
   
-  // Handle sorting column click
-  const handleSort = (column: string, direction: SortDirection) => {
+  // Handle sorting column click (ASYNC - NON-BLOCKING)
+  const handleSort = async (column: string, direction: SortDirection) => {
+    console.log('🎯 User clicked sort:', { column, direction });
     setSortBy(column);
     setSortDirection(direction);
     
-    // Re-apply sorting to filtered products
+    // Re-apply sorting to filtered products asynchronously
     if (direction) {
-      const sorted = applySorting(filteredProducts, column, direction);
+      const sorted = await applySortingAsync(filteredProducts, column, direction);
       setFilteredProducts(sorted);
     }
   };
@@ -502,23 +537,32 @@ const Dashboard: React.FC = () => {
     }
   };
   
-  // React to filter changes with debounce
-  const debouncedApplyFilters = useCallback(
-    debounce(() => loadProducts(true), 500),
-    [loadProducts]
-  );
+  // No longer needed - we do all filtering client-side now
+  // const debouncedApplyFilters = ... (removed)
   
-  // Re-filter when filters change
+  // Debounced filter application to prevent excessive filtering
+  const debouncedApplyFilters = useCallback(
+    debounce(async (productsList: ProductWithQuantity[]) => {
+      if (productsList.length > 0) {
+        await applyClientFilters(productsList);
+      }
+    }, 300), // 300ms delay to prevent excessive filtering during typing
+    [applyClientFilters]
+  );
+
+  // Re-filter when filters change (client-side only, no more API calls)
   useEffect(() => {
     if (products.length > 0) {
-      // If using real API, let the server filter data
-      if (!usingMockData) {
-        debouncedApplyFilters();
-      } else {
-        applyClientFilters(products);
-      }
+      console.log('🔄 Filters changed, debouncing filter application...');
+      // Use debounced version to prevent excessive filtering
+      debouncedApplyFilters(products);
     }
-  }, [products, filterValues, usingMockData, applyClientFilters, debouncedApplyFilters]);
+    
+    // Cleanup debounce on unmount
+    return () => {
+      debouncedApplyFilters.cancel();
+    };
+  }, [products, filterValues, debouncedApplyFilters]);
   
   // Calculate total amount whenever selection changes or product quantities change
   useEffect(() => {
@@ -533,24 +577,16 @@ const Dashboard: React.FC = () => {
       setTotalAmount(total);
   }, [selected, filteredProducts]);
   
-  // Pagination handlers
+  // Pagination handlers (client-side only, no API calls)
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
-    
-      // For real API data, reload products with new page
-    if (!usingMockData) {
-      loadProducts(true);
-    }
+    // No API call needed - all data is already loaded
   };
 
   const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
-    
-      // For real API data, reload products with new page size
-    if (!usingMockData) {
-      loadProducts(true);
-    }
+    // No API call needed - all data is already loaded
   };
   
   // Select/deselect handlers
@@ -591,9 +627,10 @@ const Dashboard: React.FC = () => {
     setFilterValues(newValues);
   };
   
-  // Apply filters when the Apply button is clicked
+  // Apply filters when the Apply button is clicked (now client-side only)
   const handleApplyFilters = () => {
-    loadProducts(true);
+    // No API call needed - filtering is now automatic via useEffect
+    // The useEffect will handle re-filtering when filterValues change
   };
   
   // Create ODA
@@ -669,20 +706,40 @@ const Dashboard: React.FC = () => {
     console.log('Submitting order:', order);
     showToast('Order submitted successfully', 'success');
     
-    // Clear the selection and reset quantities
+    // Clear the selection and reset quantities (client-side only)
     setSelected([]);
     handleCloseError();
-    loadProducts(true);
+    // Reset quantities for all products
+    resetProductQuantities();
   };
   
   // Handle saving order as draft
   const handleSaveOrderAsDraft = () => {
     showToast('Order saved as draft', 'success');
     
-    // Clear the selection and reset quantities
+    // Clear the selection and reset quantities (client-side only)
     setSelected([]);
     handleCloseError();
-    loadProducts(true);
+    // Reset quantities for all products
+    resetProductQuantities();
+  };
+
+  // Helper function to reset all product quantities without API call
+  const resetProductQuantities = () => {
+    setProducts(prevProducts => 
+      prevProducts.map(product => ({
+        ...product,
+        quantity: 0,
+        targetPrice: null
+      }))
+    );
+    setFilteredProducts(prevFiltered => 
+      prevFiltered.map(product => ({
+        ...product,
+        quantity: 0,
+        targetPrice: null
+      }))
+    );
   };
 
   const handleCloseError = () => {
@@ -695,7 +752,8 @@ const Dashboard: React.FC = () => {
       searchTerm: '',
       category: '',
       manufacturer: '',
-      supplier: ''
+      supplier: '',
+      onlyAvailableStock: true // Keep ON BY DEFAULT even after refresh
     });
     
     // Clear selected products
@@ -716,8 +774,8 @@ const Dashboard: React.FC = () => {
     // Trigger ProductTable filter reset
     setResetFilters(prev => prev + 1);
     
-    // Load fresh data
-    loadProducts(true);
+    // No need to reload data - the useEffect will handle re-filtering automatically
+    // when filterValues change
     
     // Show confirmation toast
     showToast('Filtri e selezioni resettati', 'info');
@@ -1097,6 +1155,39 @@ const Dashboard: React.FC = () => {
     setIsAddProductModalOpen(false);
   };
 
+  // Funzioni per il modal Supplier Stock Upload
+  const handleOpenSupplierStockModal = () => {
+    setIsSupplierStockModalOpen(true);
+  };
+
+  const handleCloseSupplierStockModal = () => {
+    setIsSupplierStockModalOpen(false);
+  };
+
+  // Funzioni per il modal Admin Stock Management
+  const handleOpenAdminStockModal = () => {
+    setIsAdminStockModalOpen(true);
+  };
+
+  const handleCloseAdminStockModal = () => {
+    setIsAdminStockModalOpen(false);
+  };
+
+  const handleOpenActiveUploadsModal = () => {
+    setIsActiveUploadsModalOpen(true);
+  };
+
+  const handleCloseActiveUploadsModal = () => {
+    setIsActiveUploadsModalOpen(false);
+  };
+
+  // Handle successful stock upload - refresh products
+  const handleStockUploadSuccess = () => {
+    showToast('Stock data uploaded successfully!', 'success');
+    // Refresh products to show updated stock levels
+    loadProducts();
+  };
+
   // Funzione per aggiungere un nuovo prodotto
   const handleAddProduct = (productData: ProductFormData) => {
     // Crea un nuovo prodotto con i dati del form
@@ -1281,38 +1372,56 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* ProductTable component (nuova tabella) */}
-      <ProductTable
-        products={filteredProducts}
-        selected={selected}
-        onSelect={(id) => handleSelectClick({} as any, id)}
-        onQuantityChange={handleQuantityChange}
-        onTargetPriceChange={handleTargetPriceChange}
-        isSelected={isSelected}
-        onToggleAllPrices={handleToggleAllPrices}
-        onSelectionWithProblemsChange={handleSelectionWithProblemsChange}
-        userRole={userRole}
-        resetFilters={resetFilters}
-        loading={loading}
-        fileUploading={fileUploading}
-        onAddProduct={handleOpenAddProductModal}
-        onUploadProduct={handleUploadButtonClick}
-        onRefresh={handleRefresh}
-      />
+      {/* ProductTable component or API Error Message */}
+      {error === 'API_ERROR' ? (
+        <ApiErrorMessage
+          title="Servizio Prodotti Non Disponibile"
+          description="Il sistema di gestione prodotti non è attualmente raggiungibile. Questo impedisce la visualizzazione e la gestione del catalogo prodotti."
+          endpoint="/products/fetch"
+          className="min-h-[400px]"
+        />
+      ) : (
+        <ProductTable
+          products={filteredProducts}
+          selected={selected}
+          onSelect={(id) => handleSelectClick({} as any, id)}
+          onQuantityChange={handleQuantityChange}
+          onTargetPriceChange={handleTargetPriceChange}
+          isSelected={isSelected}
+          onToggleAllPrices={handleToggleAllPrices}
+          onSelectionWithProblemsChange={handleSelectionWithProblemsChange}
+          userRole={userRole}
+          resetFilters={resetFilters}
+          loading={loading}
+          filteringLoading={filteringLoading}
+          sortingLoading={sortingLoading}
+          fileUploading={fileUploading}
+          onAddProduct={handleOpenAddProductModal}
+          onUploadProduct={handleUploadButtonClick}
+          onUploadStock={handleOpenSupplierStockModal}
+          onManageStock={handleOpenAdminStockModal}
+          onViewActiveUploads={handleOpenActiveUploadsModal}
+          onRefresh={handleRefresh}
+          filterValues={filterValues}
+          onFilterChange={setFilterValues}
+        />
+      )}
       
-      {/* Add the ActionBar component outside the Card */}
-      <ActionBar 
-        selectedCount={selected.length}
-        totalItems={getTotalQuantity()}
-        totalAmount={totalAmount}
-        onSaveAsDraft={() => showToast('Draft saved successfully', 'success')}
-        onCreateOda={handleCreateOda}
-        hasSelectionProblems={selectionWithProblems}
-        belowTargetCount={belowTargetCount}
-        aboveTargetCount={aboveTargetCount}
-        stockIssuesCount={stockIssuesCount}
-        selectedProducts={selectedProducts}
-      />
+      {/* Add the ActionBar component outside the Card - only show when no API error */}
+      {error !== 'API_ERROR' && (
+        <ActionBar 
+          selectedCount={selected.length}
+          totalItems={getTotalQuantity()}
+          totalAmount={totalAmount}
+          onSaveAsDraft={() => showToast('Draft saved successfully', 'success')}
+          onCreateOda={handleCreateOda}
+          hasSelectionProblems={selectionWithProblems}
+          belowTargetCount={belowTargetCount}
+          aboveTargetCount={aboveTargetCount}
+          stockIssuesCount={stockIssuesCount}
+          selectedProducts={selectedProducts}
+        />
+      )}
 
       {/* Order Confirmation Modal */}
       <OrderConfirmationModal
@@ -1330,6 +1439,26 @@ const Dashboard: React.FC = () => {
         open={isAddProductModalOpen}
         onClose={handleCloseAddProductModal}
         onAddProduct={handleAddProduct}
+      />
+
+      {/* Supplier Stock Upload Modal */}
+      <SupplierStockUploadModal
+        open={isSupplierStockModalOpen}
+        onClose={handleCloseSupplierStockModal}
+        onSuccess={handleStockUploadSuccess}
+      />
+
+      {/* Admin Stock Management Modal */}
+      <AdminStockManagementModal
+        open={isAdminStockModalOpen}
+        onClose={handleCloseAdminStockModal}
+        onSuccess={handleStockUploadSuccess}
+      />
+
+      {/* Active Uploads Modal */}
+      <ActiveUploadsModal
+        open={isActiveUploadsModalOpen}
+        onClose={handleCloseActiveUploadsModal}
       />
     </div>
   );

@@ -14,13 +14,13 @@ interface ThemeProviderProps {
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-    // Check localStorage first, then system preference
+    // Check localStorage first, then default to light mode
     const savedTheme = localStorage.getItem('farmabooste-theme');
     if (savedTheme) {
       return savedTheme === 'dark';
     }
-    // Default to system preference
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    // Default to light mode
+    return false;
   });
 
   const toggleTheme = () => {
@@ -43,19 +43,19 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     }
   }, [isDarkMode]);
 
-  // Listen for system theme changes
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (e: MediaQueryListEvent) => {
-      // Only update if user hasn't set a preference
-      if (!localStorage.getItem('Six Steps - FarmaAggregator-theme')) {
-        setIsDarkMode(e.matches);
-      }
-    };
+  // Listen for system theme changes (disabled - app defaults to light mode)
+  // useEffect(() => {
+  //   const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+  //   const handleChange = (e: MediaQueryListEvent) => {
+  //     // Only update if user hasn't set a preference
+  //     if (!localStorage.getItem('Six Steps - FarmaAggregator-theme')) {
+  //       setIsDarkMode(e.matches);
+  //     }
+  //   };
 
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
+  //   mediaQuery.addEventListener('change', handleChange);
+  //   return () => mediaQuery.removeEventListener('change', handleChange);
+  // }, []);
 
   return (
     <ThemeContext.Provider value={{ isDarkMode, toggleTheme, theme }}>

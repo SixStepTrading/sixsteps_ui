@@ -2,9 +2,17 @@ import React from 'react';
 
 export interface UserActivity {
   id: string;
-  user: string;
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    surname: string;
+    role: string;
+  };
+  ip: string;
   action: string;
-  details: string;
-  dateTime: string;
-  ipAddress: string;
+  timestamp: number;
+  formattedDate: string;
+  details: any;
+  userAgent: string;
 } 

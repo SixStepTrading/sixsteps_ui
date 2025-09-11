@@ -26,7 +26,11 @@ const EntitySelectionStep: React.FC<EntitySelectionStepProps> = ({
     entityName: '',
     country: 'ITALY',
     notes: '',
-    status: 'ACTIVE'
+    status: 'ACTIVE',
+    address: '',
+    vatNumber: '',
+    email: '',
+    phone: ''
   });
 
   useEffect(() => {
@@ -83,6 +87,26 @@ const EntitySelectionStep: React.FC<EntitySelectionStepProps> = ({
   const handleCreateNewEntity = async () => {
     if (!newEntityData.entityName.trim()) {
       showToast('Entity name is required', 'error');
+      return;
+    }
+    
+    if (!newEntityData.address?.trim()) {
+      showToast('Address is required', 'error');
+      return;
+    }
+    
+    if (!newEntityData.vatNumber?.trim()) {
+      showToast('VAT Number is required', 'error');
+      return;
+    }
+    
+    if (!newEntityData.email?.trim()) {
+      showToast('Email is required', 'error');
+      return;
+    }
+    
+    if (!newEntityData.phone?.trim()) {
+      showToast('Phone is required', 'error');
       return;
     }
 
@@ -280,6 +304,60 @@ const EntitySelectionStep: React.FC<EntitySelectionStepProps> = ({
             </div>
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Address *
+              </label>
+              <input
+                type="text"
+                value={newEntityData.address}
+                onChange={(e) => handleNewEntityDataChange('address', e.target.value)}
+                placeholder="e.g., Via Roma 123, Milano"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                VAT Number *
+              </label>
+              <input
+                type="text"
+                value={newEntityData.vatNumber}
+                onChange={(e) => handleNewEntityDataChange('vatNumber', e.target.value)}
+                placeholder="e.g., IT12345678901"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Email *
+              </label>
+              <input
+                type="email"
+                value={newEntityData.email}
+                onChange={(e) => handleNewEntityDataChange('email', e.target.value)}
+                placeholder="e.g., info@company.com"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Phone *
+              </label>
+              <input
+                type="tel"
+                value={newEntityData.phone}
+                onChange={(e) => handleNewEntityDataChange('phone', e.target.value)}
+                placeholder="e.g., +39 02 1234567"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              />
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Notes
@@ -296,7 +374,7 @@ const EntitySelectionStep: React.FC<EntitySelectionStepProps> = ({
           <div className="flex justify-end">
             <button
               onClick={handleCreateNewEntity}
-              disabled={submitting || !newEntityData.entityName.trim()}
+              disabled={submitting || !newEntityData.entityName.trim() || !newEntityData.address?.trim() || !newEntityData.vatNumber?.trim() || !newEntityData.email?.trim() || !newEntityData.phone?.trim()}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {submitting ? (

@@ -205,26 +205,26 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
             <div className="flex flex-col space-y-4">
               <div>
                 <div className="text-xs text-gray-500 dark:text-dark-text-muted mb-2">CURRENT ROLE</div>
-                
-                <div className="flex flex-col space-y-2">
+              
+              <div className="flex flex-col space-y-2">
                   <div
-                    className={`
-                      flex items-center p-2 rounded-md text-left
+                  className={`
+                    flex items-center p-2 rounded-md text-left
                       ${userRole === 'Admin' ? 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300' : 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'}
                       h-[50px]
-                    `}
-                  >
+                  `}
+                >
                     <div className={`w-7 h-7 rounded-full ${userRole === 'Admin' ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'} flex items-center justify-center mr-2 flex-shrink-0`}>
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </div>
-                    <div>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
                       <div className="font-medium text-sm">{userRole === 'Admin' ? 'Administrator' : 'Pharmacy'}</div>
                       <div className="text-xs text-gray-500 dark:text-dark-text-muted">{userRole === 'Admin' ? 'Full system access' : 'Order management'}</div>
-                    </div>
                   </div>
-                </div>
+                  </div>
+                  </div>
               </div>
             </div>
           </div>
