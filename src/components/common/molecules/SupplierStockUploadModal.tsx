@@ -369,16 +369,8 @@ const SupplierStockUploadModal: React.FC<SupplierStockUploadModalProps> = ({
     try {
       const fileData = await readFilePreview(file);
       
-      // Validate required fields
-      const requiredFields = ['sku', 'price', 'vat'];
-      const mappedRequiredFields = requiredFields.filter(field => 
-        Object.values(columnMapping).includes(field)
-      );
-      
-      if (mappedRequiredFields.length < requiredFields.length) {
-        const missingFields = requiredFields.filter(field => !mappedRequiredFields.includes(field));
-        throw new Error(`Missing required fields: ${missingFields.join(', ')}. Please map your CSV columns to these required fields: - SKU/Product Code (usually EAN, SKU, or similar) - Price (usually ETI, PREZZO, or similar) - VAT % (usually IVA, VAT, or similar)`);
-      }
+      // No validation - proceed with whatever fields are mapped
+      console.log('📋 Proceeding with mapped fields:', Object.values(columnMapping).filter(field => field && field.trim() !== ''));
       
       // Transform data
       console.log('🔍 File data headers:', fileData.headers);
