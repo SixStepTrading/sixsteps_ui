@@ -171,18 +171,22 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
       preview.headers.forEach(header => {
         const lowerHeader = header.toLowerCase().trim();
         
-        if (lowerHeader === 'sku' || lowerHeader.includes('ean') || lowerHeader.includes('code')) {
+        if (lowerHeader === 'sku' || lowerHeader.includes('minsan') || lowerHeader.includes('ean') || lowerHeader.includes('code')) {
           newMapping[header] = 'sku';
         } else if (lowerHeader.includes('price') || lowerHeader.includes('eti') || lowerHeader.includes('prezzo')) {
           newMapping[header] = 'price';
         } else if (lowerHeader.includes('vat') || lowerHeader.includes('iva')) {
           newMapping[header] = 'vat';
-        } else if (lowerHeader.includes('quantity') || lowerHeader.includes('stock') || lowerHeader.includes('qty')) {
-          newMapping[header] = 'quantity';
         } else if (lowerHeader.includes('currency') || lowerHeader.includes('valuta')) {
           newMapping[header] = 'currency';
-        } else if (lowerHeader.includes('unit') || lowerHeader.includes('unita')) {
+        } else if (lowerHeader.includes('quantity') || lowerHeader.includes('stock') || lowerHeader.includes('qty')) {
+          newMapping[header] = 'quantity';
+        } else if (lowerHeader.includes('unit') || lowerHeader.includes('unita') || lowerHeader.includes('measure')) {
           newMapping[header] = 'unit';
+        } else if (lowerHeader.includes('notes') || lowerHeader.includes('note') || lowerHeader.includes('comment')) {
+          newMapping[header] = 'notes';
+        } else if (lowerHeader.includes('supplier') && (lowerHeader.includes('id') || lowerHeader.includes('code'))) {
+          newMapping[header] = 'supplierId';
         }
       });
       
@@ -265,18 +269,22 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
     filePreview.headers.forEach(header => {
       const lowerHeader = header.toLowerCase().trim();
       
-      if (lowerHeader === 'sku' || lowerHeader.includes('ean') || lowerHeader.includes('code')) {
+      if (lowerHeader === 'sku' || lowerHeader.includes('minsan') || lowerHeader.includes('ean') || lowerHeader.includes('code')) {
         newMapping[header] = 'sku';
       } else if (lowerHeader.includes('price') || lowerHeader.includes('eti') || lowerHeader.includes('prezzo')) {
         newMapping[header] = 'price';
       } else if (lowerHeader.includes('vat') || lowerHeader.includes('iva')) {
         newMapping[header] = 'vat';
-      } else if (lowerHeader.includes('quantity') || lowerHeader.includes('stock') || lowerHeader.includes('qty')) {
-        newMapping[header] = 'quantity';
       } else if (lowerHeader.includes('currency') || lowerHeader.includes('valuta')) {
         newMapping[header] = 'currency';
-      } else if (lowerHeader.includes('unit') || lowerHeader.includes('unita')) {
+      } else if (lowerHeader.includes('quantity') || lowerHeader.includes('stock') || lowerHeader.includes('qty')) {
+        newMapping[header] = 'quantity';
+      } else if (lowerHeader.includes('unit') || lowerHeader.includes('unita') || lowerHeader.includes('measure')) {
         newMapping[header] = 'unit';
+      } else if (lowerHeader.includes('notes') || lowerHeader.includes('note') || lowerHeader.includes('comment')) {
+        newMapping[header] = 'notes';
+      } else if (lowerHeader.includes('supplier') && (lowerHeader.includes('id') || lowerHeader.includes('code'))) {
+        newMapping[header] = 'supplierId';
       }
     });
     
@@ -285,12 +293,15 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
 
   const getFieldOptions = () => {
     return [
-      { value: 'sku', label: 'SKU/Product Code' },
-      { value: 'price', label: 'Price' },
-      { value: 'vat', label: 'VAT %' },
-      { value: 'quantity', label: 'Quantity' },
+      { value: '', label: 'Ignore this column' },
+      { value: 'sku', label: 'Sku/Minsan' },
+      { value: 'price', label: 'Offered Price' },
+      { value: 'vat', label: 'VAT' },
       { value: 'currency', label: 'Currency' },
-      { value: 'unit', label: 'Unit' }
+      { value: 'quantity', label: 'Stock Quantity' },
+      { value: 'unit', label: 'Unit of Measurement' },
+      { value: 'notes', label: 'Stock Notes' },
+      { value: 'supplierId', label: 'Supplier ID' }
     ];
   };
 
@@ -306,9 +317,13 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
   };
 
   const downloadTemplate = () => {
+    // Template with exact headers that backend expects: sku;price;vat;currency;quantity;unit;notes
+    // Admin version includes supplierId for multi-supplier management
     const templateData = [
-      ['SKU', 'Price', 'VAT', 'Quantity', 'Currency', 'Unit'],
-      ['EXAMPLE-SKU-001', '10.50', '22', '100', 'EUR', 'pcs']
+      ['sku', 'price', 'vat', 'currency', 'quantity', 'unit', 'notes', 'supplierId'],
+      ['935621793', '19.90', '10', 'EUR', '50', 'pcs', 'Stock disponibile', 'SUPPLIER_001'],
+      ['909125460', '39.90', '22', 'EUR', '25', 'pcs', 'Riordino necessario', 'SUPPLIER_002'],
+      ['902603303', '24.50', '10', 'EUR', '100', 'pcs', 'Scorte elevate', 'SUPPLIER_001']
     ];
     
     const csvContent = templateData.map(row => row.join(';')).join('\n');

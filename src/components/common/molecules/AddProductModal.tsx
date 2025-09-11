@@ -37,18 +37,14 @@ import { useUploadProgress } from '../../../hooks/useUploadProgress';
 import UploadProgressBar from '../../common/atoms/UploadProgressBar';
 
 export interface ProductFormData {
-  productCode: string; // Keep for backward compatibility 
+  // Core API fields (what the backend expects)
   sku: string;
+  name: string;
   ean: string;
-  minsan: string;
-  name: string; // API field name
-  productName: string; // UI field name (backward compatibility)
-  price: number; // API field name  
-  publicPrice: number; // UI field name (backward compatibility)
-  stock: number; // API field name
-  stockQuantity: number; // UI field name (backward compatibility)
-  stockPrice: number;
-  manufacturer: string;
+  producer: string;
+  description: string;
+  category: string;
+  price: number;
   vat: number;
 }
 
@@ -76,18 +72,13 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   onAddMultipleProducts
 }) => {
   const initialFormData: ProductFormData = {
-    productCode: '', // Keep for backward compatibility
     sku: '',
+    name: '',
     ean: '',
-    minsan: '',
-    name: '', // API field name
-    productName: '', // UI field name (backward compatibility)
-    price: 0, // API field name
-    publicPrice: 0, // UI field name (backward compatibility)
-    stock: 0, // API field name
-    stockQuantity: 0, // UI field name (backward compatibility)
-    stockPrice: 0,
-    manufacturer: '',
+    producer: '',
+    description: '',
+    category: '',
+    price: 0,
     vat: 10
   };
 
@@ -206,22 +197,20 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       preview.headers.forEach(header => {
         const lowerHeader = header.toLowerCase();
         
-        if (lowerHeader === 'sku' || lowerHeader.includes('code') || lowerHeader.includes('codice')) {
+        if (lowerHeader === 'sku' || lowerHeader.includes('minsan') || lowerHeader.includes('code') || lowerHeader.includes('codice')) {
           newMapping[header] = 'sku';
         } else if (lowerHeader === 'ean') {
           newMapping[header] = 'ean';
-        } else if (lowerHeader.includes('minsan')) {
-          newMapping[header] = 'minsan';
         } else if (lowerHeader.includes('name') || lowerHeader.includes('product') || lowerHeader.includes('descrizione')) {
           newMapping[header] = 'name';
-        } else if (lowerHeader.includes('public') && lowerHeader.includes('price')) {
+        } else if (lowerHeader.includes('producer') || lowerHeader.includes('manufacturer') || lowerHeader.includes('brand') || lowerHeader.includes('ditta')) {
+          newMapping[header] = 'producer';
+        } else if (lowerHeader.includes('description') || lowerHeader.includes('desc')) {
+          newMapping[header] = 'description';
+        } else if (lowerHeader.includes('category') || lowerHeader.includes('categoria')) {
+          newMapping[header] = 'category';
+        } else if (lowerHeader.includes('price') || lowerHeader.includes('prezzo')) {
           newMapping[header] = 'price';
-        } else if (lowerHeader.includes('stock') && lowerHeader.includes('quantity')) {
-          newMapping[header] = 'stock';
-        } else if (lowerHeader.includes('stock') && lowerHeader.includes('price')) {
-          newMapping[header] = 'stockPrice';
-        } else if (lowerHeader.includes('manufacturer') || lowerHeader.includes('brand')) {
-          newMapping[header] = 'manufacturer';
         } else if (lowerHeader.includes('vat') || lowerHeader.includes('iva')) {
           newMapping[header] = 'vat';
         }
@@ -589,22 +578,20 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     filePreview.headers.forEach(header => {
       const lowerHeader = header.toLowerCase().trim();
       
-      if (lowerHeader === 'sku' || lowerHeader.includes('code') || lowerHeader.includes('codice')) {
+      if (lowerHeader === 'sku' || lowerHeader.includes('minsan') || lowerHeader.includes('code') || lowerHeader.includes('codice')) {
         newMapping[header] = 'sku';
       } else if (lowerHeader === 'ean') {
         newMapping[header] = 'ean';
-      } else if (lowerHeader.includes('minsan')) {
-        newMapping[header] = 'minsan';
       } else if (lowerHeader.includes('name') || lowerHeader.includes('product') || lowerHeader.includes('descrizione')) {
         newMapping[header] = 'name';
-      } else if (lowerHeader.includes('public') && lowerHeader.includes('price')) {
+      } else if (lowerHeader.includes('producer') || lowerHeader.includes('manufacturer') || lowerHeader.includes('brand') || lowerHeader.includes('ditta')) {
+        newMapping[header] = 'producer';
+      } else if (lowerHeader.includes('description') || lowerHeader.includes('desc')) {
+        newMapping[header] = 'description';
+      } else if (lowerHeader.includes('category') || lowerHeader.includes('categoria')) {
+        newMapping[header] = 'category';
+      } else if (lowerHeader.includes('price') || lowerHeader.includes('prezzo')) {
         newMapping[header] = 'price';
-      } else if (lowerHeader.includes('stock') && lowerHeader.includes('quantity')) {
-        newMapping[header] = 'stock';
-      } else if (lowerHeader.includes('stock') && lowerHeader.includes('price')) {
-        newMapping[header] = 'stockPrice';
-      } else if (lowerHeader.includes('manufacturer') || lowerHeader.includes('brand')) {
-        newMapping[header] = 'manufacturer';
       } else if (lowerHeader.includes('vat') || lowerHeader.includes('iva')) {
         newMapping[header] = 'vat';
       }
@@ -803,23 +790,24 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         
         if (value !== undefined && value !== null) {
           // Convert the value to the appropriate type
-                    if (field === 'productCode' || field === 'sku' || field === 'ean' || field === 'minsan' ||
-              field === 'name' || field === 'productName' || field === 'manufacturer') {
-            newProduct[field] = String(value).trim();
-          } else {
-            // For numeric fields (price, publicPrice, stock, stockQuantity, stockPrice, vat), parse as float
+          // String fields
+          if (field === 'sku' || field === 'name' || field === 'ean' || 
+              field === 'producer' || field === 'description' || field === 'category') {
+            (newProduct as any)[field] = String(value).trim();
+          } else if (field === 'price' || field === 'vat') {
+            // For numeric fields (price, vat), parse as float
             const numValue = parseFloat(String(value).replace(',', '.'));
             if (!isNaN(numValue)) {
-              newProduct[field] = numValue;
+              (newProduct as any)[field] = numValue;
             } else {
-              newProduct[field] = 0; // Default to 0 for invalid numeric values
+              (newProduct as any)[field] = 0; // Default to 0 for invalid numeric values
             }
           }
         }
       });
       
       // Validate the product has at least name and some kind of product identifier
-      if ((newProduct.name || newProduct.productName) && (newProduct.productCode || newProduct.sku || newProduct.ean || newProduct.minsan)) {
+      if (newProduct.name && (newProduct.sku || newProduct.ean)) {
         products.push(newProduct);
       }
     });
@@ -845,51 +833,56 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   const getFieldOptions = () => {
     return [
       { value: '', label: 'Ignore this column' },
-      { value: 'sku', label: 'SKU/Product Code' },
-      { value: 'ean', label: 'EAN Code' },
-      { value: 'minsan', label: 'MINSAN Code' },
+      { value: 'sku', label: 'Sku/Minsan' },
       { value: 'name', label: 'Product Name' },
-      { value: 'price', label: 'Price' },
-      { value: 'stock', label: 'Stock Quantity' },
-      { value: 'stockPrice', label: 'Stock Price' },
-      { value: 'manufacturer', label: 'Manufacturer' },
-      { value: 'vat', label: 'VAT %' },
-      // Legacy fields for backward compatibility
-      { value: 'productCode', label: 'Product Code (Legacy)' },
-      { value: 'productName', label: 'Product Name (Legacy)' },
-      { value: 'publicPrice', label: 'Public Price (Legacy)' },
-      { value: 'stockQuantity', label: 'Stock Quantity (Legacy)' }
+      { value: 'ean', label: 'EAN' },
+      { value: 'producer', label: 'Producer Company' },
+      { value: 'description', label: 'Product Description' },
+      { value: 'category', label: 'Product Category' },
+      { value: 'price', label: 'Public Price' },
+      { value: 'vat', label: 'VAT' }
     ];
   };
 
-  // Template for Excel/CSV file - Updated column names to match API
+  // Template for Excel/CSV file - Headers match backend expectations exactly:
+  // sku;name;ean;producer;description;category;price;vat
   const downloadTemplate = () => {
     const template: Record<string, string>[] = [
       {
         'sku': '935621793',
-        'name': '5D Depuradren TÃ¨ alla Pesca Integratore Depurativo Drenante 500 ml',
+        'name': '5D Depuradren Tè alla Pesca Integratore Depurativo Drenante 500 ml',
         'ean': '8032628862878',
-        'vat': '10',
-        'price': '19,9'
+        'producer': 'Bioearth S.r.l.',
+        'description': 'Integratore alimentare depurativo e drenante al gusto pesca',
+        'category': 'Integratori',
+        'price': '19,9',
+        'vat': '10'
       },
       {
         'sku': '909125460',
         'name': 'Acarostop Fodera Cuscino Antiacaro 50 x 80 cm',
-        'ean': '',
-        'vat': '22',
-        'price': '39,9'
+        'ean': '8058664012345',
+        'producer': 'Sanitex S.p.A.',
+        'description': 'Fodera per cuscino con trattamento antiacaro certificato',
+        'category': 'Dispositivi Medici',
+        'price': '39,9',
+        'vat': '22'
       },
       {
         'sku': '902603303',
         'name': 'Acidif Retard Integratore Per Apparato Urinario Mirtillo Rosso 30 Compresse',
         'ean': '8058341430071',
-        'vat': '10',
-        'price': '24,5'
+        'producer': 'PharmaNutra S.p.A.',
+        'description': 'Integratore per il benessere delle vie urinarie con mirtillo rosso',
+        'category': 'Integratori',
+        'price': '24,5',
+        'vat': '10'
       }
     ];
     
     // Create CSV content with semicolon separator (European format)
-    const headers = ['sku', 'name', 'ean', 'vat', 'price'];
+    // Headers match exactly what the backend expects: sku;name;ean;producer;description;category;price;vat
+    const headers = ['sku', 'name', 'ean', 'producer', 'description', 'category', 'price', 'vat'];
     const csvContent = [
       headers.join(';'),
       ...template.map(row => 

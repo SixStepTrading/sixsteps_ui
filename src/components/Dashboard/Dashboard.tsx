@@ -1193,22 +1193,22 @@ const Dashboard: React.FC = () => {
     // Crea un nuovo prodotto con i dati del form
     const newProduct: ProductWithQuantity = {
       id: uuid(),
-      ean: productData.productCode,  // Utilizziamo productCode come EAN
-      minsan: '',  // Campo opzionale
-      name: productData.productName,
-      publicPrice: productData.publicPrice,
-      vat: productData.vat,  // Use the VAT from form data
-      category: 'Manually added',
-      manufacturer: productData.manufacturer,  // Use the manufacturer from form data
-      description: 'Product added manually',
+      ean: productData.ean,
+      minsan: productData.sku,  // Use SKU as MINSAN
+      name: productData.name,
+      publicPrice: productData.price,
+      vat: productData.vat,
+      category: productData.category || 'Manually added',
+      manufacturer: productData.producer,
+      description: productData.description || 'Product added manually',
       bestPrices: [
         {
           supplier: 'Internal Stock',
-          price: productData.stockPrice,
-          stock: productData.stockQuantity  // Usiamo stock invece di quantity
+          price: productData.price,
+          stock: 100  // Default stock quantity
         }
       ],
-      inStock: productData.stockQuantity > 0,
+      inStock: true,
       quantity: 0,  // Campo per ProductWithQuantity
       averagePrice: null,  // Campo per ProductWithQuantity
       showAllPrices: false,  // Campo per ProductWithQuantity
@@ -1224,7 +1224,7 @@ const Dashboard: React.FC = () => {
     
     // Notifica l'utente
     showToast(
-      `Product "${productData.productName}" successfully added!`,
+      `Product "${productData.name}" successfully added!`,
       'success'
     );
   };
