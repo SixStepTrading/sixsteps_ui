@@ -346,10 +346,7 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
       // Transform file with correct columns
       const transformedFile = await transformFileWithCorrectColumns(selectedFile, mappedFields);
       
-      // Upload the transformed file
-      const formData = new FormData();
-      formData.append('file', transformedFile, selectedFile.name);
-      
+      // Upload the transformed file with entityId
       const response = await uploadSuppliesAdminCSV(transformedFile, mappedFields, selectedSupplier);
       
       if (response.success) {
