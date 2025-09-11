@@ -93,16 +93,30 @@ export const fetchProducts = async (
       throw new Error("Invalid API response structure");
     }
 
+    // Get all entities to map entityId to supplier names
+    let entities: Entity[] = [];
+    try {
+      entities = await getAllEntities();
+      console.log("📋 Loaded entities for supplier mapping:", entities.length);
+    } catch (error) {
+      console.warn("⚠️ Could not load entities for supplier mapping:", error);
+    }
+
+    // Create entity lookup map
+    const entityMap = new Map<string, string>();
+    entities.forEach(entity => {
+      entityMap.set(entity.id, entity.entityName);
+    });
+
     // Transform the API response to match our Product interface
     const products: Product[] = response.data.products.map((item: any) => {
       // Handle supplies/suppliers - check if they're integrated in the product
       let bestPrices: ProductPrice[] = [];
 
       if (item.supplies && Array.isArray(item.supplies)) {
-        // New format with integrated supplies
+        // New format with integrated supplies - use entityId to get supplier name
         bestPrices = item.supplies.map((supply: any) => ({
-          supplier:
-            supply.supplier || supply.supplierName || "Unknown Supplier",
+          supplier: entityMap.get(supply.entityId) || supply.supplier || supply.supplierName || `Supplier ${supply.entityId}` || "Unknown Supplier",
           price: supply.price || supply.publicPrice || 0,
           stock: supply.stock || supply.quantity || 0,
         }));
@@ -130,13 +144,13 @@ export const fetchProducts = async (
       return {
         id: item.id?.toString() || item._id?.toString() || "",
         ean: item.ean || item.EAN || "",
-        minsan: item.minsan || item.MINSAN || "",
+        minsan: item.sku || item.minsan || item.MINSAN || "", // Use sku from backend for minsan
         name: item.name || item.productName || "Unknown Product",
         description: item.description || "",
-        manufacturer: item.manufacturer || "Unknown Manufacturer",
+        manufacturer: item.producer || item.manufacturer || "Unknown Manufacturer", // Use producer from backend
         category: item.category || "Uncategorized",
         publicPrice: item.publicPrice || item.price || 0,
-        vat: item.vatRate || item.vat || 22,
+        vat: item.publicVat || item.vatRate || item.vat || 22, // Use publicVat from backend
         bestPrices,
         inStock: bestPrices.some((price) => price.stock > 0),
       };
