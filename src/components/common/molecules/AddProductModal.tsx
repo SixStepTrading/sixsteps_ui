@@ -46,16 +46,6 @@ export interface ProductFormData {
   category: string;
   price: number;
   vat: number;
-  // Additional fields for extended functionality
-  stock: number;
-  stockPrice: number;
-  // Legacy/backward compatibility fields
-  productCode: string;
-  minsan: string;
-  productName: string;
-  publicPrice: number;
-  stockQuantity: number;
-  manufacturer: string;
 }
 
 interface AddProductModalProps {
@@ -82,7 +72,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   onAddMultipleProducts
 }) => {
   const initialFormData: ProductFormData = {
-    // Core API fields (what the backend expects)
     sku: '',
     name: '',
     ean: '',
@@ -90,17 +79,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     description: '',
     category: '',
     price: 0,
-    vat: 10,
-    // Additional fields for extended functionality
-    stock: 0,
-    stockPrice: 0,
-    // Legacy/backward compatibility fields
-    productCode: '',
-    minsan: '',
-    productName: '',
-    publicPrice: 0,
-    stockQuantity: 0,
-    manufacturer: ''
+    vat: 10
   };
 
   // State variables
@@ -218,22 +197,20 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       preview.headers.forEach(header => {
         const lowerHeader = header.toLowerCase();
         
-        if (lowerHeader === 'sku' || lowerHeader.includes('code') || lowerHeader.includes('codice')) {
+        if (lowerHeader === 'sku' || lowerHeader.includes('minsan') || lowerHeader.includes('code') || lowerHeader.includes('codice')) {
           newMapping[header] = 'sku';
         } else if (lowerHeader === 'ean') {
           newMapping[header] = 'ean';
-        } else if (lowerHeader.includes('minsan')) {
-          newMapping[header] = 'minsan';
         } else if (lowerHeader.includes('name') || lowerHeader.includes('product') || lowerHeader.includes('descrizione')) {
           newMapping[header] = 'name';
-        } else if (lowerHeader.includes('public') && lowerHeader.includes('price')) {
+        } else if (lowerHeader.includes('producer') || lowerHeader.includes('manufacturer') || lowerHeader.includes('brand') || lowerHeader.includes('ditta')) {
+          newMapping[header] = 'producer';
+        } else if (lowerHeader.includes('description') || lowerHeader.includes('desc')) {
+          newMapping[header] = 'description';
+        } else if (lowerHeader.includes('category') || lowerHeader.includes('categoria')) {
+          newMapping[header] = 'category';
+        } else if (lowerHeader.includes('price') || lowerHeader.includes('prezzo')) {
           newMapping[header] = 'price';
-        } else if (lowerHeader.includes('stock') && lowerHeader.includes('quantity')) {
-          newMapping[header] = 'stock';
-        } else if (lowerHeader.includes('stock') && lowerHeader.includes('price')) {
-          newMapping[header] = 'stockPrice';
-        } else if (lowerHeader.includes('manufacturer') || lowerHeader.includes('brand')) {
-          newMapping[header] = 'manufacturer';
         } else if (lowerHeader.includes('vat') || lowerHeader.includes('iva')) {
           newMapping[header] = 'vat';
         }
@@ -601,22 +578,20 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     filePreview.headers.forEach(header => {
       const lowerHeader = header.toLowerCase().trim();
       
-      if (lowerHeader === 'sku' || lowerHeader.includes('code') || lowerHeader.includes('codice')) {
+      if (lowerHeader === 'sku' || lowerHeader.includes('minsan') || lowerHeader.includes('code') || lowerHeader.includes('codice')) {
         newMapping[header] = 'sku';
       } else if (lowerHeader === 'ean') {
         newMapping[header] = 'ean';
-      } else if (lowerHeader.includes('minsan')) {
-        newMapping[header] = 'minsan';
       } else if (lowerHeader.includes('name') || lowerHeader.includes('product') || lowerHeader.includes('descrizione')) {
         newMapping[header] = 'name';
-      } else if (lowerHeader.includes('public') && lowerHeader.includes('price')) {
+      } else if (lowerHeader.includes('producer') || lowerHeader.includes('manufacturer') || lowerHeader.includes('brand') || lowerHeader.includes('ditta')) {
+        newMapping[header] = 'producer';
+      } else if (lowerHeader.includes('description') || lowerHeader.includes('desc')) {
+        newMapping[header] = 'description';
+      } else if (lowerHeader.includes('category') || lowerHeader.includes('categoria')) {
+        newMapping[header] = 'category';
+      } else if (lowerHeader.includes('price') || lowerHeader.includes('prezzo')) {
         newMapping[header] = 'price';
-      } else if (lowerHeader.includes('stock') && lowerHeader.includes('quantity')) {
-        newMapping[header] = 'stock';
-      } else if (lowerHeader.includes('stock') && lowerHeader.includes('price')) {
-        newMapping[header] = 'stockPrice';
-      } else if (lowerHeader.includes('manufacturer') || lowerHeader.includes('brand')) {
-        newMapping[header] = 'manufacturer';
       } else if (lowerHeader.includes('vat') || lowerHeader.includes('iva')) {
         newMapping[header] = 'vat';
       }
@@ -816,12 +791,11 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         if (value !== undefined && value !== null) {
           // Convert the value to the appropriate type
           // String fields
-          if (field === 'productCode' || field === 'sku' || field === 'ean' || field === 'minsan' ||
-              field === 'name' || field === 'productName' || field === 'manufacturer' ||
+          if (field === 'sku' || field === 'name' || field === 'ean' || 
               field === 'producer' || field === 'description' || field === 'category') {
             (newProduct as any)[field] = String(value).trim();
-          } else {
-            // For numeric fields (price, publicPrice, stock, stockQuantity, stockPrice, vat), parse as float
+          } else if (field === 'price' || field === 'vat') {
+            // For numeric fields (price, vat), parse as float
             const numValue = parseFloat(String(value).replace(',', '.'));
             if (!isNaN(numValue)) {
               (newProduct as any)[field] = numValue;
@@ -833,7 +807,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       });
       
       // Validate the product has at least name and some kind of product identifier
-      if ((newProduct.name || newProduct.productName) && (newProduct.productCode || newProduct.sku || newProduct.ean || newProduct.minsan)) {
+      if (newProduct.name && (newProduct.sku || newProduct.ean)) {
         products.push(newProduct);
       }
     });
@@ -866,17 +840,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       { value: 'description', label: 'Product Description' },
       { value: 'category', label: 'Product Category' },
       { value: 'price', label: 'Public Price' },
-      { value: 'vat', label: 'VAT' },
-      // Additional fields for backward compatibility
-      { value: 'stock', label: 'Stock Quantity' },
-      { value: 'stockPrice', label: 'Stock Price' },
-      { value: 'manufacturer', label: 'Manufacturer' },
-      // Legacy fields for backward compatibility
-      { value: 'productCode', label: 'Product Code (Legacy)' },
-      { value: 'productName', label: 'Product Name (Legacy)' },
-      { value: 'publicPrice', label: 'Public Price (Legacy)' },
-      { value: 'stockQuantity', label: 'Stock Quantity (Legacy)' },
-      { value: 'minsan', label: 'MINSAN Code (Legacy)' }
+      { value: 'vat', label: 'VAT' }
     ];
   };
 
