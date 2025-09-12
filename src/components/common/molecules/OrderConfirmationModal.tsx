@@ -362,13 +362,31 @@ const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
                           <TableCell align="right" sx={{ fontSize: '0.7rem' }}>
                             {breakdown.suppliers && breakdown.suppliers.length > 1 ? (
                               <div>
-                                <div>Suppliers ({breakdown.suppliers.length}):</div>
-                                <div style={{ fontSize: '0.6rem', marginTop: '2px' }}>
-                                  {breakdown.suppliers.join(', ')}
+                                <div style={{ fontSize: '0.6rem', marginBottom: '2px' }}>Stock breakdown:</div>
+                                {breakdown.suppliers.map((supplier, idx) => {
+                                  // Find the original stock for this supplier
+                                  const originalPrice = product.priceBreakdowns?.find(p => p.supplier === supplier);
+                                  const supplierStock = originalPrice ? originalPrice.stock : 0;
+                                  return (
+                                    <div key={idx} style={{ fontSize: '0.6rem', marginBottom: '1px' }}>
+                                      Stock: {supplierStock} | {supplier}
+                                    </div>
+                                  );
+                                })}
+                                <div style={{ 
+                                  fontSize: '0.6rem', 
+                                  borderTop: '1px solid #d1d5db', 
+                                  paddingTop: '2px', 
+                                  marginTop: '2px', 
+                                  fontWeight: 'bold' 
+                                }}>
+                                  Total: {breakdown.stock}
                                 </div>
                               </div>
                             ) : (
-                              breakdown.supplier
+                              <div style={{ fontSize: '0.6rem' }}>
+                                Stock: {breakdown.stock} | {breakdown.supplier}
+                              </div>
                             )}
                           </TableCell>
                         )}
