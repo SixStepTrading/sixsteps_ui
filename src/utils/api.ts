@@ -39,7 +39,18 @@ sixstepClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid
+      // Check if this is a permission-related 401 (not a token expiration)
+      const url = error.config?.url || '';
+      
+      // For specific endpoints that might have permission restrictions,
+      // don't automatically logout - let the component handle the error
+      if (url.includes('/products/get') || url.includes('/entities/get') || url.includes('/entities/get/all')) {
+        // This might be a permission issue, not token expiration
+        // Let the component handle this gracefully
+        return Promise.reject(error);
+      }
+      
+      // For other endpoints (like auth endpoints), treat as token expiration
       localStorage.removeItem("sixstep_token");
       localStorage.removeItem("sixstep_user");
       window.location.href = "/login";
@@ -47,6 +58,42 @@ sixstepClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// Function to consolidate prices with same value but different suppliers
+const consolidatePrices = (prices: ProductPrice[]): ProductPrice[] => {
+  const priceMap = new Map<number, {
+    price: number;
+    stock: number;
+    suppliers: string[];
+    originalPrices: ProductPrice[]; // Keep original price objects for stock details
+  }>();
+
+  // Group prices by price value
+  prices.forEach(price => {
+    const existing = priceMap.get(price.price);
+    if (existing) {
+      existing.stock += price.stock;
+      existing.suppliers.push(price.supplier);
+      existing.originalPrices.push(price);
+    } else {
+      priceMap.set(price.price, {
+        price: price.price,
+        stock: price.stock,
+        suppliers: [price.supplier],
+        originalPrices: [price]
+      });
+    }
+  });
+
+  // Convert back to ProductPrice array
+  return Array.from(priceMap.values()).map(consolidated => ({
+    price: consolidated.price,
+    stock: consolidated.stock,
+    supplier: consolidated.suppliers.join(', '), // For display purposes
+    suppliers: consolidated.suppliers, // Keep original suppliers for detailed view
+    originalPrices: consolidated.originalPrices // Keep original price objects for stock details
+  }));
+};
 
 // Function to fetch pharmaceutical products with pagination and filtering
 export const fetchProducts = async (
@@ -59,7 +106,8 @@ export const fetchProducts = async (
     inStockOnly?: boolean;
     minPrice?: number;
     maxPrice?: number;
-  } = {}
+  } = {},
+  isAdmin: boolean = false
 ): Promise<{
   products: Product[];
   totalCount: number;
@@ -93,13 +141,17 @@ export const fetchProducts = async (
       throw new Error("Invalid API response structure");
     }
 
-    // Get all entities to map entityId to supplier names
+    // Get all entities to map entityId to supplier names (only for admin users)
     let entities: Entity[] = [];
-    try {
-      entities = await getAllEntities();
-      console.log("📋 Loaded entities for supplier mapping:", entities.length);
-    } catch (error) {
-      console.warn("⚠️ Could not load entities for supplier mapping:", error);
+    if (isAdmin) {
+      try {
+        entities = await getAllEntities();
+        console.log("📋 Loaded entities for supplier mapping:", entities.length);
+      } catch (error: any) {
+        console.warn("⚠️ Could not load entities for supplier mapping:", error);
+      }
+    } else {
+      console.log("📋 Skipping entities loading for non-admin user");
     }
 
     // Create entity lookup map
@@ -138,8 +190,11 @@ export const fetchProducts = async (
         ];
       }
 
-      // Sort by price
+      // Sort by price first
       bestPrices.sort((a: ProductPrice, b: ProductPrice) => a.price - b.price);
+      
+      // Consolidate prices with same value but different suppliers
+      bestPrices = consolidatePrices(bestPrices);
 
       return {
         id: item.id?.toString() || item._id?.toString() || "",

@@ -299,11 +299,13 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 }`}
               >
                 <option value="">Select an entity...</option>
-                {entities.map(entity => (
-                  <option key={entity.id} value={entity.id}>
-                    {entity.entityName} ({entity.entityType})
-                  </option>
-                ))}
+                {entities
+                  .filter(entity => entity.status === 'ACTIVE' || !entity.status)
+                  .map(entity => (
+                    <option key={entity.id} value={entity.id}>
+                      {entity.entityName} ({entity.entityType})
+                    </option>
+                  ))}
               </select>
               {errors.entity && <p className="text-sm text-red-600 dark:text-red-400 mt-1">{errors.entity}</p>}
             </div>

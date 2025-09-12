@@ -5,6 +5,16 @@ import { SidebarContext } from '../../contexts/SidebarContext';
 import ExportButton from '../common/molecules/ExportButton';
 import TableSkeleton from '../common/atoms/TableSkeleton';
 
+// Utility function to truncate supplier names with ellipsis in the middle
+const truncateSupplierName = (name: string, maxLength: number = 20): string => {
+  if (name.length <= maxLength) return name;
+  
+  const start = Math.floor((maxLength - 3) / 2);
+  const end = Math.ceil((maxLength - 3) / 2);
+  
+  return name.substring(0, start) + '...' + name.substring(name.length - end);
+};
+
 export interface ProductWithQuantity extends Product {
   quantity: number;
   averagePrice: number | null;
@@ -90,7 +100,7 @@ const PriceModal: React.FC<PriceModalProps> = ({ isOpen, onClose, product, userR
                 <div key={index} className="flex justify-between items-center p-3 border dark:border-dark-border-primary rounded-lg bg-white dark:bg-dark-bg-secondary">
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
-                      <span className="font-medium text-gray-900 dark:text-dark-text-primary">€{price.price.toFixed(2)}</span>
+                      <span className="font-medium text-gray-900 dark:text-dark-text-primary">€{price.price.toFixed(6)}</span>
                       <span className={`px-2 py-1 rounded text-xs font-medium ${
                         index === 0 ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' :
                         index === 1 ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' :
@@ -100,9 +110,45 @@ const PriceModal: React.FC<PriceModalProps> = ({ isOpen, onClose, product, userR
                       </span>
                     </div>
                     <div className="flex items-center justify-between mt-2 text-sm">
-                      <span className="text-gray-600 dark:text-dark-text-muted">Stock: {price.stock}</span>
-                      {userRole === 'Admin' && (
-                        <span className="text-gray-600 dark:text-dark-text-muted">Supplier: {price.supplier}</span>
+                      {userRole === 'Admin' ? (
+                        <div className="text-gray-600 dark:text-dark-text-muted w-full">
+                          {price.suppliers && price.suppliers.length > 1 ? (
+                            <div>
+                              <div className="text-xs mb-1">Stock breakdown:</div>
+                              <div className="text-xs space-y-1">
+                                {price.originalPrices?.map((originalPrice, idx) => (
+                                  <div key={idx} className="flex justify-between">
+                                    <span>Stock: {originalPrice.stock}</span>
+                                    <span>| {originalPrice.supplier}</span>
+                                  </div>
+                                )) || price.suppliers?.map((supplier, idx) => (
+                                  <div key={idx} className="flex justify-between">
+                                    <span>Stock: 0</span>
+                                    <span>| {supplier}</span>
+                                  </div>
+                                ))}
+                                <div className="border-t border-gray-300 dark:border-gray-600 pt-1 mt-1 font-medium">
+                                  <span>Total: {price.stock}</span>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div>
+                              <span>Stock: {price.stock}</span>
+                              <span className="ml-2">| {price.supplier}</span>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between w-full">
+                          <span className="text-gray-600 dark:text-dark-text-muted">Stock: {price.stock}</span>
+                          <span className="text-gray-600 dark:text-dark-text-muted">
+                            {price.suppliers && price.suppliers.length > 1 
+                              ? `from ${price.suppliers.length} suppliers`
+                              : 'from 1 supplier'
+                            }
+                          </span>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -826,25 +872,39 @@ const ProductTable: React.FC<ProductTableProps> = ({
                       const priceLabels = ["Best price", "Second best price", "Third best price"];
                       const tooltipContent = `
                         <div><strong>${priceLabels[i]}</strong></div>
-                        <div>Gross discount: <span style='color:#ef4444'>${grossDiscountPercent.toFixed(0)}%</span></div>
-                        <div>Net discount: <span style='color:#f59e42'>${netDiscountPercent.toFixed(0)}%</span></div>
+                        <div>Gross discount: <span style='color:#ef4444'>${grossDiscountPercent.toFixed(4)}%</span></div>
+                        <div>Net discount: <span style='color:#f59e42'>${netDiscountPercent.toFixed(4)}%</span></div>
                         <div>Stock: <span style='color:#2563eb'>${price.stock}</span></div>
-                        ${userRole === 'Admin' && price.supplier ? `<div>Supplier: <span style='color:#047857'>${price.supplier}</span></div>` : ''}
+                        ${userRole === 'Admin' && price.supplier ? (
+                          price.suppliers && price.suppliers.length > 1 
+                            ? `<div>Stock breakdown:</div>
+                               ${price.originalPrices?.map(originalPrice => 
+                                 `<div>Stock: ${originalPrice.stock} | <span style='color:#047857'>${truncateSupplierName(originalPrice.supplier)}</span></div>`
+                               ).join('') || price.suppliers?.map(supplier => 
+                                 `<div>Stock: 0 | <span style='color:#047857'>${truncateSupplierName(supplier)}</span></div>`
+                               ).join('')}
+                               <div style='border-top: 1px solid #d1d5db; padding-top: 4px; margin-top: 4px; font-weight: bold;'>Total: ${price.stock}</div>`
+                            : `<div>Stock: ${price.stock} | <span style='color:#047857'>${truncateSupplierName(price.supplier)}</span></div>`
+                        ) : (
+                          price.suppliers && price.suppliers.length > 1 
+                            ? `<div>from <span style='color:#047857'>${price.suppliers.length} suppliers</span></div>`
+                            : `<div>from <span style='color:#047857'>1 supplier</span></div>`
+                        )}
                       `;
                       return (
                         <Tooltip key={i} text={tooltipContent} position="left" html>
-                          <div className={`rounded px-2 py-1 text-xs transition-all duration-150 hover:shadow-md dark:hover:shadow-dark-md
+                          <div className={`rounded px-2 py-1 text-xs transition-all duration-150 hover:shadow-md dark:hover:shadow-dark-md whitespace-nowrap overflow-hidden
                             ${i === 0 ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/50' : 
                               i === 1 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50' : 
                               'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50'}`}
                           >
                             <div className="font-semibold text-sm cursor-help">€{price.price.toFixed(2)}</div>
-                            <div className="text-xs flex gap-1 items-center">
+                            <div className="text-xs flex gap-1 items-center whitespace-nowrap">
                               <span className="text-red-500 dark:text-red-400" title="Gross discount">{grossDiscountPercent.toFixed(0)}%</span>
                               <span className="text-slate-400 dark:text-slate-500">|</span>
                               <span className="text-orange-500 dark:text-orange-400" title="Net discount">{netDiscountPercent.toFixed(0)}%</span>
                             </div>
-                            <div className="text-xs">Stock: {price.stock}</div>
+                            <div className="text-xs whitespace-nowrap"><span className="text-[10px]">Stock:</span> {price.stock}</div>
                           </div>
                         </Tooltip>
                       );

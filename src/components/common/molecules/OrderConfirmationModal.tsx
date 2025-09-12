@@ -48,6 +48,8 @@ export interface PriceBreakdown {
   unitPrice: number;
   supplier: string;
   stock: number;
+  suppliers?: string[]; // Array of original suppliers for consolidated prices
+  originalPrices?: { supplier: string; stock: number; }[]; // Array of original price objects for stock details
 }
 
 export interface ProductItem {
@@ -359,7 +361,33 @@ const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
                         <TableCell align="right">{breakdown.stock}</TableCell>
                         {isAdmin && (
                           <TableCell align="right" sx={{ fontSize: '0.7rem' }}>
-                            {breakdown.supplier}
+                            {breakdown.suppliers && breakdown.suppliers.length > 1 ? (
+                              <div>
+                                <div style={{ fontSize: '0.6rem', marginBottom: '2px' }}>Stock breakdown:</div>
+                                {breakdown.originalPrices?.map((originalPrice, idx) => (
+                                  <div key={idx} style={{ fontSize: '0.6rem', marginBottom: '1px' }}>
+                                    Stock: {originalPrice.stock} | {originalPrice.supplier}
+                                  </div>
+                                )) || breakdown.suppliers?.map((supplier, idx) => (
+                                  <div key={idx} style={{ fontSize: '0.6rem', marginBottom: '1px' }}>
+                                    Stock: 0 | {supplier}
+                                  </div>
+                                ))}
+                                <div style={{ 
+                                  fontSize: '0.6rem', 
+                                  borderTop: '1px solid #d1d5db', 
+                                  paddingTop: '2px', 
+                                  marginTop: '2px', 
+                                  fontWeight: 'bold' 
+                                }}>
+                                  Total: {breakdown.stock}
+                                </div>
+                              </div>
+                            ) : (
+                              <div style={{ fontSize: '0.6rem' }}>
+                                Stock: {breakdown.stock} | {breakdown.supplier}
+                              </div>
+                            )}
                           </TableCell>
                         )}
                       </TableRow>

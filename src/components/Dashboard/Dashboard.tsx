@@ -245,7 +245,7 @@ const Dashboard: React.FC = () => {
         searchTerm: filterValues.searchTerm
       };
       
-      const result = await fetchProducts(1, 999999, filters); // Get all products
+      const result = await fetchProducts(1, 999999, filters, isAdmin); // Get all products
       
       // Add quantity and averagePrice properties to products
       const productsWithQuantity = result.products.map((product: Product) => ({
@@ -275,9 +275,16 @@ const Dashboard: React.FC = () => {
         manufacturers: result.manufacturers?.length || 0,
         suppliers: result.suppliers?.length || 0
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to fetch products from API:', err);
-      setError('API_ERROR'); // Set a specific error state to show the error message
+      
+      // Handle different types of errors
+      if (err.response?.status === 401) {
+        setError('PERMISSION_DENIED'); // Set specific error for permission issues
+      } else {
+        setError('API_ERROR'); // Set generic error for other issues
+      }
+      
       setProducts([]);
       setFilteredProducts([]);
       setTotalCount(0);
@@ -667,7 +674,12 @@ const Dashboard: React.FC = () => {
             quantity: allocatedQuantity,
             unitPrice: price.price,
             supplier: price.supplier,
-            stock: price.stock
+            stock: price.stock,
+            suppliers: price.suppliers,
+            originalPrices: price.originalPrices?.map(orig => ({
+              supplier: orig.supplier,
+              stock: orig.stock
+            }))
           });
           
           remainingQuantity -= allocatedQuantity;
@@ -1380,6 +1392,27 @@ const Dashboard: React.FC = () => {
           endpoint="/products/fetch"
           className="min-h-[400px]"
         />
+      ) : error === 'PERMISSION_DENIED' ? (
+        <div className="bg-white dark:bg-dark-bg-secondary rounded-xl shadow-lg border border-gray-200 dark:border-dark-border-primary p-8 text-center min-h-[400px] flex flex-col items-center justify-center">
+          <div className="w-16 h-16 bg-yellow-100 dark:bg-yellow-900/20 rounded-full flex items-center justify-center mb-4">
+            <svg className="w-8 h-8 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            Accesso Limitato
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-4 max-w-md">
+            Il tuo account non ha i permessi necessari per accedere al catalogo prodotti completo. 
+            Contatta l'amministratore per maggiori informazioni.
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Riprova
+          </button>
+        </div>
       ) : (
         <ProductTable
           products={filteredProducts}
@@ -1407,8 +1440,8 @@ const Dashboard: React.FC = () => {
         />
       )}
       
-      {/* Add the ActionBar component outside the Card - only show when no API error */}
-      {error !== 'API_ERROR' && (
+      {/* Add the ActionBar component outside the Card - only show when no errors */}
+      {error !== 'API_ERROR' && error !== 'PERMISSION_DENIED' && (
         <ActionBar 
           selectedCount={selected.length}
           totalItems={getTotalQuantity()}
