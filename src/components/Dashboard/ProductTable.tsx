@@ -5,6 +5,16 @@ import { SidebarContext } from '../../contexts/SidebarContext';
 import ExportButton from '../common/molecules/ExportButton';
 import TableSkeleton from '../common/atoms/TableSkeleton';
 
+// Utility function to truncate supplier names with ellipsis in the middle
+const truncateSupplierName = (name: string, maxLength: number = 20): string => {
+  if (name.length <= maxLength) return name;
+  
+  const start = Math.floor((maxLength - 3) / 2);
+  const end = Math.ceil((maxLength - 3) / 2);
+  
+  return name.substring(0, start) + '...' + name.substring(name.length - end);
+};
+
 export interface ProductWithQuantity extends Product {
   quantity: number;
   averagePrice: number | null;
@@ -869,12 +879,12 @@ const ProductTable: React.FC<ProductTableProps> = ({
                           price.suppliers && price.suppliers.length > 1 
                             ? `<div>Stock breakdown:</div>
                                ${price.originalPrices?.map(originalPrice => 
-                                 `<div>Stock: ${originalPrice.stock} | <span style='color:#047857'>${originalPrice.supplier}</span></div>`
+                                 `<div>Stock: ${originalPrice.stock} | <span style='color:#047857'>${truncateSupplierName(originalPrice.supplier)}</span></div>`
                                ).join('') || price.suppliers?.map(supplier => 
-                                 `<div>Stock: 0 | <span style='color:#047857'>${supplier}</span></div>`
+                                 `<div>Stock: 0 | <span style='color:#047857'>${truncateSupplierName(supplier)}</span></div>`
                                ).join('')}
                                <div style='border-top: 1px solid #d1d5db; padding-top: 4px; margin-top: 4px; font-weight: bold;'>Total: ${price.stock}</div>`
-                            : `<div>Stock: ${price.stock} | <span style='color:#047857'>${price.supplier}</span></div>`
+                            : `<div>Stock: ${price.stock} | <span style='color:#047857'>${truncateSupplierName(price.supplier)}</span></div>`
                         ) : (
                           price.suppliers && price.suppliers.length > 1 
                             ? `<div>from <span style='color:#047857'>${price.suppliers.length} suppliers</span></div>`
