@@ -39,7 +39,18 @@ sixstepClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid
+      // Check if this is a permission-related 401 (not a token expiration)
+      const url = error.config?.url || '';
+      
+      // For specific endpoints that might have permission restrictions,
+      // don't automatically logout - let the component handle the error
+      if (url.includes('/products/get') || url.includes('/entities/get') || url.includes('/entities/get/all')) {
+        // This might be a permission issue, not token expiration
+        // Let the component handle this gracefully
+        return Promise.reject(error);
+      }
+      
+      // For other endpoints (like auth endpoints), treat as token expiration
       localStorage.removeItem("sixstep_token");
       localStorage.removeItem("sixstep_user");
       window.location.href = "/login";
@@ -59,7 +70,8 @@ export const fetchProducts = async (
     inStockOnly?: boolean;
     minPrice?: number;
     maxPrice?: number;
-  } = {}
+  } = {},
+  isAdmin: boolean = false
 ): Promise<{
   products: Product[];
   totalCount: number;
@@ -93,13 +105,17 @@ export const fetchProducts = async (
       throw new Error("Invalid API response structure");
     }
 
-    // Get all entities to map entityId to supplier names
+    // Get all entities to map entityId to supplier names (only for admin users)
     let entities: Entity[] = [];
-    try {
-      entities = await getAllEntities();
-      console.log("📋 Loaded entities for supplier mapping:", entities.length);
-    } catch (error) {
-      console.warn("⚠️ Could not load entities for supplier mapping:", error);
+    if (isAdmin) {
+      try {
+        entities = await getAllEntities();
+        console.log("📋 Loaded entities for supplier mapping:", entities.length);
+      } catch (error: any) {
+        console.warn("⚠️ Could not load entities for supplier mapping:", error);
+      }
+    } else {
+      console.log("📋 Skipping entities loading for non-admin user");
     }
 
     // Create entity lookup map
