@@ -872,8 +872,8 @@ const ProductTable: React.FC<ProductTableProps> = ({
                       const priceLabels = ["Best price", "Second best price", "Third best price"];
                       const tooltipContent = `
                         <div><strong>${priceLabels[i]}</strong></div>
-                        <div>Gross discount: <span style='color:#ef4444'>${grossDiscountPercent.toFixed(0)}%</span></div>
-                        <div>Net discount: <span style='color:#f59e42'>${netDiscountPercent.toFixed(0)}%</span></div>
+                        <div>Gross discount: <span style='color:#ef4444'>${grossDiscountPercent.toFixed(4)}%</span></div>
+                        <div>Net discount: <span style='color:#f59e42'>${netDiscountPercent.toFixed(4)}%</span></div>
                         <div>Stock: <span style='color:#2563eb'>${price.stock}</span></div>
                         ${userRole === 'Admin' && price.supplier ? (
                           price.suppliers && price.suppliers.length > 1 
