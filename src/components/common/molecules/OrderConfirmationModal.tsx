@@ -49,6 +49,7 @@ export interface PriceBreakdown {
   supplier: string;
   stock: number;
   suppliers?: string[]; // Array of original suppliers for consolidated prices
+  originalPrices?: { supplier: string; stock: number; }[]; // Array of original price objects for stock details
 }
 
 export interface ProductItem {
@@ -363,16 +364,15 @@ const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
                             {breakdown.suppliers && breakdown.suppliers.length > 1 ? (
                               <div>
                                 <div style={{ fontSize: '0.6rem', marginBottom: '2px' }}>Stock breakdown:</div>
-                                {breakdown.suppliers.map((supplier, idx) => {
-                                  // Find the original stock for this supplier
-                                  const originalPrice = product.priceBreakdowns?.find(p => p.supplier === supplier);
-                                  const supplierStock = originalPrice ? originalPrice.stock : 0;
-                                  return (
-                                    <div key={idx} style={{ fontSize: '0.6rem', marginBottom: '1px' }}>
-                                      Stock: {supplierStock} | {supplier}
-                                    </div>
-                                  );
-                                })}
+                                {breakdown.originalPrices?.map((originalPrice, idx) => (
+                                  <div key={idx} style={{ fontSize: '0.6rem', marginBottom: '1px' }}>
+                                    Stock: {originalPrice.stock} | {originalPrice.supplier}
+                                  </div>
+                                )) || breakdown.suppliers?.map((supplier, idx) => (
+                                  <div key={idx} style={{ fontSize: '0.6rem', marginBottom: '1px' }}>
+                                    Stock: 0 | {supplier}
+                                  </div>
+                                ))}
                                 <div style={{ 
                                   fontSize: '0.6rem', 
                                   borderTop: '1px solid #d1d5db', 

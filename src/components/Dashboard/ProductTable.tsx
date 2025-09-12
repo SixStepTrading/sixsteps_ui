@@ -106,17 +106,17 @@ const PriceModal: React.FC<PriceModalProps> = ({ isOpen, onClose, product, userR
                             <div>
                               <div className="text-xs mb-1">Stock breakdown:</div>
                               <div className="text-xs space-y-1">
-                                {price.suppliers.map((supplier, idx) => {
-                                  // Find the original stock for this supplier from the product's bestPrices
-                                  const originalPrice = product.bestPrices.find(p => p.supplier === supplier);
-                                  const supplierStock = originalPrice ? originalPrice.stock : 0;
-                                  return (
-                                    <div key={idx} className="flex justify-between">
-                                      <span>Stock: {supplierStock}</span>
-                                      <span>| {supplier}</span>
-                                    </div>
-                                  );
-                                })}
+                                {price.originalPrices?.map((originalPrice, idx) => (
+                                  <div key={idx} className="flex justify-between">
+                                    <span>Stock: {originalPrice.stock}</span>
+                                    <span>| {originalPrice.supplier}</span>
+                                  </div>
+                                )) || price.suppliers?.map((supplier, idx) => (
+                                  <div key={idx} className="flex justify-between">
+                                    <span>Stock: 0</span>
+                                    <span>| {supplier}</span>
+                                  </div>
+                                ))}
                                 <div className="border-t border-gray-300 dark:border-gray-600 pt-1 mt-1 font-medium">
                                   <span>Total: {price.stock}</span>
                                 </div>
@@ -868,11 +868,11 @@ const ProductTable: React.FC<ProductTableProps> = ({
                         ${userRole === 'Admin' && price.supplier ? (
                           price.suppliers && price.suppliers.length > 1 
                             ? `<div>Stock breakdown:</div>
-                               ${price.suppliers.map(supplier => {
-                                 const originalPrice = product.bestPrices.find(p => p.supplier === supplier);
-                                 const supplierStock = originalPrice ? originalPrice.stock : 0;
-                                 return `<div>Stock: ${supplierStock} | <span style='color:#047857'>${supplier}</span></div>`;
-                               }).join('')}
+                               ${price.originalPrices?.map(originalPrice => 
+                                 `<div>Stock: ${originalPrice.stock} | <span style='color:#047857'>${originalPrice.supplier}</span></div>`
+                               ).join('') || price.suppliers?.map(supplier => 
+                                 `<div>Stock: 0 | <span style='color:#047857'>${supplier}</span></div>`
+                               ).join('')}
                                <div style='border-top: 1px solid #d1d5db; padding-top: 4px; margin-top: 4px; font-weight: bold;'>Total: ${price.stock}</div>`
                             : `<div>Stock: ${price.stock} | <span style='color:#047857'>${price.supplier}</span></div>`
                         ) : (

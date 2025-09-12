@@ -65,6 +65,7 @@ const consolidatePrices = (prices: ProductPrice[]): ProductPrice[] => {
     price: number;
     stock: number;
     suppliers: string[];
+    originalPrices: ProductPrice[]; // Keep original price objects for stock details
   }>();
 
   // Group prices by price value
@@ -73,11 +74,13 @@ const consolidatePrices = (prices: ProductPrice[]): ProductPrice[] => {
     if (existing) {
       existing.stock += price.stock;
       existing.suppliers.push(price.supplier);
+      existing.originalPrices.push(price);
     } else {
       priceMap.set(price.price, {
         price: price.price,
         stock: price.stock,
-        suppliers: [price.supplier]
+        suppliers: [price.supplier],
+        originalPrices: [price]
       });
     }
   });
@@ -87,7 +90,8 @@ const consolidatePrices = (prices: ProductPrice[]): ProductPrice[] => {
     price: consolidated.price,
     stock: consolidated.stock,
     supplier: consolidated.suppliers.join(', '), // For display purposes
-    suppliers: consolidated.suppliers // Keep original suppliers for detailed view
+    suppliers: consolidated.suppliers, // Keep original suppliers for detailed view
+    originalPrices: consolidated.originalPrices // Keep original price objects for stock details
   }));
 };
 
