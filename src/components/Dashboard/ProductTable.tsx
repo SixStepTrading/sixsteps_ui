@@ -893,18 +893,18 @@ const ProductTable: React.FC<ProductTableProps> = ({
                       `;
                       return (
                         <Tooltip key={i} text={tooltipContent} position="left" html>
-                          <div className={`rounded px-2 py-1 text-xs transition-all duration-150 hover:shadow-md dark:hover:shadow-dark-md
+                          <div className={`rounded px-2 py-1 text-xs transition-all duration-150 hover:shadow-md dark:hover:shadow-dark-md whitespace-nowrap overflow-hidden
                             ${i === 0 ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/50' : 
                               i === 1 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50' : 
                               'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50'}`}
                           >
                             <div className="font-semibold text-sm cursor-help">€{price.price.toFixed(2)}</div>
-                            <div className="text-xs flex gap-1 items-center">
+                            <div className="text-xs flex gap-1 items-center whitespace-nowrap">
                               <span className="text-red-500 dark:text-red-400" title="Gross discount">{grossDiscountPercent.toFixed(0)}%</span>
                               <span className="text-slate-400 dark:text-slate-500">|</span>
                               <span className="text-orange-500 dark:text-orange-400" title="Net discount">{netDiscountPercent.toFixed(0)}%</span>
                             </div>
-                            <div className="text-xs">Stock: {price.stock}</div>
+                            <div className="text-xs whitespace-nowrap">Stock: {price.stock}</div>
                           </div>
                         </Tooltip>
                       );
