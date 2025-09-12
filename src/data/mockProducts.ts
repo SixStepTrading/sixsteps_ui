@@ -4,6 +4,7 @@ export interface ProductPrice {
   supplier: string;
   price: number;
   stock: number;
+  suppliers?: string[]; // Array of original suppliers for consolidated prices
 }
 
 export interface Product {

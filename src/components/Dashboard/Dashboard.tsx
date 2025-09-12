@@ -674,7 +674,8 @@ const Dashboard: React.FC = () => {
             quantity: allocatedQuantity,
             unitPrice: price.price,
             supplier: price.supplier,
-            stock: price.stock
+            stock: price.stock,
+            suppliers: price.suppliers
           });
           
           remainingQuantity -= allocatedQuantity;

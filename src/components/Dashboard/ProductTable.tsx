@@ -101,8 +101,31 @@ const PriceModal: React.FC<PriceModalProps> = ({ isOpen, onClose, product, userR
                     </div>
                     <div className="flex items-center justify-between mt-2 text-sm">
                       <span className="text-gray-600 dark:text-dark-text-muted">Stock: {price.stock}</span>
-                      {userRole === 'Admin' && (
-                        <span className="text-gray-600 dark:text-dark-text-muted">Supplier: {price.supplier}</span>
+                      {userRole === 'Admin' ? (
+                        <div className="text-gray-600 dark:text-dark-text-muted">
+                          {price.suppliers && price.suppliers.length > 1 ? (
+                            <div>
+                              <div className="text-xs">Suppliers ({price.suppliers.length}):</div>
+                              <div className="text-xs mt-1">
+                                {price.suppliers.map((supplier, idx) => (
+                                  <span key={idx}>
+                                    {supplier}
+                                    {idx < price.suppliers!.length - 1 ? ', ' : ''}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          ) : (
+                            <span>Supplier: {price.supplier}</span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-gray-600 dark:text-dark-text-muted">
+                          {price.suppliers && price.suppliers.length > 1 
+                            ? `from ${price.suppliers.length} suppliers`
+                            : 'from 1 supplier'
+                          }
+                        </span>
                       )}
                     </div>
                   </div>
@@ -829,7 +852,15 @@ const ProductTable: React.FC<ProductTableProps> = ({
                         <div>Gross discount: <span style='color:#ef4444'>${grossDiscountPercent.toFixed(0)}%</span></div>
                         <div>Net discount: <span style='color:#f59e42'>${netDiscountPercent.toFixed(0)}%</span></div>
                         <div>Stock: <span style='color:#2563eb'>${price.stock}</span></div>
-                        ${userRole === 'Admin' && price.supplier ? `<div>Supplier: <span style='color:#047857'>${price.supplier}</span></div>` : ''}
+                        ${userRole === 'Admin' && price.supplier ? (
+                          price.suppliers && price.suppliers.length > 1 
+                            ? `<div>Suppliers (${price.suppliers.length}): <span style='color:#047857'>${price.suppliers.join(', ')}</span></div>`
+                            : `<div>Supplier: <span style='color:#047857'>${price.supplier}</span></div>`
+                        ) : (
+                          price.suppliers && price.suppliers.length > 1 
+                            ? `<div>from <span style='color:#047857'>${price.suppliers.length} suppliers</span></div>`
+                            : `<div>from <span style='color:#047857'>1 supplier</span></div>`
+                        )}
                       `;
                       return (
                         <Tooltip key={i} text={tooltipContent} position="left" html>

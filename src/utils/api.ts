@@ -59,6 +59,38 @@ sixstepClient.interceptors.response.use(
   }
 );
 
+// Function to consolidate prices with same value but different suppliers
+const consolidatePrices = (prices: ProductPrice[]): ProductPrice[] => {
+  const priceMap = new Map<number, {
+    price: number;
+    stock: number;
+    suppliers: string[];
+  }>();
+
+  // Group prices by price value
+  prices.forEach(price => {
+    const existing = priceMap.get(price.price);
+    if (existing) {
+      existing.stock += price.stock;
+      existing.suppliers.push(price.supplier);
+    } else {
+      priceMap.set(price.price, {
+        price: price.price,
+        stock: price.stock,
+        suppliers: [price.supplier]
+      });
+    }
+  });
+
+  // Convert back to ProductPrice array
+  return Array.from(priceMap.values()).map(consolidated => ({
+    price: consolidated.price,
+    stock: consolidated.stock,
+    supplier: consolidated.suppliers.join(', '), // For display purposes
+    suppliers: consolidated.suppliers // Keep original suppliers for detailed view
+  }));
+};
+
 // Function to fetch pharmaceutical products with pagination and filtering
 export const fetchProducts = async (
   page: number = 1,
@@ -154,8 +186,11 @@ export const fetchProducts = async (
         ];
       }
 
-      // Sort by price
+      // Sort by price first
       bestPrices.sort((a: ProductPrice, b: ProductPrice) => a.price - b.price);
+      
+      // Consolidate prices with same value but different suppliers
+      bestPrices = consolidatePrices(bestPrices);
 
       return {
         id: item.id?.toString() || item._id?.toString() || "",

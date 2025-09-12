@@ -48,6 +48,7 @@ export interface PriceBreakdown {
   unitPrice: number;
   supplier: string;
   stock: number;
+  suppliers?: string[]; // Array of original suppliers for consolidated prices
 }
 
 export interface ProductItem {
@@ -359,7 +360,16 @@ const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
                         <TableCell align="right">{breakdown.stock}</TableCell>
                         {isAdmin && (
                           <TableCell align="right" sx={{ fontSize: '0.7rem' }}>
-                            {breakdown.supplier}
+                            {breakdown.suppliers && breakdown.suppliers.length > 1 ? (
+                              <div>
+                                <div>Suppliers ({breakdown.suppliers.length}):</div>
+                                <div style={{ fontSize: '0.6rem', marginTop: '2px' }}>
+                                  {breakdown.suppliers.join(', ')}
+                                </div>
+                              </div>
+                            ) : (
+                              breakdown.supplier
+                            )}
                           </TableCell>
                         )}
                       </TableRow>
