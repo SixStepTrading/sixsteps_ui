@@ -90,7 +90,7 @@ const PriceModal: React.FC<PriceModalProps> = ({ isOpen, onClose, product, userR
                 <div key={index} className="flex justify-between items-center p-3 border dark:border-dark-border-primary rounded-lg bg-white dark:bg-dark-bg-secondary">
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
-                      <span className="font-medium text-gray-900 dark:text-dark-text-primary">€{price.price.toFixed(2)}</span>
+                      <span className="font-medium text-gray-900 dark:text-dark-text-primary">€{price.price.toFixed(6)}</span>
                       <span className={`px-2 py-1 rounded text-xs font-medium ${
                         index === 0 ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' :
                         index === 1 ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' :
