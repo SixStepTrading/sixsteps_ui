@@ -904,7 +904,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
                               <span className="text-slate-400 dark:text-slate-500">|</span>
                               <span className="text-orange-500 dark:text-orange-400" title="Net discount">{netDiscountPercent.toFixed(0)}%</span>
                             </div>
-                            <div className="text-xs whitespace-nowrap">Stock: {price.stock}</div>
+                            <div className="text-xs whitespace-nowrap"><span className="text-[10px]">Stock:</span> {price.stock}</div>
                           </div>
                         </Tooltip>
                       );
