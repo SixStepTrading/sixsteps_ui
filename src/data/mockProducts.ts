@@ -34,8 +34,10 @@ const generateEAN = (): string => {
 
 // Helper function to generate random Minsan code
 const generateMinsan = (): string => {
-  // Format: Typically a 9-digit number starting with specific digits for pharmaceuticals
-  let minsan = '0';
+  // Format: 9-digit number starting with specific digits for different categories
+  // 0 = Human Use Medicines, 1 = Veterinary, 8 = Homeopathic, 9 = Parapharmaceuticals
+  const firstDigits = ['0', '1', '8', '9'];
+  let minsan = getRandomElement(firstDigits);
   for (let i = 0; i < 8; i++) {
     minsan += Math.floor(Math.random() * 10);
   }
