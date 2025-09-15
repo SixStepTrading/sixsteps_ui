@@ -25,6 +25,7 @@ import { v4 as uuid } from 'uuid';
 import ProductTable from './ProductTable';
 import TableSkeleton from '../common/atoms/TableSkeleton';
 import ApiErrorMessage from '../common/atoms/ApiErrorMessage';
+import { getCategoryFromMinsan, getAvailableCategoriesFromProducts, getDigitFromCategoryName } from '../../utils/minsanCategories';
 
 // Icons (we'll use SVG or Heroicons)
 const ShoppingCartIcon = () => (
@@ -122,7 +123,7 @@ interface ProductWithQuantity extends Product {
 
 const Dashboard: React.FC = () => {
   const { showToast } = useToast();
-  const { userRole } = useUser();
+  const { userRole, logout } = useUser();
   const isAdmin = userRole === 'Admin';
   const tableRef = useRef<HTMLDivElement>(null);
   
@@ -259,7 +260,13 @@ const Dashboard: React.FC = () => {
       // Set all data (products with integrated supplies)
       setProducts(productsWithQuantity);
       setTotalCount(result.totalCount);
-      setCategories(result.categories || []);
+      
+      // Generate categories based on MINSAN codes instead of using API categories
+      const minsanCategories = getAvailableCategoriesFromProducts(productsWithQuantity);
+      console.log('🏷️ Generated MINSAN categories:', minsanCategories);
+      console.log('📋 Sample MINSAN codes:', productsWithQuantity.slice(0, 5).map(p => ({ name: p.name, minsan: p.minsan, category: getCategoryFromMinsan(p.minsan) })));
+      setCategories(minsanCategories);
+      
       setManufacturers(result.manufacturers || []);
       setSuppliers((result.suppliers || []).map(supplier => ({ value: supplier, label: supplier }))); // Now populated from integrated supplies
       
@@ -280,7 +287,10 @@ const Dashboard: React.FC = () => {
       
       // Handle different types of errors
       if (err.response?.status === 401) {
-        setError('PERMISSION_DENIED'); // Set specific error for permission issues
+        // Session expired - logout user to redirect to login page
+        console.log('🔒 Session expired, redirecting to login...');
+        await logout();
+        return; // Early return to prevent setting error state
       } else {
         setError('API_ERROR'); // Set generic error for other issues
       }
@@ -324,16 +334,27 @@ const Dashboard: React.FC = () => {
             );
           }
           
-          // Apply category filter - now supporting multi-selection
-          if (filterValues.category) {
-            if (Array.isArray(filterValues.category) && filterValues.category.length > 0) {
-              filtered = filtered.filter(product => 
-                filterValues.category.includes(product.category)
-            );
-            } else if (typeof filterValues.category === 'string' && filterValues.category !== '') {
-              // Backward compatibility for single selection
-              filtered = filtered.filter(product => product.category === filterValues.category);
-            }
+          // Apply category filter - now based on MINSAN first digit
+          if (filterValues.category && filterValues.category !== '') {
+            console.log('🔍 Applying category filter:', filterValues.category);
+            const beforeCount = filtered.length;
+            
+            // Single category selection - compare first digit of MINSAN
+            const expectedDigit = getDigitFromCategoryName(filterValues.category);
+            console.log(`🔍 Looking for products with MINSAN starting with digit: ${expectedDigit}`);
+            
+            filtered = filtered.filter(product => {
+              const firstDigit = product.minsan.charAt(0);
+              const matches = firstDigit === expectedDigit;
+              if (!matches) {
+                console.log(`❌ Product ${product.name} (MINSAN: ${product.minsan}, first digit: ${firstDigit}) -> expected digit: ${expectedDigit} for category: ${filterValues.category}`);
+              } else {
+                console.log(`✅ Product ${product.name} (MINSAN: ${product.minsan}, first digit: ${firstDigit}) -> matches expected digit: ${expectedDigit}`);
+              }
+              return matches;
+            });
+            
+            console.log(`📊 Category filter applied: ${beforeCount} → ${filtered.length} products`);
           }
           
           // Apply manufacturer filter - now supporting multi-selection
@@ -1392,27 +1413,6 @@ const Dashboard: React.FC = () => {
           endpoint="/products/fetch"
           className="min-h-[400px]"
         />
-      ) : error === 'PERMISSION_DENIED' ? (
-        <div className="bg-white dark:bg-dark-bg-secondary rounded-xl shadow-lg border border-gray-200 dark:border-dark-border-primary p-8 text-center min-h-[400px] flex flex-col items-center justify-center">
-          <div className="w-16 h-16 bg-yellow-100 dark:bg-yellow-900/20 rounded-full flex items-center justify-center mb-4">
-            <svg className="w-8 h-8 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-            </svg>
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            Accesso Limitato
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-4 max-w-md">
-            Il tuo account non ha i permessi necessari per accedere al catalogo prodotti completo. 
-            Contatta l'amministratore per maggiori informazioni.
-          </p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Riprova
-          </button>
-        </div>
       ) : (
         <ProductTable
           products={filteredProducts}
@@ -1441,7 +1441,7 @@ const Dashboard: React.FC = () => {
       )}
       
       {/* Add the ActionBar component outside the Card - only show when no errors */}
-      {error !== 'API_ERROR' && error !== 'PERMISSION_DENIED' && (
+      {error !== 'API_ERROR' && (
         <ActionBar 
           selectedCount={selected.length}
           totalItems={getTotalQuantity()}
