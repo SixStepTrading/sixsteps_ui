@@ -91,8 +91,12 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
       {/* Logo and collapse control */}
       <div className={`p-2 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
         {!isCollapsed && (
-          <div className="h-16 pl-1">
-            <img src="/sixsteps_logo.png" alt="Six Steps Logo" className="h-full object-contain" />
+          <div className="h-24 pl-1">
+            <img 
+              src="/sixsteps_logo.png" 
+              alt="Six Steps Logo" 
+              className="h-full w-48 object-contain" 
+            />
           </div>
         )}
         
