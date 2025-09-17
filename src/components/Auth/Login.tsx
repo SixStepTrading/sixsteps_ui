@@ -102,26 +102,16 @@ const Login: React.FC = () => {
       <div className="max-w-md w-full space-y-8">
         {/* Header */}
         <div className="text-center">
-          <div className="mx-auto h-16 w-16 flex items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
-            <img 
-              src="/sixsteps_logo.png" 
-              alt="Six Steps - FarmaAggregator" 
-              className="h-10 w-10"
-              onError={(e) => {
-                // Fallback to icon if logo not found
-                e.currentTarget.style.display = 'none';
-                e.currentTarget.nextElementSibling?.classList.remove('hidden');
-              }}
-            />
-            <svg xmlns="http://www.w3.org/2000/svg" className="hidden h-8 w-8 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-1a2 2 0 00-2-2H6a2 2 0 00-2 2v1a2 2 0 002 2zM12 9a3 3 0 110-6 3 3 0 010 6z" />
-            </svg>
-          </div>
-          <h2 className="mt-6 text-3xl font-bold text-gray-900 dark:text-white">
-            Welcome to Six Steps - FarmaAggregator
-          </h2>
+          <img 
+            src="/sixsteps_logo.png" 
+            alt="Six Steps - FarmaAggregator" 
+            className="block mx-auto h-36 w-72 object-contain"
+          />
+          <svg xmlns="http://www.w3.org/2000/svg" className="hidden block mx-auto h-16 w-16 text-blue-600 dark:text-blue-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-1a2 2 0 00-2-2H6a2 2 0 00-2 2v1a2 2 0 002 2zM12 9a3 3 0 110-6 3 3 0 010 6z" />
+          </svg>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Sign in to your account to continue
+          Welcome to SixSteps - FarmaAggregator. <br /> Sign in to your account to continue
           </p>
         </div>
 
