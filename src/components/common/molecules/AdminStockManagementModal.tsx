@@ -53,7 +53,7 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
   const [showCreateEntityDialog, setShowCreateEntityDialog] = useState(false);
   const [newEntityData, setNewEntityData] = useState({
     entityName: '',
-    entityType: 'PHARMA' as 'PHARMA' | 'LANDLORD' | 'TENANT' | 'ADMIN',
+    entityType: 'SUPPLIER' as 'SUPPLIER' | 'MANAGER' | 'PHARMACY' | 'ADMIN',
     country: '',
     address: '',
     vatNumber: '',
@@ -115,7 +115,7 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
       setShowCreateEntityDialog(false);
       setNewEntityData({
         entityName: '',
-        entityType: 'PHARMA' as 'PHARMA' | 'LANDLORD' | 'TENANT' | 'ADMIN',
+        entityType: 'SUPPLIER' as 'SUPPLIER' | 'MANAGER' | 'PHARMACY' | 'ADMIN',
         country: '',
         address: '',
         vatNumber: '',
@@ -142,7 +142,7 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
   const resetNewEntityForm = () => {
     setNewEntityData({
       entityName: '',
-      entityType: 'PHARMA' as 'PHARMA' | 'LANDLORD' | 'TENANT' | 'ADMIN',
+      entityType: 'SUPPLIER' as 'SUPPLIER' | 'MANAGER' | 'PHARMACY' | 'ADMIN',
       country: '',
       address: '',
       vatNumber: '',
@@ -656,7 +656,8 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
               options={entities
                 .filter(entity => 
                   (entity.entityType === 'SUPPLIER' || 
-                   entity.entityType === 'PHARMA' || 
+                   entity.entityType === 'MANAGER' || 
+                   entity.entityType === 'PHARMACY' ||
                    entity.entityType === 'company') &&
                   (entity.status === 'ACTIVE' || !entity.status)
                 )
@@ -835,9 +836,9 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
                   label="Entity Type *"
                   onChange={(e) => handleNewEntityDataChange('entityType', e.target.value)}
                 >
-                  <MenuItem value="PHARMA">Pharma</MenuItem>
-                  <MenuItem value="LANDLORD">Landlord</MenuItem>
-                  <MenuItem value="TENANT">Tenant</MenuItem>
+                  <MenuItem value="SUPPLIER">Supplier</MenuItem>
+                  <MenuItem value="MANAGER">Manager</MenuItem>
+                  <MenuItem value="PHARMACY">Pharmacy</MenuItem>
                   <MenuItem value="ADMIN">Admin</MenuItem>
                 </Select>
               </FormControl>

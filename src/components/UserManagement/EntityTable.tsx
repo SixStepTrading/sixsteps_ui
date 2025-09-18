@@ -8,6 +8,7 @@ interface EntityTableProps {
   hasActiveFilters?: boolean;
   onEditEntity: (entity: Entity) => void;
   onDeleteEntity: (entity: Entity) => void;
+  onResetSupplies: (entity: Entity) => void;
 }
 
 const EntityTable: React.FC<EntityTableProps> = ({
@@ -15,7 +16,8 @@ const EntityTable: React.FC<EntityTableProps> = ({
   totalEntities,
   hasActiveFilters = false,
   onEditEntity,
-  onDeleteEntity
+  onDeleteEntity,
+  onResetSupplies
 }) => {
   const { isDrawerCollapsed } = useContext(SidebarContext);
   
@@ -231,30 +233,60 @@ const EntityTable: React.FC<EntityTableProps> = ({
                   </div>
                   
                   {/* Actions */}
-                  <div className="w-[5%] flex justify-center gap-1">
+                  <div className="w-[7%] flex justify-center gap-1">
                     <button 
-                      className="text-blue-600 dark:text-blue-400 p-1 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-full"
+                      className="text-blue-600 dark:text-blue-400 p-1 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-full group relative"
                       onClick={(e) => { 
                         e.stopPropagation(); 
                         onEditEntity(entity); 
                       }}
                       aria-label="Edit entity"
+                      title="Edit entity"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                       </svg>
+                      {/* Tooltip */}
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                        Edit Entity
+                      </div>
                     </button>
                     <button 
-                      className="text-red-600 dark:text-red-400 p-1 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-full"
+                      className="text-orange-600 dark:text-orange-400 p-1 hover:bg-orange-50 dark:hover:bg-orange-900/30 rounded-full group relative"
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        onResetSupplies(entity); 
+                      }}
+                      aria-label="Reset supplies"
+                      title="Reset all supplies for this entity"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        {/* Main cube/box icon */}
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        {/* Diagonal slash line for reset/delete indication */}
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 3l18 18" />
+                      </svg>
+                      {/* Tooltip */}
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                        Reset Supplies
+                      </div>
+                    </button>
+                    <button 
+                      className="text-red-600 dark:text-red-400 p-1 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-full group relative"
                       onClick={(e) => { 
                         e.stopPropagation(); 
                         onDeleteEntity(entity); 
                       }}
                       aria-label="Delete entity"
+                      title="Delete entity"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
+                      {/* Tooltip */}
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                        Delete Entity
+                      </div>
                     </button>
                   </div>
                 </div>

@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, ReactNode, useEffect } from
 import { AuthUser, getCurrentUser, isAuthenticated, login as apiLogin, logout as apiLogout, LoginCredentials } from '../utils/api';
 
 // Possible user roles mapped from entity types
-export type UserRole = 'Admin' | 'Pharmacy' | 'Supplier' | 'Landlord' | 'Tenant';
+export type UserRole = 'Admin' | 'Pharmacy' | 'Supplier' | 'Manager';
 
 // User profile interface
 interface UserProfile {
@@ -45,10 +45,8 @@ const mapEntityTypeToRole = (entityType: string): UserRole => {
       return 'Pharmacy';
     case 'SUPPLIER':
       return 'Supplier';
-    case 'LANDLORD':
-      return 'Landlord';
-    case 'TENANT':
-      return 'Tenant';
+    case 'MANAGER':
+      return 'Manager';
     default:
       return 'Admin';
   }
@@ -78,10 +76,8 @@ const getRoleDescription = (role: UserRole): string => {
       return 'Pharmacy manager for orders and inventory';
     case 'Supplier':
       return 'Supplier for product management';
-    case 'Landlord':
-      return 'Property owner and manager';
-    case 'Tenant':
-      return 'Property tenant';
+    case 'Manager':
+      return 'Management entity for business operations';
     default:
       return 'System user';
   }

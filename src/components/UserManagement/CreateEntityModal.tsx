@@ -16,7 +16,7 @@ const CreateEntityModal: React.FC<CreateEntityModalProps> = ({
   const { showToast } = useToast();
   const [formData, setFormData] = useState({
     entityName: '',
-    entityType: 'PHARMA' as 'PHARMA' | 'LANDLORD' | 'TENANT' | 'ADMIN',
+    entityType: 'SUPPLIER' as 'SUPPLIER' | 'MANAGER' | 'PHARMACY' | 'ADMIN',
     country: '',
     address: '',
     vatNumber: '',
@@ -87,7 +87,7 @@ const CreateEntityModal: React.FC<CreateEntityModalProps> = ({
   const handleClose = () => {
     setFormData({
       entityName: '',
-      entityType: 'PHARMA' as 'PHARMA' | 'LANDLORD' | 'TENANT' | 'ADMIN',
+      entityType: 'SUPPLIER' as 'SUPPLIER' | 'MANAGER' | 'PHARMACY' | 'ADMIN',
       country: '',
       address: '',
       vatNumber: '',
@@ -152,9 +152,9 @@ const CreateEntityModal: React.FC<CreateEntityModalProps> = ({
                     errors.entityType ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                   }`}
                 >
-                  <option value="PHARMA">Pharma</option>
-                  <option value="LANDLORD">Landlord</option>
-                  <option value="TENANT">Tenant</option>
+                  <option value="SUPPLIER">Supplier</option>
+                  <option value="MANAGER">Manager</option>
+                  <option value="PHARMACY">Pharmacy</option>
                   <option value="ADMIN">Admin</option>
                 </select>
                 {errors.entityType && (
