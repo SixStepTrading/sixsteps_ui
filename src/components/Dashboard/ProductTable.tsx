@@ -862,7 +862,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
                   </div>
 
                   {/* Prices */}
-                  <div className={`${isDrawerCollapsed ? 'w-[20%]' : 'w-[21%]'} flex flex-wrap justify-end gap-1 pt-1 px-2`}>
+                  <div className={`${isDrawerCollapsed ? 'w-[22%]' : 'w-[24%]'} flex justify-end gap-1 pt-1 px-2`}>
                     {product.bestPrices.slice(0, 3).map((price, i) => {
                       const { grossDiscountPercent, netDiscountPercent } = calculateDiscounts(
                         product.publicPrice, 
@@ -913,7 +913,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
                   
                   {/* Total Stock + Show more prices */}
                   <div 
-                    className={`${isDrawerCollapsed ? 'w-[7.5%]' : 'w-[8%]'} flex flex-col items-end text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-bg-hover rounded transition-colors pt-1 px-2`}
+                    className={`${isDrawerCollapsed ? 'w-[6.5%]' : 'w-[7%]'} flex flex-col items-end text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-bg-hover rounded transition-colors pt-1 px-2`}
                     onClick={e => {
                       e.stopPropagation();
                       openPriceModal(product);

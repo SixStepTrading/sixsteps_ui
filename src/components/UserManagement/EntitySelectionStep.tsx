@@ -22,7 +22,7 @@ const EntitySelectionStep: React.FC<EntitySelectionStepProps> = ({
   
   // New entity form data
   const [newEntityData, setNewEntityData] = useState<CreateEntityData>({
-    entityType: 'PHARMA',
+    entityType: 'SUPPLIER',
     entityName: '',
     country: 'ITALY',
     notes: '',
@@ -81,7 +81,7 @@ const EntitySelectionStep: React.FC<EntitySelectionStepProps> = ({
     setNewEntityData(prev => ({
       ...prev,
       [field]: value
-    }));
+    } as CreateEntityData));
   };
 
   const handleCreateNewEntity = async () => {
@@ -255,10 +255,9 @@ const EntitySelectionStep: React.FC<EntitySelectionStepProps> = ({
                 onChange={(e) => handleNewEntityDataChange('entityType', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               >
-                <option value="PHARMA">Pharmacy</option>
                 <option value="SUPPLIER">Supplier</option>
-                <option value="LANDLORD">Landlord</option>
-                <option value="TENANT">Tenant</option>
+                <option value="MANAGER">Manager</option>
+                <option value="PHARMACY">Pharmacy</option>
                 <option value="ADMIN">Admin</option>
               </select>
             </div>

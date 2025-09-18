@@ -282,14 +282,11 @@ export interface LoginResponse {
 export interface Entity {
   id: string;
   entityType:
-    | "PHARMA"
-    | "LANDLORD"
-    | "TENANT"
-    | "ADMIN"
-    | "PHARMACY"
     | "SUPPLIER"
-    | "company"
-    | "MANAGER";
+    | "MANAGER"
+    | "PHARMACY"
+    | "ADMIN"
+    | "company"; // Backend compatibility
   entityName: string;
   country?: string;
   notes?: string;
@@ -304,12 +301,10 @@ export interface Entity {
 
 export interface CreateEntityData {
   entityType:
-    | "PHARMA"
-    | "LANDLORD"
-    | "TENANT"
-    | "ADMIN"
+    | "SUPPLIER"
+    | "MANAGER"
     | "PHARMACY"
-    | "SUPPLIER";
+    | "ADMIN";
   entityName: string;
   country: string;
   notes?: string;
@@ -843,6 +838,24 @@ export const deleteEntity = async (entityId: string): Promise<void> => {
       error.response?.data?.message ||
         error.message ||
         "Failed to delete entity"
+    );
+  }
+};
+
+// Reset supplies for entity
+export const resetEntitySupplies = async (entityId: string): Promise<void> => {
+  try {
+    console.log("Resetting supplies for entity:", entityId);
+    const response = await sixstepClient.post("/supply/delete-all-for-entity", {
+      entityId: entityId
+    });
+    console.log("Reset Entity Supplies API response:", response.data);
+  } catch (error: any) {
+    console.error("Reset entity supplies error:", error);
+    throw new Error(
+      error.response?.data?.message ||
+        error.message ||
+        "Failed to reset entity supplies"
     );
   }
 };
