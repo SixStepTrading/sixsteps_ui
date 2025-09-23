@@ -22,6 +22,7 @@ const CreateEntityModal: React.FC<CreateEntityModalProps> = ({
     vatNumber: '',
     email: '',
     phone: '',
+    notes: '',
     status: 'ACTIVE' as const
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -93,6 +94,7 @@ const CreateEntityModal: React.FC<CreateEntityModalProps> = ({
       vatNumber: '',
       email: '',
       phone: '',
+      notes: '',
       status: 'ACTIVE' as const
     });
     setErrors({});
@@ -229,6 +231,20 @@ const CreateEntityModal: React.FC<CreateEntityModalProps> = ({
                   onChange={(e) => handleInputChange('phone', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   placeholder="Enter phone number"
+                />
+              </div>
+
+              {/* Notes */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Notes
+                </label>
+                <textarea
+                  value={formData.notes}
+                  onChange={(e) => handleInputChange('notes', e.target.value)}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  placeholder="Enter additional notes"
                 />
               </div>
             </div>

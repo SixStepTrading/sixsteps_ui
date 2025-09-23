@@ -188,9 +188,12 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
         entityId: selectedSupplier,
         entityName: selectedEntity.entityName,
         entityType: selectedEntity.entityType,
+        country: selectedEntity.country || 'IT',
         address: selectedEntity.address || '',
         phone: selectedEntity.phone || '',
-        warehouses: updatedWarehouses
+        notes: selectedEntity.notes || '',
+        warehouses: updatedWarehouses,
+        status: selectedEntity.status || 'ACTIVE'
       });
       
       console.log('✅ New warehouse created:', newWarehouseName);

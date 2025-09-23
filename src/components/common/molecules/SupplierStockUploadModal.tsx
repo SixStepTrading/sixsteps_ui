@@ -109,9 +109,12 @@ const SupplierStockUploadModal: React.FC<SupplierStockUploadModalProps> = ({
         entityId: userEntity.id,
         entityName: userEntity.entityName,
         entityType: userEntity.entityType,
+        country: userEntity.country || 'IT',
         address: userEntity.address || '',
         phone: userEntity.phone || '',
-        warehouses: updatedWarehouses
+        notes: userEntity.notes || '',
+        warehouses: updatedWarehouses,
+        status: userEntity.status || 'ACTIVE'
       });
       
       console.log('✅ New warehouse created:', newWarehouseName);

@@ -22,8 +22,14 @@ const EditEntityModal: React.FC<EditEntityModalProps> = ({
     entityId: '',
     entityName: '',
     entityType: 'SUPPLIER' as Entity['entityType'],
+    country: '',
     address: '',
-    phone: ''
+    phone: '',
+    vatNumber: '',
+    email: '',
+    notes: '',
+    status: 'ACTIVE' as const,
+    warehouses: [] as string[]
   });
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
@@ -34,8 +40,14 @@ const EditEntityModal: React.FC<EditEntityModalProps> = ({
         entityId: entity.id,
         entityName: entity.entityName,
         entityType: entity.entityType,
-        address: '', // Not available in current entity structure
-        phone: '' // Not available in current entity structure
+        country: entity.country || '',
+        address: entity.address || '',
+        phone: entity.phone || '',
+        vatNumber: entity.vatNumber || '',
+        email: entity.email || '',
+        notes: entity.notes || '',
+        status: entity.status || 'ACTIVE',
+        warehouses: entity.warehouses || []
       });
     }
   }, [isOpen, entity]);
@@ -84,8 +96,14 @@ const EditEntityModal: React.FC<EditEntityModalProps> = ({
         entityId: formData.entityId,
         entityName: formData.entityName,
         entityType: formData.entityType as Entity['entityType'],
+        country: formData.country,
         address: formData.address,
-        phone: formData.phone
+        phone: formData.phone,
+        vatNumber: formData.vatNumber,
+        email: formData.email,
+        notes: formData.notes,
+        status: formData.status,
+        warehouses: formData.warehouses
       };
       
       await updateEntity(updateData);
@@ -105,8 +123,14 @@ const EditEntityModal: React.FC<EditEntityModalProps> = ({
       entityId: '',
       entityName: '',
       entityType: 'SUPPLIER' as Entity['entityType'],
+      country: '',
       address: '',
-      phone: ''
+      phone: '',
+      vatNumber: '',
+      email: '',
+      notes: '',
+      status: 'ACTIVE' as const,
+      warehouses: []
     });
     setErrors({});
     onClose();
@@ -220,6 +244,120 @@ const EditEntityModal: React.FC<EditEntityModalProps> = ({
                 placeholder="Enter phone number"
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-colors"
               />
+            </div>
+
+            {/* Country */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Country
+              </label>
+              <input
+                type="text"
+                value={formData.country}
+                onChange={(e) => handleChange('country', e.target.value)}
+                placeholder="Enter country"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-colors"
+              />
+            </div>
+
+            {/* VAT Number */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                VAT Number
+              </label>
+              <input
+                type="text"
+                value={formData.vatNumber}
+                onChange={(e) => handleChange('vatNumber', e.target.value)}
+                placeholder="Enter VAT number"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-colors"
+              />
+            </div>
+
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Email
+              </label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => handleChange('email', e.target.value)}
+                placeholder="Enter email address"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-colors"
+              />
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Notes
+              </label>
+              <textarea
+                value={formData.notes}
+                onChange={(e) => handleChange('notes', e.target.value)}
+                placeholder="Enter additional notes"
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-colors"
+              />
+            </div>
+
+            {/* Status */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Status
+              </label>
+              <select
+                value={formData.status}
+                onChange={(e) => handleChange('status', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-colors"
+              >
+                <option value="ACTIVE">Active</option>
+                <option value="INACTIVE">Inactive</option>
+              </select>
+            </div>
+
+            {/* Warehouses */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Warehouses
+              </label>
+              <div className="space-y-2">
+                {formData.warehouses.map((warehouse, index) => (
+                  <div key={index} className="flex items-center space-x-2">
+                    <input
+                      type="text"
+                      value={warehouse}
+                      onChange={(e) => {
+                        const newWarehouses = [...formData.warehouses];
+                        newWarehouses[index] = e.target.value;
+                        setFormData(prev => ({ ...prev, warehouses: newWarehouses }));
+                      }}
+                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-colors"
+                      placeholder="Warehouse name"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newWarehouses = formData.warehouses.filter((_, i) => i !== index);
+                        setFormData(prev => ({ ...prev, warehouses: newWarehouses }));
+                      }}
+                      className="px-3 py-2 text-red-600 hover:text-red-800 border border-red-300 hover:border-red-500 rounded-lg transition-colors"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormData(prev => ({ ...prev, warehouses: [...prev.warehouses, ''] }));
+                  }}
+                  className="px-4 py-2 text-blue-600 hover:text-blue-800 border border-blue-300 hover:border-blue-500 rounded-lg transition-colors"
+                >
+                  Add Warehouse
+                </button>
+              </div>
             </div>
 
             {/* Action Buttons */}
