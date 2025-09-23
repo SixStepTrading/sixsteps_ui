@@ -187,13 +187,11 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
       await updateEntity({
         entityId: selectedSupplier,
         entityName: selectedEntity.entityName,
-        entityType: selectedEntity.entityType,
-        country: selectedEntity.country || 'IT',
-        address: selectedEntity.address || '',
-        phone: selectedEntity.phone || '',
-        notes: selectedEntity.notes || '',
+        entityType: selectedEntity.entityType.toUpperCase() as Entity['entityType'], // Convert to uppercase for update
+        country: selectedEntity.country || 'IT', // Use country code for update
         warehouses: updatedWarehouses,
-        status: selectedEntity.status || 'ACTIVE'
+        notes: selectedEntity.notes || '',
+        status: (selectedEntity.status || 'ACTIVE').toLowerCase() as any // Convert to lowercase for update
       });
       
       console.log('✅ New warehouse created:', newWarehouseName);

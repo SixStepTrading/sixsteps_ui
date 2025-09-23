@@ -355,15 +355,17 @@ export interface Entity {
     | "company"; // Backend compatibility
   entityName: string;
   country?: string;
+  address?: string;
+  phone?: string;
+  vatNumber?: string;
+  email?: string;
   notes?: string;
   status?: "ACTIVE" | "INACTIVE";
+  warehouses?: string[];
   referralName?: string;
   referralContacts?: string;
   username?: string;
   crmId?: string;
-  warehouses?: string[]; // Array of warehouse names
-  address?: string; // Entity address
-  phone?: string; // Entity phone
   createdAt?: string;
   updatedAt?: string;
 }

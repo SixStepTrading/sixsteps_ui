@@ -28,7 +28,7 @@ const EditEntityModal: React.FC<EditEntityModalProps> = ({
     vatNumber: '',
     email: '',
     notes: '',
-    status: 'ACTIVE' as const,
+    status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE',
     warehouses: [] as string[]
   });
 
@@ -92,17 +92,14 @@ const EditEntityModal: React.FC<EditEntityModalProps> = ({
     try {
       setSubmitting(true);
       
+      // Transform data for backend format (update expects uppercase entityType and country code)
       const updateData = {
         entityId: formData.entityId,
         entityName: formData.entityName,
-        entityType: formData.entityType as Entity['entityType'],
-        country: formData.country,
-        address: formData.address,
-        phone: formData.phone,
-        vatNumber: formData.vatNumber,
-        email: formData.email,
+        entityType: formData.entityType.toUpperCase() as Entity['entityType'], // Convert to uppercase for update
+        country: formData.country || 'IT', // Use country code for update
         notes: formData.notes,
-        status: formData.status,
+        status: formData.status.toLowerCase() as any, // Convert to lowercase for update
         warehouses: formData.warehouses
       };
       
@@ -129,7 +126,7 @@ const EditEntityModal: React.FC<EditEntityModalProps> = ({
       vatNumber: '',
       email: '',
       notes: '',
-      status: 'ACTIVE' as const,
+      status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE',
       warehouses: []
     });
     setErrors({});

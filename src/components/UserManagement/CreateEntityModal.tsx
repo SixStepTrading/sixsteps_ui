@@ -68,7 +68,20 @@ const CreateEntityModal: React.FC<CreateEntityModalProps> = ({
     setIsSubmitting(true);
     
     try {
-      await createEntity(formData);
+      // Transform data for backend format
+      const backendData = {
+        entityName: formData.entityName,
+        entityType: formData.entityType.toLowerCase(), // Convert to lowercase for create
+        country: formData.country || 'Italy', // Use full country name
+        address: formData.address,
+        vatNumber: formData.vatNumber,
+        email: formData.email,
+        phone: formData.phone,
+        warehouses: [], // Start with empty warehouses array
+        status: 'ACTIVE' // Add required status field
+      };
+      
+      await createEntity(backendData);
       showToast('Entity created successfully!', 'success');
       onEntityCreated();
       handleClose();
