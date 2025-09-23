@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { fetchWarehouseLogs } from '../../utils/api';
+import React, { useState, useEffect, useCallback } from 'react';
+import { fetchWarehouseLogs, fetchWarehouseStats } from '../../utils/api';
 import { Entity } from '../../utils/api';
 
 interface WarehouseListModalProps {
@@ -31,57 +31,86 @@ interface WarehouseLog {
   };
 }
 
+interface WarehouseStats {
+  totalProducts: number;
+  totalStock: number;
+  totalValue: number;
+  lastActivity: string;
+  recentUploads: number;
+}
+
 const WarehouseListModal: React.FC<WarehouseListModalProps> = ({
   isOpen,
   onClose,
   entity
 }) => {
   const [warehouseLogs, setWarehouseLogs] = useState<Record<string, WarehouseLog>>({});
+  const [warehouseStats, setWarehouseStats] = useState<Record<string, WarehouseStats>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch logs for all warehouses
-  const fetchAllWarehouseLogs = async () => {
+  // Fetch logs and stats for all warehouses
+  const fetchAllWarehouseData = useCallback(async () => {
     if (!entity || !entity.warehouses || entity.warehouses.length === 0) return;
     
     setLoading(true);
     setError(null);
     
     try {
-      const logPromises = entity.warehouses.map(async (warehouse) => {
+      const dataPromises = entity.warehouses.map(async (warehouse) => {
         try {
-          const logs = await fetchWarehouseLogs(warehouse);
-          return { warehouse, logs: logs[0] || null };
+          const [logs, stats] = await Promise.all([
+            fetchWarehouseLogs(warehouse),
+            fetchWarehouseStats(entity.id, warehouse)
+          ]);
+          return { 
+            warehouse, 
+            logs: logs[0] || null,
+            stats: stats
+          };
         } catch (err) {
-          console.error(`Error fetching logs for warehouse ${warehouse}:`, err);
-          return { warehouse, logs: null };
+          console.error(`Error fetching data for warehouse ${warehouse}:`, err);
+          return { 
+            warehouse, 
+            logs: null,
+            stats: {
+              totalProducts: 0,
+              totalStock: 0,
+              totalValue: 0,
+              lastActivity: 'Unknown',
+              recentUploads: 0
+            }
+          };
         }
       });
       
-      const results = await Promise.all(logPromises);
+      const results = await Promise.all(dataPromises);
       const logsMap: Record<string, WarehouseLog> = {};
+      const statsMap: Record<string, WarehouseStats> = {};
       
-      results.forEach(({ warehouse, logs }) => {
+      results.forEach(({ warehouse, logs, stats }) => {
         if (logs) {
           logsMap[warehouse] = logs;
         }
+        statsMap[warehouse] = stats;
       });
       
       setWarehouseLogs(logsMap);
+      setWarehouseStats(statsMap);
     } catch (err) {
-      console.error('Error fetching warehouse logs:', err);
-      setError('Failed to fetch warehouse activity logs');
+      console.error('Error fetching warehouse data:', err);
+      setError('Failed to fetch warehouse data');
     } finally {
       setLoading(false);
     }
-  };
+  }, [entity]);
 
-  // Fetch logs when modal opens
+  // Fetch data when modal opens
   useEffect(() => {
     if (isOpen && entity) {
-      fetchAllWarehouseLogs();
+      fetchAllWarehouseData();
     }
-  }, [isOpen, entity]);
+  }, [isOpen, entity, fetchAllWarehouseData]);
 
   const formatTimestamp = (timestamp: number) => {
     try {
@@ -147,10 +176,10 @@ const WarehouseListModal: React.FC<WarehouseListModalProps> = ({
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                Warehouse Activity - {entity.entityName}
+                Warehouse Analytics - {entity.entityName}
               </h3>
               <p className="mt-1 text-sm text-gray-500 dark:text-dark-text-muted">
-                Last activity for each warehouse
+                Comprehensive statistics and activity overview for all warehouses
               </p>
             </div>
             <button
@@ -191,70 +220,134 @@ const WarehouseListModal: React.FC<WarehouseListModalProps> = ({
                 </div>
               </div>
             ) : (
-              <div className="space-y-3">
-                {entity.warehouses?.map((warehouse) => {
-                  const log = warehouseLogs[warehouse];
-                  
-                  return (
-                    <div 
-                      key={warehouse}
-                      className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg border border-gray-200 dark:border-gray-600"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="text-sm font-medium text-gray-900 dark:text-white">
-                          {warehouse}
-                        </h4>
-                        {log ? (
-                          <span className="text-xs text-gray-500 dark:text-dark-text-muted">
-                            Last activity: {formatTimestamp(log.timestamp)}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-gray-400 dark:text-gray-500">
-                            No activity found
-                          </span>
-                        )}
-                      </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-800">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Warehouse
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Products
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Total Stock
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Total Value
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Recent Uploads
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Last Activity
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        User
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Action
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                    {entity.warehouses?.map((warehouse) => {
+                      const log = warehouseLogs[warehouse];
+                      const stats = warehouseStats[warehouse];
                       
-                      {log ? (
-                        <div className="space-y-2">
-                          <div className="flex items-center space-x-2">
-                            <span className={`inline-block py-1 px-2 rounded text-xs font-medium ${getActionColor(log.action)}`}>
-                              {log.action}
-                            </span>
-                            <span className="text-sm text-gray-600 dark:text-dark-text-secondary">
-                              {getCustomActionLabel(log.customAction)}
-                            </span>
-                          </div>
-                          
-                          {log.details && (
-                            <div className="text-xs text-gray-500 dark:text-dark-text-muted">
-                              <div>IP: {log.ip}</div>
-                              {log.user && (
-                                <div>User: {log.user.name || log.user.email || 'Unknown'}</div>
-                              )}
-                              {log.uploadResult && (
-                                <div className="mt-1 p-2 bg-gray-100 dark:bg-gray-600 rounded text-xs">
-                                  <div className="font-medium">Upload Result:</div>
-                                  <div>Success: {log.uploadResult.success ? 'Yes' : 'No'}</div>
-                                  {log.uploadResult.message && (
-                                    <div>Message: {log.uploadResult.message}</div>
-                                  )}
-                                  {log.uploadResult.totalRows && (
-                                    <div>Rows: {log.uploadResult.processedRows}/{log.uploadResult.totalRows}</div>
-                                  )}
-                                </div>
-                              )}
+                      return (
+                        <tr key={warehouse} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                          {/* Warehouse Name */}
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">
+                              {warehouse}
                             </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="text-sm text-gray-400 dark:text-gray-500">
-                          No recent activity recorded for this warehouse
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                          </td>
+                          
+                          {/* Products Count */}
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-1 rounded-full text-sm font-medium">
+                                {stats?.totalProducts || 0}
+                              </div>
+                            </div>
+                          </td>
+                          
+                          {/* Total Stock */}
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-1 rounded-full text-sm font-medium">
+                                {stats?.totalStock || 0}
+                              </div>
+                            </div>
+                          </td>
+                          
+                          {/* Total Value */}
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 px-2 py-1 rounded-full text-sm font-medium">
+                                €{stats?.totalValue?.toLocaleString() || '0'}
+                              </div>
+                            </div>
+                          </td>
+                          
+                          {/* Recent Uploads */}
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 px-2 py-1 rounded-full text-sm font-medium">
+                                {stats?.recentUploads || 0}
+                              </div>
+                            </div>
+                          </td>
+                          
+                          {/* Last Activity */}
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900 dark:text-white">
+                              {log ? formatTimestamp(log.timestamp) : 'No activity'}
+                            </div>
+                          </td>
+                          
+                          {/* User */}
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900 dark:text-white">
+                              {log?.user?.name || log?.user?.email || 'N/A'}
+                            </div>
+                          </td>
+                          
+                          {/* Action */}
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {log ? (
+                              <div className="flex flex-col space-y-1">
+                                <span className={`inline-block py-1 px-2 rounded-full text-xs font-medium ${getActionColor(log.action)}`}>
+                                  {log.action}
+                                </span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                  {getCustomActionLabel(log.customAction)}
+                                </span>
+                                {log.uploadResult && (
+                                  <div className="text-xs">
+                                    <span className={log.uploadResult.success ? 'text-green-600' : 'text-red-600'}>
+                                      {log.uploadResult.success ? '✓ Success' : '✗ Failed'}
+                                    </span>
+                                    {log.uploadResult.totalRows && (
+                                      <span className="text-gray-500 dark:text-gray-400 ml-1">
+                                        ({log.uploadResult.processedRows}/{log.uploadResult.totalRows})
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-sm text-gray-400 dark:text-gray-500">
+                                No activity
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>

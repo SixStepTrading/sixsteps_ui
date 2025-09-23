@@ -987,11 +987,9 @@ export const fetchWarehouseLogs = async (warehouseName: string): Promise<any[]> 
     console.log("🔍 Fetching logs for warehouse:", warehouseName);
     
     // First, get all recent logs and filter client-side since the warehouse field is nested
-    const response = await sixstepClient.get("/logs/get", {
-      params: {
-        sort: JSON.stringify({ timestamp: -1 }),
-        limit: 50 // Get more logs to filter client-side
-      }
+    const response = await sixstepClient.post("/logs/get",{
+      "page": 1,
+      "limit": 20000000
     });
     
     console.log("📊 All logs response:", response.data);
@@ -999,6 +997,7 @@ export const fetchWarehouseLogs = async (warehouseName: string): Promise<any[]> 
     // Filter logs that have the warehouse in details.metadata.warehouse
     const filteredLogs = (response.data.logs || []).filter((log: any) => {
       // Check if warehouse exists in details.metadata.warehouse
+      console.log("🔍 Checking log:", log);
       const warehouseInMetadata = log.details?.metadata?.warehouse === warehouseName;
       // Also check the top-level warehouse field for backward compatibility
       const warehouseTopLevel = log.warehouse === warehouseName;
@@ -1011,6 +1010,85 @@ export const fetchWarehouseLogs = async (warehouseName: string): Promise<any[]> 
   } catch (error) {
     console.error("❌ Error fetching warehouse logs:", error);
     throw error;
+  }
+};
+
+// Fetch warehouse statistics
+export const fetchWarehouseStats = async (entityId: string, warehouseName: string): Promise<{
+  totalProducts: number;
+  totalStock: number;
+  totalValue: number;
+  lastActivity: string;
+  recentUploads: number;
+}> => {
+  try {
+    console.log("📊 Fetching warehouse stats for:", { entityId, warehouseName });
+    
+    // Get products to calculate stats
+    const productsResponse = await sixstepClient.post("/products/get", {
+      page: 1,
+      limit: 1000 // Get more products to calculate accurate stats
+    });
+    
+    // Filter products that have supplies in this specific warehouse
+    const warehouseProducts = productsResponse.data.products.filter((product: any) => {
+      if (product.supplies && Array.isArray(product.supplies)) {
+        return product.supplies.some((supply: any) => 
+          supply.entityId === entityId && supply.warehouse === warehouseName
+        );
+      }
+      return false;
+    });
+    
+    // Calculate statistics
+    let totalStock = 0;
+    let totalValue = 0;
+    
+    warehouseProducts.forEach((product: any) => {
+      if (product.supplies && Array.isArray(product.supplies)) {
+        product.supplies.forEach((supply: any) => {
+          if (supply.entityId === entityId && supply.warehouse === warehouseName) {
+            totalStock += supply.stock || supply.quantity || 0;
+            totalValue += (supply.stock || supply.quantity || 0) * (supply.price || supply.publicPrice || 0);
+          }
+        });
+      }
+    });
+    
+    // Get recent activity count (last 7 days)
+    const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+    const logsResponse = await sixstepClient.post("/logs/get", {
+      page: 1,
+      limit: 1000
+    });
+    
+    const recentUploads = (logsResponse.data.logs || []).filter((log: any) => {
+      const isWarehouseLog = log.details?.metadata?.warehouse === warehouseName || log.warehouse === warehouseName;
+      const isRecent = log.timestamp > sevenDaysAgo;
+      const isUploadAction = log.customAction?.includes('CSV_UPLOAD') || log.customAction?.includes('UPLOAD');
+      return isWarehouseLog && isRecent && isUploadAction;
+    }).length;
+    
+    const stats = {
+      totalProducts: warehouseProducts.length,
+      totalStock: totalStock,
+      totalValue: Math.round(totalValue * 100) / 100, // Round to 2 decimal places
+      lastActivity: warehouseProducts.length > 0 ? 'Active' : 'No activity',
+      recentUploads: recentUploads
+    };
+    
+    console.log("✅ Warehouse stats calculated:", stats);
+    return stats;
+  } catch (error) {
+    console.error("❌ Error fetching warehouse stats:", error);
+    // Return default stats on error
+    return {
+      totalProducts: 0,
+      totalStock: 0,
+      totalValue: 0,
+      lastActivity: 'Unknown',
+      recentUploads: 0
+    };
   }
 };
 
