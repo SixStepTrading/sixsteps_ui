@@ -48,9 +48,6 @@ const EntityTable: React.FC<EntityTableProps> = ({
       case 'country':
         comparison = (a.country || '').localeCompare(b.country || '');
         break;
-      case 'status':
-        comparison = (a.status || 'ACTIVE').localeCompare(b.status || 'ACTIVE');
-        break;
       case 'createdAt':
         const dateA = new Date(a.createdAt || 0);
         const dateB = new Date(b.createdAt || 0);
@@ -160,13 +157,10 @@ const EntityTable: React.FC<EntityTableProps> = ({
             <div className="w-[12%] text-center cursor-pointer select-none flex items-center justify-center" onClick={() => handleSort('warehouses')}>
               Warehouses {renderSortIcon('warehouses')}
             </div>
-            <div className="w-[13%] cursor-pointer select-none flex items-center" onClick={() => handleSort('country')}>
+            <div className="w-[18%] cursor-pointer select-none flex items-center" onClick={() => handleSort('country')}>
               Country {renderSortIcon('country')}
             </div>
-            <div className="w-[10%] text-center cursor-pointer select-none flex items-center justify-center" onClick={() => handleSort('status')}>
-              Status {renderSortIcon('status')}
-            </div>
-            <div className="w-[15%] cursor-pointer select-none flex items-center" onClick={() => handleSort('createdAt')}>
+            <div className="w-[20%] cursor-pointer select-none flex items-center" onClick={() => handleSort('createdAt')}>
               Created {renderSortIcon('createdAt')}
             </div>
             <div className="w-[15%] text-center">Notes</div>
@@ -192,9 +186,6 @@ const EntityTable: React.FC<EntityTableProps> = ({
           ) : (
             sortedEntities.map((entity, idx) => {
               const typeClasses = getEntityTypeColorClasses(entity.entityType);
-              const statusClasses = (entity.status || 'ACTIVE') === 'ACTIVE' 
-                ? { bg: 'bg-green-50 dark:bg-green-900/30', text: 'text-green-600 dark:text-green-400' } 
-                : { bg: 'bg-gray-50 dark:bg-gray-800', text: 'text-gray-500 dark:text-gray-400' };
 
               return (
                 <div 
@@ -254,21 +245,14 @@ const EntityTable: React.FC<EntityTableProps> = ({
                   </div>
                   
                   {/* Country */}
-                  <div className="w-[13%]">
+                  <div className="w-[18%]">
                     <span className="text-sm text-slate-700 dark:text-dark-text-secondary">
                       {entity.country || 'N/A'}
                     </span>
                   </div>
                   
-                  {/* Status */}
-                  <div className="w-[10%] flex justify-center">
-                    <span className={`${statusClasses.bg} ${statusClasses.text} inline-block py-1 px-3 rounded text-xs font-medium border dark:border-opacity-30`}>
-                      {entity.status || 'ACTIVE'}
-                    </span>
-                  </div>
-                  
                   {/* Created Date */}
-                  <div className="w-[15%]">
+                  <div className="w-[20%]">
                     <span className="text-sm text-gray-500 dark:text-dark-text-muted">
                       {formatDate(entity.createdAt)}
                     </span>
