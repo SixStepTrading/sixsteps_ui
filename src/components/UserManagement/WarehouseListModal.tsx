@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { fetchWarehouseLogs, fetchWarehouseStats, deleteWarehouseSupplies, removeWarehouseFromEntity } from '../../utils/api';
+import { fetchWarehouseStats, deleteWarehouseSupplies, removeWarehouseFromEntity } from '../../utils/api';
 import { Entity } from '../../utils/api';
 
 interface WarehouseListModalProps {
@@ -8,28 +8,6 @@ interface WarehouseListModalProps {
   entity: Entity | null;
 }
 
-interface WarehouseLog {
-  _id: string;
-  timestamp: number;
-  action: string;
-  customAction: string;
-  warehouse: string;
-  entityId: string;
-  details: any;
-  metadata: any;
-  user: any;
-  ip: string;
-  uploadResult?: {
-    success: boolean;
-    message?: string;
-    totalRows?: number;
-    processedRows?: number;
-    created?: number;
-    updated?: number;
-    skipped?: number;
-    uploadId?: string;
-  };
-}
 
 interface WarehouseStats {
   totalProducts: number;
@@ -44,36 +22,28 @@ const WarehouseListModal: React.FC<WarehouseListModalProps> = ({
   onClose,
   entity
 }) => {
-  const [warehouseLogs, setWarehouseLogs] = useState<Record<string, WarehouseLog>>({});
   const [warehouseStats, setWarehouseStats] = useState<Record<string, WarehouseStats>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deletingWarehouse, setDeletingWarehouse] = useState<string | null>(null);
 
-  // Fetch logs and stats for all warehouses
-  const fetchAllWarehouseData = useCallback(async () => {
+  // Fetch only essential warehouse data
+  const fetchWarehouseData = useCallback(async () => {
     if (!entity || !entity.warehouses || entity.warehouses.length === 0) return;
     
     setLoading(true);
     setError(null);
     
     try {
-      const dataPromises = entity.warehouses.map(async (warehouse) => {
+      // Only fetch basic stats, no logs
+      const statsPromises = entity.warehouses.map(async (warehouse) => {
         try {
-          const [logs, stats] = await Promise.all([
-            fetchWarehouseLogs(warehouse),
-            fetchWarehouseStats(entity.id, warehouse)
-          ]);
-          return { 
-            warehouse, 
-            logs: logs[0] || null,
-            stats: stats
-          };
+          const stats = await fetchWarehouseStats(entity.id, warehouse);
+          return { warehouse, stats };
         } catch (err) {
-          console.error(`Error fetching data for warehouse ${warehouse}:`, err);
+          console.error(`Error fetching stats for warehouse ${warehouse}:`, err);
           return { 
             warehouse, 
-            logs: null,
             stats: {
               totalProducts: 0,
               totalStock: 0,
@@ -85,18 +55,13 @@ const WarehouseListModal: React.FC<WarehouseListModalProps> = ({
         }
       });
       
-      const results = await Promise.all(dataPromises);
-      const logsMap: Record<string, WarehouseLog> = {};
+      const results = await Promise.all(statsPromises);
       const statsMap: Record<string, WarehouseStats> = {};
       
-      results.forEach(({ warehouse, logs, stats }) => {
-        if (logs) {
-          logsMap[warehouse] = logs;
-        }
+      results.forEach(({ warehouse, stats }) => {
         statsMap[warehouse] = stats;
       });
       
-      setWarehouseLogs(logsMap);
       setWarehouseStats(statsMap);
     } catch (err) {
       console.error('Error fetching warehouse data:', err);
@@ -127,7 +92,7 @@ const WarehouseListModal: React.FC<WarehouseListModalProps> = ({
       await removeWarehouseFromEntity(entity.id, warehouseName);
       
       // Refresh data to reflect changes
-      await fetchAllWarehouseData();
+      await fetchWarehouseData();
       
       alert(`Warehouse "${warehouseName}" has been successfully deleted.`);
     } catch (error) {
@@ -141,24 +106,10 @@ const WarehouseListModal: React.FC<WarehouseListModalProps> = ({
   // Fetch data when modal opens
   useEffect(() => {
     if (isOpen && entity) {
-      fetchAllWarehouseData();
+      fetchWarehouseData();
     }
-  }, [isOpen, entity, fetchAllWarehouseData]);
+  }, [isOpen, entity, fetchWarehouseData]);
 
-  const formatTimestamp = (timestamp: number) => {
-    try {
-      return new Date(timestamp).toLocaleString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      });
-    } catch {
-      return 'Invalid Date';
-    }
-  };
 
 
   if (!isOpen || !entity) {
@@ -180,10 +131,10 @@ const WarehouseListModal: React.FC<WarehouseListModalProps> = ({
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                Warehouse Analytics - {entity.entityName}
+                Warehouses - {entity.entityName}
               </h3>
               <p className="mt-1 text-sm text-gray-500 dark:text-dark-text-muted">
-                Comprehensive statistics and activity overview for all warehouses
+                Warehouse statistics and management
               </p>
             </div>
             <button
@@ -241,16 +192,12 @@ const WarehouseListModal: React.FC<WarehouseListModalProps> = ({
                         Total Value
                       </th>
                       <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Last Activity
-                      </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Actions
                       </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                     {entity.warehouses?.map((warehouse) => {
-                      const log = warehouseLogs[warehouse];
                       const stats = warehouseStats[warehouse];
                       
                       return (
@@ -283,12 +230,6 @@ const WarehouseListModal: React.FC<WarehouseListModalProps> = ({
                             </div>
                           </td>
                           
-                          {/* Last Activity */}
-                          <td className="px-6 py-4 whitespace-nowrap text-center">
-                            <div className="text-sm text-gray-900 dark:text-white">
-                              {log ? formatTimestamp(log.timestamp) : 'No activity'}
-                            </div>
-                          </td>
                           
                           {/* Actions */}
                           <td className="px-6 py-4 whitespace-nowrap text-center">
