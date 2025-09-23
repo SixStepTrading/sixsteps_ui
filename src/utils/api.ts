@@ -986,16 +986,28 @@ export const fetchWarehouseLogs = async (warehouseName: string): Promise<any[]> 
   try {
     console.log("🔍 Fetching logs for warehouse:", warehouseName);
     
+    // First, get all recent logs and filter client-side since the warehouse field is nested
     const response = await sixstepClient.get("/logs/get", {
       params: {
-        warehouse: warehouseName,
         sort: JSON.stringify({ timestamp: -1 }),
-        limit: 1 // Get only the most recent log entry
+        limit: 50 // Get more logs to filter client-side
       }
     });
     
-    console.log("✅ Warehouse logs response:", response.data);
-    return response.data.logs || [];
+    console.log("📊 All logs response:", response.data);
+    
+    // Filter logs that have the warehouse in details.metadata.warehouse
+    const filteredLogs = (response.data.logs || []).filter((log: any) => {
+      // Check if warehouse exists in details.metadata.warehouse
+      const warehouseInMetadata = log.details?.metadata?.warehouse === warehouseName;
+      // Also check the top-level warehouse field for backward compatibility
+      const warehouseTopLevel = log.warehouse === warehouseName;
+      
+      return warehouseInMetadata || warehouseTopLevel;
+    });
+    
+    console.log("✅ Filtered warehouse logs:", filteredLogs);
+    return filteredLogs.slice(0, 1); // Return only the most recent
   } catch (error) {
     console.error("❌ Error fetching warehouse logs:", error);
     throw error;

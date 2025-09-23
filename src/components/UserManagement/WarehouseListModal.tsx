@@ -222,6 +222,18 @@ const WarehouseListModal: React.FC<WarehouseListModalProps> = ({
                               {log.user && (
                                 <div>User: {log.user.name || log.user.email || 'Unknown'}</div>
                               )}
+                              {log.uploadResult && (
+                                <div className="mt-1 p-2 bg-gray-100 dark:bg-gray-600 rounded text-xs">
+                                  <div className="font-medium">Upload Result:</div>
+                                  <div>Success: {log.uploadResult.success ? 'Yes' : 'No'}</div>
+                                  {log.uploadResult.message && (
+                                    <div>Message: {log.uploadResult.message}</div>
+                                  )}
+                                  {log.uploadResult.totalRows && (
+                                    <div>Rows: {log.uploadResult.processedRows}/{log.uploadResult.totalRows}</div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
