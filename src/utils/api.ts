@@ -1123,17 +1123,18 @@ export const removeWarehouseFromEntity = async (entityId: string, warehouseName:
     // Remove warehouse from the list
     const updatedWarehouses = (entity.warehouses || []).filter(w => w !== warehouseName);
     
-    // Update entity with new warehouses list
-    await updateEntity({
+    // Use POST /entities/update endpoint directly
+    const response = await sixstepClient.post("/entities/update", {
       entityId: entityId,
-      entityName: entity.entityName,
       entityType: entity.entityType,
-      address: entity.address || '',
-      phone: entity.phone || '',
-      warehouses: updatedWarehouses
+      entityName: entity.entityName,
+      country: entity.country || "IT",
+      warehouses: updatedWarehouses,
+      notes: entity.notes || "",
+      status: entity.status || "active"
     });
     
-    console.log("✅ Warehouse removed from entity successfully");
+    console.log("✅ Warehouse removed from entity successfully:", response.data);
   } catch (error) {
     console.error("❌ Error removing warehouse from entity:", error);
     throw error;
