@@ -35,6 +35,11 @@ const EntityTable: React.FC<EntityTableProps> = ({
       case 'entityType':
         comparison = a.entityType.localeCompare(b.entityType);
         break;
+      case 'warehouses':
+        const warehousesA = (a.warehouses || []).length;
+        const warehousesB = (b.warehouses || []).length;
+        comparison = warehousesA - warehousesB;
+        break;
       case 'country':
         comparison = (a.country || '').localeCompare(b.country || '');
         break;
@@ -133,7 +138,10 @@ const EntityTable: React.FC<EntityTableProps> = ({
             <div className="w-[15%] text-center cursor-pointer select-none flex items-center justify-center" onClick={() => handleSort('entityType')}>
               Type {renderSortIcon('entityType')}
             </div>
-            <div className="w-[15%] cursor-pointer select-none flex items-center" onClick={() => handleSort('country')}>
+            <div className="w-[12%] text-center cursor-pointer select-none flex items-center justify-center" onClick={() => handleSort('warehouses')}>
+              Warehouses {renderSortIcon('warehouses')}
+            </div>
+            <div className="w-[13%] cursor-pointer select-none flex items-center" onClick={() => handleSort('country')}>
               Country {renderSortIcon('country')}
             </div>
             <div className="w-[10%] text-center cursor-pointer select-none flex items-center justify-center" onClick={() => handleSort('status')}>
@@ -204,8 +212,22 @@ const EntityTable: React.FC<EntityTableProps> = ({
                     </span>
                   </div>
                   
+                  {/* Warehouses Count */}
+                  <div className="w-[12%] flex justify-center">
+                    <div className="flex items-center">
+                      <span className="text-sm font-medium text-slate-700 dark:text-dark-text-secondary">
+                        {(entity.warehouses || []).length}
+                      </span>
+                      {(entity.warehouses || []).length > 0 && (
+                        <span className="ml-1 text-xs text-slate-500 dark:text-dark-text-muted">
+                          ({entity.warehouses?.join(', ')})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  
                   {/* Country */}
-                  <div className="w-[15%]">
+                  <div className="w-[13%]">
                     <span className="text-sm text-slate-700 dark:text-dark-text-secondary">
                       {entity.country || 'N/A'}
                     </span>
@@ -233,7 +255,7 @@ const EntityTable: React.FC<EntityTableProps> = ({
                   </div>
                   
                   {/* Actions */}
-                  <div className="w-[7%] flex justify-center gap-1">
+                  <div className="w-[5%] flex justify-center gap-1">
                     <button 
                       className="text-blue-600 dark:text-blue-400 p-1 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-full group relative"
                       onClick={(e) => { 
