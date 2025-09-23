@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { fetchWarehouseStats, deleteWarehouseSupplies, removeWarehouseFromEntity } from '../../utils/api';
+import { fetchWarehouseStats, fetchWarehouseLogs, deleteWarehouseSupplies, removeWarehouseFromEntity, updateEntity } from '../../utils/api';
 import { Entity } from '../../utils/api';
 
 interface WarehouseListModalProps {
@@ -23,11 +23,15 @@ const WarehouseListModal: React.FC<WarehouseListModalProps> = ({
   entity
 }) => {
   const [warehouseStats, setWarehouseStats] = useState<Record<string, WarehouseStats>>({});
+  const [warehouseLogs, setWarehouseLogs] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deletingWarehouse, setDeletingWarehouse] = useState<string | null>(null);
+  const [showCreateWarehouseDialog, setShowCreateWarehouseDialog] = useState(false);
+  const [newWarehouseName, setNewWarehouseName] = useState('');
+  const [creatingWarehouse, setCreatingWarehouse] = useState(false);
 
-  // Fetch only essential warehouse data
+  // Fetch warehouse data including logs for last activity
   const fetchWarehouseData = useCallback(async () => {
     if (!entity || !entity.warehouses || entity.warehouses.length === 0) return;
     
@@ -35,13 +39,20 @@ const WarehouseListModal: React.FC<WarehouseListModalProps> = ({
     setError(null);
     
     try {
-      // Only fetch basic stats, no logs
-      const statsPromises = entity.warehouses.map(async (warehouse) => {
+      // Fetch both stats and logs for last activity
+      const dataPromises = entity.warehouses.map(async (warehouse) => {
         try {
-          const stats = await fetchWarehouseStats(entity.id, warehouse);
-          return { warehouse, stats };
+          const [stats, logs] = await Promise.all([
+            fetchWarehouseStats(entity.id, warehouse),
+            fetchWarehouseLogs(warehouse)
+          ]);
+          return { 
+            warehouse, 
+            stats,
+            logs: logs[0] || null
+          };
         } catch (err) {
-          console.error(`Error fetching stats for warehouse ${warehouse}:`, err);
+          console.error(`Error fetching data for warehouse ${warehouse}:`, err);
           return { 
             warehouse, 
             stats: {
@@ -50,19 +61,25 @@ const WarehouseListModal: React.FC<WarehouseListModalProps> = ({
               totalValue: 0,
               lastActivity: 'Unknown',
               recentUploads: 0
-            }
+            },
+            logs: null
           };
         }
       });
       
-      const results = await Promise.all(statsPromises);
+      const results = await Promise.all(dataPromises);
       const statsMap: Record<string, WarehouseStats> = {};
+      const logsMap: Record<string, any> = {};
       
-      results.forEach(({ warehouse, stats }) => {
+      results.forEach(({ warehouse, stats, logs }) => {
         statsMap[warehouse] = stats;
+        if (logs) {
+          logsMap[warehouse] = logs;
+        }
       });
       
       setWarehouseStats(statsMap);
+      setWarehouseLogs(logsMap);
     } catch (err) {
       console.error('Error fetching warehouse data:', err);
       setError('Failed to fetch warehouse data');
@@ -103,6 +120,45 @@ const WarehouseListModal: React.FC<WarehouseListModalProps> = ({
     }
   };
 
+  // Handle warehouse creation
+  const handleCreateWarehouse = async () => {
+    if (!newWarehouseName.trim()) {
+      setError('Warehouse name is required');
+      return;
+    }
+    if (!entity) {
+      setError('Entity not found');
+      return;
+    }
+    
+    setCreatingWarehouse(true);
+    setError(null);
+    
+    try {
+      const updatedWarehouses = [...(entity.warehouses || []), newWarehouseName.trim()];
+      await updateEntity({
+        entityId: entity.id,
+        entityName: entity.entityName,
+        entityType: entity.entityType,
+        country: entity.country || 'IT',
+        warehouses: updatedWarehouses,
+        notes: entity.notes || '',
+        status: entity.status || 'ACTIVE'
+      });
+      
+      console.log('✅ New warehouse created:', newWarehouseName);
+      await fetchWarehouseData(); // Refresh data
+      setShowCreateWarehouseDialog(false);
+      setNewWarehouseName('');
+      alert(`Warehouse "${newWarehouseName}" has been successfully created.`);
+    } catch (error) {
+      console.error('❌ Error creating warehouse:', error);
+      setError(error instanceof Error ? error.message : 'Failed to create warehouse');
+    } finally {
+      setCreatingWarehouse(false);
+    }
+  };
+
   // Fetch data when modal opens
   useEffect(() => {
     if (isOpen && entity) {
@@ -110,7 +166,20 @@ const WarehouseListModal: React.FC<WarehouseListModalProps> = ({
     }
   }, [isOpen, entity, fetchWarehouseData]);
 
-
+  const formatTimestamp = (timestamp: number) => {
+    try {
+      return new Date(timestamp).toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    } catch {
+      return 'Invalid Date';
+    }
+  };
 
   if (!isOpen || !entity) {
     return null;
@@ -137,14 +206,25 @@ const WarehouseListModal: React.FC<WarehouseListModalProps> = ({
                 Warehouse statistics and management
               </p>
             </div>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => setShowCreateWarehouseDialog(true)}
+                className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                New Warehouse
+              </button>
+              <button
+                onClick={onClose}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           {/* Content */}
@@ -192,6 +272,9 @@ const WarehouseListModal: React.FC<WarehouseListModalProps> = ({
                         Total Value
                       </th>
                       <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Last Activity
+                      </th>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Actions
                       </th>
                     </tr>
@@ -199,6 +282,7 @@ const WarehouseListModal: React.FC<WarehouseListModalProps> = ({
                   <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                     {entity.warehouses?.map((warehouse) => {
                       const stats = warehouseStats[warehouse];
+                      const log = warehouseLogs[warehouse];
                       
                       return (
                         <tr key={warehouse} className="hover:bg-gray-50 dark:hover:bg-gray-800">
@@ -230,6 +314,12 @@ const WarehouseListModal: React.FC<WarehouseListModalProps> = ({
                             </div>
                           </td>
                           
+                          {/* Last Activity */}
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <div className="text-sm text-gray-900 dark:text-white">
+                              {log ? formatTimestamp(log.timestamp) : 'No activity'}
+                            </div>
+                          </td>
                           
                           {/* Actions */}
                           <td className="px-6 py-4 whitespace-nowrap text-center">
@@ -277,6 +367,79 @@ const WarehouseListModal: React.FC<WarehouseListModalProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Create Warehouse Dialog */}
+      {showCreateWarehouseDialog && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75" />
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div className="inline-block align-bottom bg-white dark:bg-dark-bg-card rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+              <div className="bg-white dark:bg-dark-bg-card px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="sm:flex sm:items-start">
+                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                    <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-dark-text-primary" id="modal-title">
+                      Create New Warehouse
+                    </h3>
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-500 dark:text-dark-text-muted">
+                        Add a new warehouse to {entity?.entityName}
+                      </p>
+                    </div>
+
+                    <div className="mt-4">
+                      <div className="space-y-4">
+                        <div>
+                          <label htmlFor="warehouse-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Warehouse Name *
+                          </label>
+                          <input
+                            type="text"
+                            id="warehouse-name"
+                            value={newWarehouseName}
+                            onChange={(e) => setNewWarehouseName(e.target.value)}
+                            placeholder="e.g., WAREHOUSE_3, Main Warehouse, etc."
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                            required
+                          />
+                        </div>
+                        
+                        {error && (
+                          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-3">
+                            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50 dark:bg-dark-bg-secondary px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  onClick={handleCreateWarehouse}
+                  disabled={creatingWarehouse || !newWarehouseName.trim()}
+                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {creatingWarehouse ? 'Creating...' : 'Create Warehouse'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCreateWarehouseDialog(false);
+                    setNewWarehouseName('');
+                    setError(null);
+                  }}
+                  disabled={creatingWarehouse}
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
