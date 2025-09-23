@@ -71,7 +71,7 @@ const CreateEntityModal: React.FC<CreateEntityModalProps> = ({
       // Transform data for backend format
       const backendData = {
         entityName: formData.entityName,
-        entityType: formData.entityType.toLowerCase(), // Convert to lowercase for create
+        entityType: formData.entityType.toLowerCase() as 'supplier' | 'manager' | 'pharmacy' | 'admin', // Convert to lowercase for create
         country: formData.country || 'Italy', // Use full country name
         address: formData.address,
         vatNumber: formData.vatNumber,
