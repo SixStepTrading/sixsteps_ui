@@ -147,7 +147,30 @@ const WarehouseListModal: React.FC<WarehouseListModalProps> = ({
       });
       
       console.log('✅ New warehouse created:', newWarehouseName);
-      await fetchWarehouseData(); // Refresh data
+      
+      // Update entity locally with new warehouse
+      if (entity) {
+        entity.warehouses = updatedWarehouses;
+      }
+      
+      // Add empty stats for the new warehouse
+      setWarehouseStats(prev => ({
+        ...prev,
+        [newWarehouseName.trim()]: {
+          totalProducts: 0,
+          totalStock: 0,
+          totalValue: 0,
+          lastActivity: 'No activity',
+          recentUploads: 0
+        }
+      }));
+      
+      // Add empty log for the new warehouse
+      setWarehouseLogs(prev => ({
+        ...prev,
+        [newWarehouseName.trim()]: null
+      }));
+      
       setShowCreateWarehouseDialog(false);
       setNewWarehouseName('');
       alert(`Warehouse "${newWarehouseName}" has been successfully created.`);
