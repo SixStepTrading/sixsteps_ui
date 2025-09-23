@@ -1092,6 +1092,54 @@ export const fetchWarehouseStats = async (entityId: string, warehouseName: strin
   }
 };
 
+// Delete warehouse supplies
+export const deleteWarehouseSupplies = async (entityId: string, warehouseName: string): Promise<void> => {
+  try {
+    console.log("🗑️ Deleting supplies for warehouse:", { entityId, warehouseName });
+    const response = await sixstepClient.post("/supply/delete-all-for-entity", {
+      entityId: entityId,
+      warehouse: warehouseName
+    });
+    console.log("✅ Warehouse supplies deleted successfully:", response.data);
+  } catch (error) {
+    console.error("❌ Error deleting warehouse supplies:", error);
+    throw error;
+  }
+};
+
+// Remove warehouse from entity
+export const removeWarehouseFromEntity = async (entityId: string, warehouseName: string): Promise<void> => {
+  try {
+    console.log("🏢 Removing warehouse from entity:", { entityId, warehouseName });
+    
+    // First get current entity data
+    const entities = await getAllEntities();
+    const entity = entities.find(e => e.id === entityId);
+    
+    if (!entity) {
+      throw new Error("Entity not found");
+    }
+    
+    // Remove warehouse from the list
+    const updatedWarehouses = (entity.warehouses || []).filter(w => w !== warehouseName);
+    
+    // Update entity with new warehouses list
+    await updateEntity({
+      entityId: entityId,
+      entityName: entity.entityName,
+      entityType: entity.entityType,
+      address: entity.address || '',
+      phone: entity.phone || '',
+      warehouses: updatedWarehouses
+    });
+    
+    console.log("✅ Warehouse removed from entity successfully");
+  } catch (error) {
+    console.error("❌ Error removing warehouse from entity:", error);
+    throw error;
+  }
+};
+
 // Get current user from localStorage
 export const getCurrentUser = (): AuthUser | null => {
   try {

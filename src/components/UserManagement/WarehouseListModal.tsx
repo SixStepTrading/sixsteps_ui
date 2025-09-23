@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { fetchWarehouseLogs, fetchWarehouseStats } from '../../utils/api';
+import { fetchWarehouseLogs, fetchWarehouseStats, deleteWarehouseSupplies, removeWarehouseFromEntity } from '../../utils/api';
 import { Entity } from '../../utils/api';
 
 interface WarehouseListModalProps {
@@ -48,6 +48,7 @@ const WarehouseListModal: React.FC<WarehouseListModalProps> = ({
   const [warehouseStats, setWarehouseStats] = useState<Record<string, WarehouseStats>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deletingWarehouse, setDeletingWarehouse] = useState<string | null>(null);
 
   // Fetch logs and stats for all warehouses
   const fetchAllWarehouseData = useCallback(async () => {
@@ -105,6 +106,38 @@ const WarehouseListModal: React.FC<WarehouseListModalProps> = ({
     }
   }, [entity]);
 
+  // Handle warehouse deletion
+  const handleDeleteWarehouse = async (warehouseName: string) => {
+    if (!entity) return;
+    
+    const confirmed = window.confirm(
+      `Are you sure you want to delete warehouse "${warehouseName}"?\n\nThis will:\n1. Delete all supplies in this warehouse\n2. Remove the warehouse from the entity\n\nThis action cannot be undone.`
+    );
+    
+    if (!confirmed) return;
+    
+    setDeletingWarehouse(warehouseName);
+    setError(null);
+    
+    try {
+      // Step 1: Delete all supplies for this warehouse
+      await deleteWarehouseSupplies(entity.id, warehouseName);
+      
+      // Step 2: Remove warehouse from entity
+      await removeWarehouseFromEntity(entity.id, warehouseName);
+      
+      // Refresh data to reflect changes
+      await fetchAllWarehouseData();
+      
+      alert(`Warehouse "${warehouseName}" has been successfully deleted.`);
+    } catch (error) {
+      console.error('Error deleting warehouse:', error);
+      setError(`Failed to delete warehouse: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setDeletingWarehouse(null);
+    }
+  };
+
   // Fetch data when modal opens
   useEffect(() => {
     if (isOpen && entity) {
@@ -127,35 +160,6 @@ const WarehouseListModal: React.FC<WarehouseListModalProps> = ({
     }
   };
 
-  const getActionColor = (action: string) => {
-    switch (action) {
-      case 'ADMIN_ACTION':
-        return 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400';
-      case 'USER_ACTION':
-        return 'bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400';
-      case 'SYSTEM_ACTION':
-        return 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400';
-      default:
-        return 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400';
-    }
-  };
-
-  const getCustomActionLabel = (customAction: string) => {
-    switch (customAction) {
-      case 'SUPPLY_CSV_UPLOAD_ADMIN':
-        return 'Admin CSV Upload';
-      case 'SUPPLY_CSV_UPLOAD':
-        return 'CSV Upload';
-      case 'SUPPLY_RESET':
-        return 'Supplies Reset';
-      case 'WAREHOUSE_CREATE':
-        return 'Warehouse Created';
-      case 'WAREHOUSE_UPDATE':
-        return 'Warehouse Updated';
-      default:
-        return customAction;
-    }
-  };
 
   if (!isOpen || !entity) {
     return null;
@@ -227,26 +231,20 @@ const WarehouseListModal: React.FC<WarehouseListModalProps> = ({
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Warehouse
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Products
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Total Stock
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Total Value
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Recent Uploads
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Last Activity
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        User
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Action
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Actions
                       </th>
                     </tr>
                   </thead>
@@ -265,83 +263,58 @@ const WarehouseListModal: React.FC<WarehouseListModalProps> = ({
                           </td>
                           
                           {/* Products Count */}
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-1 rounded-full text-sm font-medium">
-                                {stats?.totalProducts || 0}
-                              </div>
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <div className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-3 py-1 rounded-full text-sm font-medium inline-block">
+                              {stats?.totalProducts || 0}
                             </div>
                           </td>
                           
                           {/* Total Stock */}
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-1 rounded-full text-sm font-medium">
-                                {stats?.totalStock || 0}
-                              </div>
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <div className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-3 py-1 rounded-full text-sm font-medium inline-block">
+                              {stats?.totalStock || 0}
                             </div>
                           </td>
                           
                           {/* Total Value */}
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 px-2 py-1 rounded-full text-sm font-medium">
-                                €{stats?.totalValue?.toLocaleString() || '0'}
-                              </div>
-                            </div>
-                          </td>
-                          
-                          {/* Recent Uploads */}
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 px-2 py-1 rounded-full text-sm font-medium">
-                                {stats?.recentUploads || 0}
-                              </div>
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <div className="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 px-3 py-1 rounded-full text-sm font-medium inline-block">
+                              €{stats?.totalValue?.toLocaleString() || '0'}
                             </div>
                           </td>
                           
                           {/* Last Activity */}
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
                             <div className="text-sm text-gray-900 dark:text-white">
                               {log ? formatTimestamp(log.timestamp) : 'No activity'}
                             </div>
                           </td>
                           
-                          {/* User */}
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900 dark:text-white">
-                              {log?.user?.name || log?.user?.email || 'N/A'}
-                            </div>
-                          </td>
-                          
-                          {/* Action */}
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {log ? (
-                              <div className="flex flex-col space-y-1">
-                                <span className={`inline-block py-1 px-2 rounded-full text-xs font-medium ${getActionColor(log.action)}`}>
-                                  {log.action}
-                                </span>
-                                <span className="text-xs text-gray-500 dark:text-gray-400">
-                                  {getCustomActionLabel(log.customAction)}
-                                </span>
-                                {log.uploadResult && (
-                                  <div className="text-xs">
-                                    <span className={log.uploadResult.success ? 'text-green-600' : 'text-red-600'}>
-                                      {log.uploadResult.success ? '✓ Success' : '✗ Failed'}
-                                    </span>
-                                    {log.uploadResult.totalRows && (
-                                      <span className="text-gray-500 dark:text-gray-400 ml-1">
-                                        ({log.uploadResult.processedRows}/{log.uploadResult.totalRows})
-                                      </span>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              <span className="text-sm text-gray-400 dark:text-gray-500">
-                                No activity
-                              </span>
-                            )}
+                          {/* Actions */}
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <button
+                              onClick={() => handleDeleteWarehouse(warehouse)}
+                              disabled={deletingWarehouse === warehouse}
+                              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Delete warehouse"
+                            >
+                              {deletingWarehouse === warehouse ? (
+                                <>
+                                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                  </svg>
+                                  Deleting...
+                                </>
+                              ) : (
+                                <>
+                                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                  Delete
+                                </>
+                              )}
+                            </button>
                           </td>
                         </tr>
                       );
