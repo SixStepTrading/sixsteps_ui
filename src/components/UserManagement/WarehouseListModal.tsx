@@ -19,6 +19,16 @@ interface WarehouseLog {
   metadata: any;
   user: any;
   ip: string;
+  uploadResult?: {
+    success: boolean;
+    message?: string;
+    totalRows?: number;
+    processedRows?: number;
+    created?: number;
+    updated?: number;
+    skipped?: number;
+    uploadId?: string;
+  };
 }
 
 const WarehouseListModal: React.FC<WarehouseListModalProps> = ({
