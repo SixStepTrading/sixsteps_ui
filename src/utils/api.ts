@@ -981,6 +981,27 @@ export const isAuthenticated = (): boolean => {
   return !!(token && user);
 };
 
+// Fetch logs with warehouse filtering
+export const fetchWarehouseLogs = async (warehouseName: string): Promise<any[]> => {
+  try {
+    console.log("🔍 Fetching logs for warehouse:", warehouseName);
+    
+    const response = await sixstepClient.get("/logs/get", {
+      params: {
+        warehouse: warehouseName,
+        sort: JSON.stringify({ timestamp: -1 }),
+        limit: 1 // Get only the most recent log entry
+      }
+    });
+    
+    console.log("✅ Warehouse logs response:", response.data);
+    return response.data.logs || [];
+  } catch (error) {
+    console.error("❌ Error fetching warehouse logs:", error);
+    throw error;
+  }
+};
+
 // Get current user from localStorage
 export const getCurrentUser = (): AuthUser | null => {
   try {

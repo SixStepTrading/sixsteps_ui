@@ -1,6 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { Entity } from '../../utils/api';
 import { SidebarContext } from '../../contexts/SidebarContext';
+import WarehouseListModal from './WarehouseListModal';
 
 interface EntityTableProps {
   entities: Entity[];
@@ -24,6 +25,10 @@ const EntityTable: React.FC<EntityTableProps> = ({
   // Add sort state
   const [sortBy, setSortBy] = useState<string>('entityName');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  
+  // Warehouse modal state
+  const [warehouseModalOpen, setWarehouseModalOpen] = useState(false);
+  const [selectedEntityForWarehouses, setSelectedEntityForWarehouses] = useState<Entity | null>(null);
 
   // Apply sorting
   const sortedEntities = [...entities].sort((a, b) => {
@@ -72,6 +77,20 @@ const EntityTable: React.FC<EntityTableProps> = ({
       setSortBy(column);
       setSortDirection('asc');
     }
+  };
+
+  // Handle warehouse count click
+  const handleWarehouseCountClick = (entity: Entity) => {
+    if ((entity.warehouses || []).length > 1) {
+      setSelectedEntityForWarehouses(entity);
+      setWarehouseModalOpen(true);
+    }
+  };
+
+  // Handle warehouse modal close
+  const handleWarehouseModalClose = () => {
+    setWarehouseModalOpen(false);
+    setSelectedEntityForWarehouses(null);
   };
 
   // Entity type color mapping
@@ -215,9 +234,22 @@ const EntityTable: React.FC<EntityTableProps> = ({
                   {/* Warehouses Count */}
                   <div className="w-[12%] flex justify-center">
                     <div className="flex items-center">
-                      <span className="text-sm font-medium text-slate-700 dark:text-dark-text-secondary">
-                        {(entity.warehouses || []).length}
-                      </span>
+                      {(entity.warehouses || []).length > 1 ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleWarehouseCountClick(entity);
+                          }}
+                          className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline cursor-pointer"
+                          title="Click to view warehouse activity"
+                        >
+                          {(entity.warehouses || []).length}
+                        </button>
+                      ) : (
+                        <span className="text-sm font-medium text-slate-700 dark:text-dark-text-secondary">
+                          {(entity.warehouses || []).length}
+                        </span>
+                      )}
                       {(entity.warehouses || []).length > 0 && (
                         <span className="ml-1 text-xs text-slate-500 dark:text-dark-text-muted">
                           ({entity.warehouses?.join(', ')})
@@ -317,6 +349,13 @@ const EntityTable: React.FC<EntityTableProps> = ({
           )}
         </div>
       </div>
+      
+      {/* Warehouse List Modal */}
+      <WarehouseListModal
+        isOpen={warehouseModalOpen}
+        onClose={handleWarehouseModalClose}
+        entity={selectedEntityForWarehouses}
+      />
     </div>
   );
 };
