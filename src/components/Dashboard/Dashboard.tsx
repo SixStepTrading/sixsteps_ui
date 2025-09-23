@@ -369,18 +369,28 @@ const Dashboard: React.FC = () => {
             }
           }
           
-          // Apply supplier filter - now supporting multi-selection
+          // Apply supplier filter - now supporting warehouse format "Entity | Warehouse"
           if (filterValues.supplier) {
             if (Array.isArray(filterValues.supplier) && filterValues.supplier.length > 0) {
-          filtered = filtered.filter(product => 
-                product.bestPrices.some(price => 
-                  filterValues.supplier.includes(price.supplier)
-                )
+              filtered = filtered.filter(product => 
+                (product.allPrices || product.bestPrices).some(price => {
+                  // Create the same format as in the dropdown: "Entity | Warehouse"
+                  const priceSupplierWithWarehouse = price.warehouse && price.entityName 
+                    ? `${price.entityName} | ${price.warehouse}`
+                    : price.supplier;
+                  return filterValues.supplier.includes(priceSupplierWithWarehouse);
+                })
               );
             } else if (typeof filterValues.supplier === 'string' && filterValues.supplier !== '') {
               // Backward compatibility for single selection
               filtered = filtered.filter(product => 
-                product.bestPrices.some(price => price.supplier === filterValues.supplier)
+                (product.allPrices || product.bestPrices).some(price => {
+                  // Create the same format as in the dropdown: "Entity | Warehouse"
+                  const priceSupplierWithWarehouse = price.warehouse && price.entityName 
+                    ? `${price.entityName} | ${price.warehouse}`
+                    : price.supplier;
+                  return priceSupplierWithWarehouse === filterValues.supplier;
+                })
               );
             }
           }
@@ -779,39 +789,50 @@ const Dashboard: React.FC = () => {
     setError(null);
   };
 
-  const handleRefresh = () => {
-    // Reset filter values to default state
-    setFilterValues({
-      searchTerm: '',
-      category: '',
-      manufacturer: '',
-      supplier: '',
-      onlyAvailableStock: true // Keep ON BY DEFAULT even after refresh
-    });
+  const handleRefresh = async () => {
+    // Set loading state
+    setLoading(true);
+    setError(null);
     
-    // Clear selected products
-    setSelected([]);
-    
-    // Reset pagination
-    setPage(0);
-    
-    // Reset products quantities
-    setProducts(prev => prev.map(product => ({
-      ...product,
-      quantity: 0,
-      averagePrice: null,
-      targetPrice: null,
-      showAllPrices: false
-    })));
-    
-    // Trigger ProductTable filter reset
-    setResetFilters(prev => prev + 1);
-    
-    // No need to reload data - the useEffect will handle re-filtering automatically
-    // when filterValues change
-    
-    // Show confirmation toast
-    showToast('Filtri e selezioni resettati', 'info');
+    try {
+      // Reset filter values to default state
+      setFilterValues({
+        searchTerm: '',
+        category: '',
+        manufacturer: '',
+        supplier: '',
+        onlyAvailableStock: true // Keep ON BY DEFAULT even after refresh
+      });
+      
+      // Clear selected products
+      setSelected([]);
+      
+      // Reset pagination
+      setPage(0);
+      
+      // Reset products quantities
+      setProducts(prev => prev.map(product => ({
+        ...product,
+        quantity: 0,
+        averagePrice: null,
+        targetPrice: null,
+        showAllPrices: false
+      })));
+      
+      // Trigger ProductTable filter reset
+      setResetFilters(prev => prev + 1);
+      
+      // Reload products from API
+      await loadProducts(true);
+      
+      // Show confirmation toast
+      showToast('Prodotti aggiornati e filtri resettati', 'success');
+    } catch (error) {
+      console.error('Error refreshing products:', error);
+      showToast('Errore durante l\'aggiornamento dei prodotti', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Get the total quantity of selected products

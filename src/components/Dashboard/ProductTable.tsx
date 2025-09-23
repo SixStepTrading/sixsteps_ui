@@ -119,7 +119,7 @@ const PriceModal: React.FC<PriceModalProps> = ({ isOpen, onClose, product, userR
                                 {price.originalPrices?.map((originalPrice, idx) => (
                                   <div key={idx} className="flex justify-between">
                                     <span>Stock: {originalPrice.stock}</span>
-                                    <span>| {originalPrice.supplier}</span>
+                                    <span>| {originalPrice.warehouse && originalPrice.entityName ? `${originalPrice.warehouse} - ${originalPrice.entityName}` : originalPrice.supplier}</span>
                                   </div>
                                 )) || price.suppliers?.map((supplier, idx) => (
                                   <div key={idx} className="flex justify-between">
@@ -135,7 +135,7 @@ const PriceModal: React.FC<PriceModalProps> = ({ isOpen, onClose, product, userR
                           ) : (
                             <div>
                               <span>Stock: {price.stock}</span>
-                              <span className="ml-2">| {price.supplier}</span>
+                              <span className="ml-2">| {price.warehouse && price.entityName ? `${price.warehouse} - ${price.entityName}` : price.supplier}</span>
                             </div>
                           )}
                         </div>
@@ -145,7 +145,9 @@ const PriceModal: React.FC<PriceModalProps> = ({ isOpen, onClose, product, userR
                           <span className="text-gray-600 dark:text-dark-text-muted">
                             {price.suppliers && price.suppliers.length > 1 
                               ? `from ${price.suppliers.length} suppliers`
-                              : 'from 1 supplier'
+                              : price.warehouse && price.entityName 
+                                ? `${price.warehouse} - ${price.entityName}`
+                                : 'from 1 supplier'
                             }
                           </span>
                         </div>
@@ -549,7 +551,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
 
             {onRefresh && (
             <Tooltip 
-              text="Reset all filters, clear product selections, and refresh the product list to its default state."
+              text="Reset all filters, clear product selections, and refresh the product list from the database."
               position="top"
             >
               <button 

@@ -1,13 +1,22 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Box,
   Button,
   Typography,
   Alert,
-  LinearProgress
+  LinearProgress,
+  FormControl,
+  Select,
+  MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField
 } from '@mui/material';
-import { uploadSuppliesCSV } from '../../../utils/api';
+import { uploadSuppliesCSV, getCurrentUserEntity, updateEntity, Entity } from '../../../utils/api';
 import { useUploadProgress } from '../../../hooks';
+import { useUser } from '../../../contexts/UserContext';
 import { ModernDialog, FileUploadArea, ColumnMappingTable, DataPreviewTable } from './upload';
 import * as XLSX from 'xlsx';
 
@@ -27,6 +36,8 @@ const SupplierStockUploadModal: React.FC<SupplierStockUploadModalProps> = ({
   onClose,
   onSuccess
 }) => {
+  const { user } = useUser();
+  
   // State variables
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -36,11 +47,85 @@ const SupplierStockUploadModal: React.FC<SupplierStockUploadModalProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
   
+  // Warehouse selection states
+  const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
+  const [userEntity, setUserEntity] = useState<Entity | null>(null);
+  const [loadingEntity, setLoadingEntity] = useState(false);
+  
+  // Warehouse creation states
+  const [showCreateWarehouseDialog, setShowCreateWarehouseDialog] = useState(false);
+  const [newWarehouseName, setNewWarehouseName] = useState('');
+  const [creatingWarehouse, setCreatingWarehouse] = useState(false);
+  
   // Stepper configuration
-  const steps = ['Upload File', 'Map Columns', 'Preview & Upload'];
+  const steps = ['Select Warehouse', 'Upload File', 'Map Columns', 'Preview & Upload'];
   
   // References
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch user entity from API
+  const fetchUserEntity = useCallback(async () => {
+    setLoadingEntity(true);
+    setFileError(null);
+    
+    try {
+      console.log('🔍 Fetching current user entity...');
+      const currentUserEntity = await getCurrentUserEntity();
+      
+      setUserEntity(currentUserEntity);
+      console.log('✅ User entity found:', currentUserEntity);
+    } catch (error) {
+      console.error('❌ Error fetching user entity:', error);
+      setFileError('Failed to load entity information. Please try again.');
+    } finally {
+      setLoadingEntity(false);
+    }
+  }, []);
+
+  // Fetch user entity on component mount
+  useEffect(() => {
+    if (open) {
+      fetchUserEntity();
+    }
+  }, [open, fetchUserEntity]);
+
+  // Handle warehouse creation
+  const handleCreateWarehouse = async () => {
+    if (!newWarehouseName.trim()) {
+      setFileError('Warehouse name is required');
+      return;
+    }
+    if (!userEntity) {
+      setFileError('Please select an entity first');
+      return;
+    }
+    
+    setCreatingWarehouse(true);
+    setFileError(null);
+    
+    try {
+      const updatedWarehouses = [...(userEntity.warehouses || []), newWarehouseName.trim()];
+      await updateEntity({
+        entityId: userEntity.id,
+        entityName: userEntity.entityName,
+        entityType: userEntity.entityType,
+        address: userEntity.address || '',
+        phone: userEntity.phone || '',
+        warehouses: updatedWarehouses
+      });
+      
+      console.log('✅ New warehouse created:', newWarehouseName);
+      await fetchUserEntity();
+      setSelectedWarehouse(newWarehouseName.trim());
+      setShowCreateWarehouseDialog(false);
+      setNewWarehouseName('');
+    } catch (error) {
+      console.error('❌ Error creating warehouse:', error);
+      setFileError(error instanceof Error ? error.message : 'Failed to create warehouse');
+    } finally {
+      setCreatingWarehouse(false);
+    }
+  };
 
   // Upload progress tracking
   const uploadProgress = useUploadProgress({
@@ -61,10 +146,12 @@ const SupplierStockUploadModal: React.FC<SupplierStockUploadModalProps> = ({
 
   // Step navigation handlers
   const handleNext = () => {
-    if (activeStep === 0 && selectedFile) {
+    if (activeStep === 0 && selectedWarehouse) {
       setActiveStep(1);
-    } else if (activeStep === 1 && Object.keys(mappedFields).length > 0) {
+    } else if (activeStep === 1 && selectedFile) {
       setActiveStep(2);
+    } else if (activeStep === 2 && Object.keys(mappedFields).length > 0) {
+      setActiveStep(3);
     }
   };
   
@@ -73,8 +160,9 @@ const SupplierStockUploadModal: React.FC<SupplierStockUploadModalProps> = ({
   };
   
   const canProceed = () => {
-    if (activeStep === 0) return selectedFile !== null;
-    if (activeStep === 1) return Object.keys(mappedFields).filter(key => mappedFields[key]).length > 0;
+    if (activeStep === 0) return selectedWarehouse !== '';
+    if (activeStep === 1) return selectedFile !== null;
+    if (activeStep === 2) return Object.keys(mappedFields).filter(key => mappedFields[key]).length > 0;
     return true;
   };
 
@@ -277,7 +365,8 @@ const SupplierStockUploadModal: React.FC<SupplierStockUploadModalProps> = ({
       { value: 'currency', label: 'Currency' },
       { value: 'quantity', label: 'Stock Quantity' },
       { value: 'unit', label: 'Unit of Measurement' },
-      { value: 'notes', label: 'Stock Notes' }
+      { value: 'notes', label: 'Stock Notes' },
+      { value: 'warehouse', label: 'Warehouse (auto-filled)' }
     ];
   };
 
@@ -293,12 +382,12 @@ const SupplierStockUploadModal: React.FC<SupplierStockUploadModalProps> = ({
   };
 
   const downloadTemplate = () => {
-    // Template with exact headers that backend expects: sku;price;vat;currency;quantity;unit;notes
+    // Template with exact headers that backend expects: sku;price;vat;currency;quantity;unit;notes;warehouse
     const templateData = [
-      ['sku', 'price', 'vat', 'currency', 'quantity', 'unit', 'notes'],
-      ['935621793', '19.90', '10', 'EUR', '50', 'pcs', 'Stock disponibile'],
-      ['909125460', '39.90', '22', 'EUR', '25', 'pcs', 'Riordino necessario'],
-      ['902603303', '24.50', '10', 'EUR', '100', 'pcs', 'Scorte elevate']
+      ['sku', 'price', 'vat', 'currency', 'quantity', 'unit', 'notes', 'warehouse'],
+      ['935621793', '19.90', '10', 'EUR', '50', 'pcs', 'Stock disponibile', 'WAREHOUSE_1'],
+      ['909125460', '39.90', '22', 'EUR', '25', 'pcs', 'Riordino necessario', 'WAREHOUSE_1'],
+      ['902603303', '24.50', '10', 'EUR', '100', 'pcs', 'Scorte elevate', 'WAREHOUSE_1']
     ];
     
     const csvContent = templateData.map(row => row.join(';')).join('\n');
@@ -312,7 +401,7 @@ const SupplierStockUploadModal: React.FC<SupplierStockUploadModalProps> = ({
   };
 
   const handleUpload = async () => {
-    if (!selectedFile || !filePreview) return;
+    if (!selectedFile || !filePreview || !user?.id) return;
     
     setIsProcessing(true);
     setFileError(null);
@@ -321,11 +410,8 @@ const SupplierStockUploadModal: React.FC<SupplierStockUploadModalProps> = ({
       // Transform file with correct columns
       const transformedFile = await transformFileWithCorrectColumns(selectedFile, mappedFields);
       
-      // Upload the transformed file
-      const formData = new FormData();
-      formData.append('file', transformedFile, selectedFile.name);
-      
-      const response = await uploadSuppliesCSV(transformedFile, mappedFields);
+      // Upload the transformed file with user entity ID and selected warehouse
+      const response = await uploadSuppliesCSV(transformedFile, mappedFields, user.id, selectedWarehouse);
       
       if (response.success) {
         onSuccess?.();
@@ -387,10 +473,16 @@ const SupplierStockUploadModal: React.FC<SupplierStockUploadModalProps> = ({
           if (headerIndex !== -1 && originalRow[headerIndex] !== undefined) {
             newRow[targetField] = originalRow[headerIndex];
             console.log(`🔍 Mapped "${originalHeader}" -> "${targetField}": ${originalRow[headerIndex]}`);
-      } else {
+          } else {
             console.log(`⚠️ Could not find header "${originalHeader}" in headers:`, fileData.headers);
           }
         });
+        
+        // Add warehouse column automatically with selected warehouse value
+        if (selectedWarehouse) {
+          newRow.warehouse = selectedWarehouse;
+          console.log(`🏢 Added warehouse "${selectedWarehouse}" to row ${rowIndex + 1}`);
+        }
         
         // Log first few rows for debugging
         if (rowIndex < 3) {
@@ -424,6 +516,10 @@ const SupplierStockUploadModal: React.FC<SupplierStockUploadModalProps> = ({
     setMappedFields({});
     setIsProcessing(false);
     setActiveStep(0);
+    setSelectedWarehouse('');
+    setUserEntity(null);
+    setShowCreateWarehouseDialog(false);
+    setNewWarehouseName('');
     onClose();
   };
 
@@ -457,7 +553,7 @@ const SupplierStockUploadModal: React.FC<SupplierStockUploadModalProps> = ({
         </Button>
       )}
       
-      {activeStep < 2 ? (
+      {activeStep < 3 ? (
         <Button 
           variant="contained" 
           color="primary"
@@ -519,8 +615,116 @@ const SupplierStockUploadModal: React.FC<SupplierStockUploadModalProps> = ({
         activeStep={activeStep}
         actions={dialogActions}
       >
-        {/* Step 0: Upload File */}
+        {/* Step 0: Select Warehouse */}
         {activeStep === 0 && (
+          <Box sx={{ py: 1 }}>
+            <Typography variant="h6" sx={{ mb: 1, fontSize: '1.1rem' }}>
+              Select Warehouse
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontSize: '0.875rem' }}>
+              Choose the warehouse where you want to upload your stock levels
+            </Typography>
+            
+            {loadingEntity ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+                <LinearProgress sx={{ width: '100%' }} />
+              </Box>
+            ) : userEntity ? (
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="subtitle2" sx={{ mb: 1, fontSize: '0.9rem', fontWeight: 600 }}>
+                  Warehouse
+                </Typography>
+                <FormControl fullWidth size="small">
+                  <Select
+                    value={selectedWarehouse}
+                    onChange={(e) => setSelectedWarehouse(e.target.value)}
+                    displayEmpty
+                    sx={{ borderRadius: 1.5 }}
+                  >
+                    <MenuItem value="" disabled>
+                      <em>Select a warehouse</em>
+                    </MenuItem>
+                    {userEntity.warehouses?.map((warehouse) => (
+                      <MenuItem key={warehouse} value={warehouse}>
+                        {warehouse}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                
+                {/* Create New Warehouse Button */}
+                <Box sx={{ mt: 1 }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => setShowCreateWarehouseDialog(true)}
+                    sx={{
+                      borderRadius: 1.5,
+                      textTransform: 'none',
+                      fontWeight: 500,
+                      px: 2,
+                      py: 0.5,
+                      fontSize: '0.875rem'
+                    }}
+                  >
+                    + Create New Warehouse
+                  </Button>
+                </Box>
+              </Box>
+            ) : (
+              <Alert severity="error" sx={{ mt: 2 }}>
+                Unable to load your entity information. Please contact support.
+              </Alert>
+            )}
+            
+            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1.5, mt: 2 }}>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => {
+                  setSelectedWarehouse('');
+                  setFileError(null);
+                }}
+                sx={{
+                  borderRadius: 1.5,
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  px: 2,
+                  py: 0.5,
+                  fontSize: '0.875rem'
+                }}
+              >
+                Reset
+              </Button>
+              
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={fetchUserEntity}
+                disabled={loadingEntity}
+                sx={{
+                  borderRadius: 1.5,
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  px: 2,
+                  py: 0.5,
+                  fontSize: '0.875rem'
+                }}
+              >
+                Refresh
+              </Button>
+            </Box>
+            
+            {fileError && (
+              <Alert severity="error" sx={{ mt: 2 }}>
+                {fileError}
+              </Alert>
+            )}
+          </Box>
+        )}
+
+        {/* Step 1: Upload File */}
+        {activeStep === 1 && (
           <>
             <FileUploadArea
               selectedFile={selectedFile}
@@ -544,8 +748,8 @@ const SupplierStockUploadModal: React.FC<SupplierStockUploadModalProps> = ({
           </>
         )}
 
-        {/* Step 1: Map Columns */}
-        {activeStep === 1 && filePreview && (
+        {/* Step 2: Map Columns */}
+        {activeStep === 2 && filePreview && (
           <>
             <ColumnMappingTable
               headers={filePreview.headers}
@@ -565,8 +769,8 @@ const SupplierStockUploadModal: React.FC<SupplierStockUploadModalProps> = ({
           </>
         )}
 
-        {/* Step 2: Preview & Upload */}
-        {activeStep === 2 && filePreview && (
+        {/* Step 3: Preview & Upload */}
+        {activeStep === 3 && filePreview && (
           <>
             <DataPreviewTable
               headers={filePreview.headers}
@@ -593,6 +797,69 @@ const SupplierStockUploadModal: React.FC<SupplierStockUploadModalProps> = ({
           </>
         )}
       </ModernDialog>
+
+      {/* Create New Warehouse Dialog */}
+      <Dialog
+        open={showCreateWarehouseDialog}
+        onClose={() => {
+          setShowCreateWarehouseDialog(false);
+          setNewWarehouseName('');
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ pb: 1, fontSize: '1.1rem' }}>Create New Warehouse</DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            <TextField
+              fullWidth
+              size="small"
+              label="Warehouse Name *"
+              value={newWarehouseName}
+              onChange={(e) => setNewWarehouseName(e.target.value)}
+              placeholder="e.g., WAREHOUSE_1, Main Warehouse, etc."
+              required
+            />
+            
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+              This warehouse will be added to your entity: <strong>{userEntity?.entityName}</strong>
+            </Typography>
+          </Box>
+          
+          {fileError && (
+            <Alert severity="error" sx={{ mt: 1.5, py: 1 }}>
+              {fileError}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ pt: 1, pb: 2 }}>
+          <Button
+            size="small"
+            onClick={() => {
+              setShowCreateWarehouseDialog(false);
+              setNewWarehouseName('');
+            }}
+            disabled={creatingWarehouse}
+            sx={{ textTransform: 'none' }}
+          >
+            Cancel
+          </Button>
+          <Button
+            size="small"
+            onClick={handleCreateWarehouse}
+            variant="contained"
+            disabled={creatingWarehouse || !newWarehouseName.trim()}
+            sx={{
+              borderRadius: 1.5,
+              textTransform: 'none',
+              fontWeight: 600,
+              px: 3
+            }}
+          >
+            {creatingWarehouse ? 'Creating...' : 'Create Warehouse'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 };

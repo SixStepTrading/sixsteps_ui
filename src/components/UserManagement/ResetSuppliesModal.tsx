@@ -19,11 +19,17 @@ const ResetSuppliesModal: React.FC<ResetSuppliesModalProps> = ({
   const [resetting, setResetting] = useState(false);
   const [confirmationChecked, setConfirmationChecked] = useState(false);
   const [confirmationText, setConfirmationText] = useState('');
+  const [selectedWarehouses, setSelectedWarehouses] = useState<string[]>([]);
 
   const expectedConfirmationText = 'RESET';
 
   const handleReset = async () => {
     if (!entity) return;
+    
+    if (selectedWarehouses.length === 0) {
+      showToast('Please select at least one warehouse', 'warning');
+      return;
+    }
     
     if (!confirmationChecked) {
       showToast('Please check the confirmation checkbox', 'warning');
@@ -38,8 +44,16 @@ const ResetSuppliesModal: React.FC<ResetSuppliesModalProps> = ({
     try {
       setResetting(true);
       
-      await resetEntitySupplies(entity.id);
-      showToast(`Supplies for ${entity.entityName} reset successfully!`, 'success');
+      // Reset supplies for each selected warehouse
+      for (const warehouse of selectedWarehouses) {
+        await resetEntitySupplies(entity.id, warehouse);
+      }
+      
+      const warehouseText = selectedWarehouses.length === 1 
+        ? `warehouse ${selectedWarehouses[0]}` 
+        : `${selectedWarehouses.length} warehouses`;
+      
+      showToast(`Supplies for ${entity.entityName} (${warehouseText}) reset successfully!`, 'success');
       onSuppliesReset();
       handleClose();
     } catch (error: any) {
@@ -53,10 +67,11 @@ const ResetSuppliesModal: React.FC<ResetSuppliesModalProps> = ({
   const handleClose = () => {
     setConfirmationChecked(false);
     setConfirmationText('');
+    setSelectedWarehouses([]);
     onClose();
   };
 
-  const canReset = confirmationChecked && confirmationText.trim() === expectedConfirmationText;
+  const canReset = confirmationChecked && confirmationText.trim() === expectedConfirmationText && selectedWarehouses.length > 0;
 
   if (!isOpen || !entity) {
     return null;
@@ -140,6 +155,65 @@ const ResetSuppliesModal: React.FC<ResetSuppliesModalProps> = ({
                 </div>
               </div>
             </div>
+
+            {/* Warehouse Selection */}
+            {entity.warehouses && entity.warehouses.length > 0 && (
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg mb-6">
+                <h5 className="text-sm font-medium text-blue-900 dark:text-blue-200 mb-3">
+                  Select Warehouses to Reset:
+                </h5>
+                <p className="text-sm text-blue-700 dark:text-blue-300 mb-4">
+                  Choose which warehouses you want to reset supplies for. You can select multiple warehouses.
+                </p>
+                <div className="space-y-2">
+                  {entity.warehouses.map((warehouse) => (
+                    <label key={warehouse} className="flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedWarehouses.includes(warehouse)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedWarehouses(prev => [...prev, warehouse]);
+                          } else {
+                            setSelectedWarehouses(prev => prev.filter(w => w !== warehouse));
+                          }
+                        }}
+                        disabled={resetting}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded"
+                      />
+                      <span className="ml-3 text-sm text-blue-900 dark:text-blue-200 font-medium">
+                        {warehouse}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                {selectedWarehouses.length === 0 && (
+                  <p className="text-sm text-red-600 dark:text-red-400 mt-2">
+                    Please select at least one warehouse
+                  </p>
+                )}
+              </div>
+            )}
+
+            {(!entity.warehouses || entity.warehouses.length === 0) && (
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg mb-6">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                      No Warehouses Found
+                    </h4>
+                    <p className="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
+                      This entity has no warehouses configured. You cannot reset supplies without warehouses.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Confirmation Steps */}
             <div className="space-y-4">

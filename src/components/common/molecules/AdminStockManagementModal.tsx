@@ -15,7 +15,7 @@ import {
   Select,
   MenuItem
 } from '@mui/material';
-import { uploadSuppliesAdminCSV, getAllEntities, createEntity, Entity } from '../../../utils/api';
+import { uploadSuppliesAdminCSV, getAllEntities, createEntity, updateEntity, Entity } from '../../../utils/api';
 import { useUploadProgress } from '../../../hooks';
 import { ModernDialog, FileUploadArea, ColumnMappingTable, DataPreviewTable } from './upload';
 import SearchableDropdown from './SearchableDropdown';
@@ -46,6 +46,7 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
   const [selectedSupplier, setSelectedSupplier] = useState<string>('');
+  const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
   const [entities, setEntities] = useState<Entity[]>([]);
   const [loadingEntities, setLoadingEntities] = useState(false);
   
@@ -63,8 +64,13 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
   });
   const [creatingEntity, setCreatingEntity] = useState(false);
   
+  // Warehouse creation states
+  const [showCreateWarehouseDialog, setShowCreateWarehouseDialog] = useState(false);
+  const [newWarehouseName, setNewWarehouseName] = useState('');
+  const [creatingWarehouse, setCreatingWarehouse] = useState(false);
+  
   // Stepper configuration
-  const steps = ['Select Supplier', 'Upload File', 'Map Columns', 'Preview & Upload'];
+  const steps = ['Select Entity & Warehouse', 'Upload File', 'Map Columns', 'Preview & Upload'];
   
   // References
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -153,6 +159,60 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
     setFileError(null);
   };
 
+  // Handle new warehouse creation
+  const handleCreateWarehouse = async () => {
+    if (!newWarehouseName.trim()) {
+      setFileError('Warehouse name is required');
+      return;
+    }
+
+    if (!selectedSupplier) {
+      setFileError('Please select an entity first');
+      return;
+    }
+
+    setCreatingWarehouse(true);
+    setFileError(null);
+
+    try {
+      const selectedEntity = entities.find(e => e.id === selectedSupplier);
+      if (!selectedEntity) {
+        throw new Error('Selected entity not found');
+      }
+
+      // Add new warehouse to existing warehouses
+      const updatedWarehouses = [...(selectedEntity.warehouses || []), newWarehouseName.trim()];
+      
+      // Update entity with new warehouse
+      await updateEntity({
+        entityId: selectedSupplier,
+        entityName: selectedEntity.entityName,
+        entityType: selectedEntity.entityType,
+        address: selectedEntity.address || '',
+        phone: selectedEntity.phone || '',
+        warehouses: updatedWarehouses
+      });
+      
+      console.log('✅ New warehouse created:', newWarehouseName);
+      
+      // Refresh entities list
+      await fetchEntities();
+      
+      // Select the newly created warehouse
+      setSelectedWarehouse(newWarehouseName.trim());
+      
+      // Close dialog and reset form
+      setShowCreateWarehouseDialog(false);
+      setNewWarehouseName('');
+      
+    } catch (error) {
+      console.error('❌ Error creating warehouse:', error);
+      setFileError(error instanceof Error ? error.message : 'Failed to create warehouse');
+    } finally {
+      setCreatingWarehouse(false);
+    }
+  };
+
   // Upload progress tracking
   const uploadProgress = useUploadProgress({
     onComplete: (result: any) => {
@@ -172,7 +232,7 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
 
   // Step navigation handlers
   const handleNext = () => {
-    if (activeStep === 0 && selectedSupplier) {
+    if (activeStep === 0 && selectedSupplier && selectedWarehouse) {
       setActiveStep(1);
     } else if (activeStep === 1 && selectedFile) {
       setActiveStep(2);
@@ -186,7 +246,7 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
   };
   
   const canProceed = () => {
-    if (activeStep === 0) return selectedSupplier !== '';
+    if (activeStep === 0) return selectedSupplier !== '' && selectedWarehouse !== '';
     if (activeStep === 1) return selectedFile !== null;
     if (activeStep === 2) return Object.keys(mappedFields).filter(key => mappedFields[key]).length > 0;
     return true;
@@ -269,6 +329,8 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
           newMapping[header] = 'notes';
         } else if (lowerHeader.includes('supplier') && (lowerHeader.includes('id') || lowerHeader.includes('code'))) {
           newMapping[header] = 'supplierId';
+        } else if (lowerHeader.includes('warehouse') || lowerHeader.includes('magazzino') || lowerHeader.includes('deposito')) {
+          newMapping[header] = 'warehouse';
         }
       });
       
@@ -378,6 +440,9 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
       } else if (lowerHeader.includes('supplier') && (lowerHeader.includes('id') || lowerHeader.includes('code'))) {
         newMapping[header] = 'supplierId';
         console.log(`✅ Mapped "${header}" → supplierId`);
+      } else if (lowerHeader.includes('warehouse') || lowerHeader.includes('magazzino') || lowerHeader.includes('deposito')) {
+        newMapping[header] = 'warehouse';
+        console.log(`✅ Mapped "${header}" → warehouse`);
       } else {
         console.log(`❌ No mapping found for "${header}"`);
       }
@@ -397,7 +462,8 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
       { value: 'quantity', label: 'Stock Quantity' },
       { value: 'unit', label: 'Unit of Measurement' },
       { value: 'notes', label: 'Stock Notes' },
-      { value: 'supplierId', label: 'Supplier ID' }
+      { value: 'supplierId', label: 'Supplier ID' },
+      { value: 'warehouse', label: 'Warehouse (auto-filled)' }
     ];
   };
 
@@ -413,13 +479,13 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
   };
 
   const downloadTemplate = () => {
-    // Template with exact headers that backend expects: sku;price;vat;currency;quantity;unit;notes
+    // Template with exact headers that backend expects: sku;price;vat;currency;quantity;unit;notes;warehouse
     // Admin version includes supplierId for multi-supplier management
     const templateData = [
-      ['sku', 'price', 'vat', 'currency', 'quantity', 'unit', 'notes', 'supplierId'],
-      ['935621793', '19.90', '10', 'EUR', '50', 'pcs', 'Stock disponibile', 'SUPPLIER_001'],
-      ['909125460', '39.90', '22', 'EUR', '25', 'pcs', 'Riordino necessario', 'SUPPLIER_002'],
-      ['902603303', '24.50', '10', 'EUR', '100', 'pcs', 'Scorte elevate', 'SUPPLIER_001']
+      ['sku', 'price', 'vat', 'currency', 'quantity', 'unit', 'notes', 'supplierId', 'warehouse'],
+      ['935621793', '19.90', '10', 'EUR', '50', 'pcs', 'Stock disponibile', 'SUPPLIER_001', 'WAREHOUSE_1'],
+      ['909125460', '39.90', '22', 'EUR', '25', 'pcs', 'Riordino necessario', 'SUPPLIER_002', 'WAREHOUSE_1'],
+      ['902603303', '24.50', '10', 'EUR', '100', 'pcs', 'Scorte elevate', 'SUPPLIER_001', 'WAREHOUSE_1']
     ];
     
     const csvContent = templateData.map(row => row.join(';')).join('\n');
@@ -442,8 +508,8 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
       // Transform file with correct columns
       const transformedFile = await transformFileWithCorrectColumns(selectedFile, mappedFields);
       
-      // Upload the transformed file with entityId
-      const response = await uploadSuppliesAdminCSV(transformedFile, mappedFields, selectedSupplier);
+      // Upload the transformed file with entityId and warehouse
+      const response = await uploadSuppliesAdminCSV(transformedFile, mappedFields, selectedSupplier, selectedWarehouse);
       
       if (response.success) {
         onSuccess?.();
@@ -494,6 +560,7 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
       console.log('🔍 File data headers:', fileData.headers);
       console.log('🔍 Column mapping:', columnMapping);
       console.log('🔍 First few rows of original data:', fileData.rows.slice(0, 3));
+      console.log('🏢 Selected warehouse for all rows:', selectedWarehouse);
       
       const newRows = fileData.rows.map((originalRow, rowIndex) => {
         const newRow: Record<string, any> = {};
@@ -509,6 +576,12 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
             console.log(`⚠️ Could not find header "${originalHeader}" in headers:`, fileData.headers);
           }
         });
+        
+        // Add warehouse column automatically with selected warehouse value
+        if (selectedWarehouse) {
+          newRow.warehouse = selectedWarehouse;
+          console.log(`🏢 Added warehouse "${selectedWarehouse}" to row ${rowIndex + 1}`);
+        }
         
         // Log first few rows for debugging
         if (rowIndex < 3) {
@@ -543,8 +616,11 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
     setIsProcessing(false);
     setActiveStep(0);
     setSelectedSupplier('');
+    setSelectedWarehouse('');
     setEntities([]);
     setShowCreateEntityDialog(false);
+    setShowCreateWarehouseDialog(false);
+    setNewWarehouseName('');
     resetNewEntityForm();
     onClose();
   };
@@ -642,39 +718,95 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
         activeStep={activeStep}
         actions={dialogActions}
       >
-        {/* Step 0: Select Supplier */}
+        {/* Step 0: Select Entity & Warehouse */}
         {activeStep === 0 && (
           <Box sx={{ py: 1 }}>
             <Typography variant="h6" sx={{ mb: 1, fontSize: '1.1rem' }}>
-              Select Supplier
+              Select Entity & Warehouse
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontSize: '0.875rem' }}>
-              Choose the supplier whose stock you want to manage
+              Choose the entity and warehouse whose stock you want to manage
             </Typography>
             
-            <SearchableDropdown
-              options={entities
-                .filter(entity => 
-                  (entity.entityType === 'SUPPLIER' || 
-                   entity.entityType === 'MANAGER' || 
-                   entity.entityType === 'PHARMACY' ||
-                   entity.entityType === 'company') &&
-                  (entity.status === 'ACTIVE' || !entity.status)
-                )
-                .map(entity => ({
-                  id: entity.id,
-                  name: entity.entityName,
-                  type: entity.entityType,
-                  country: entity.country,
-                  status: entity.status
-                }))
-              }
-              selectedId={selectedSupplier}
-              onSelect={setSelectedSupplier}
-              placeholder="Select a supplier"
-              searchPlaceholder="Search suppliers..."
-              loading={loadingEntities}
-            />
+            {/* Entity Selection */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="subtitle2" sx={{ mb: 1, fontSize: '0.9rem', fontWeight: 600 }}>
+                Entity
+              </Typography>
+              <SearchableDropdown
+                options={entities
+                  .filter(entity => 
+                    (entity.entityType === 'SUPPLIER' || 
+                     entity.entityType === 'MANAGER' || 
+                     entity.entityType === 'PHARMACY' ||
+                     entity.entityType === 'company') &&
+                    (entity.status === 'ACTIVE' || !entity.status)
+                  )
+                  .map(entity => ({
+                    id: entity.id,
+                    name: entity.entityName,
+                    type: entity.entityType,
+                    country: entity.country,
+                    status: entity.status
+                  }))
+                }
+                selectedId={selectedSupplier}
+                onSelect={(id) => {
+                  setSelectedSupplier(id);
+                  setSelectedWarehouse(''); // Reset warehouse when entity changes
+                }}
+                placeholder="Select an entity"
+                searchPlaceholder="Search entities..."
+                loading={loadingEntities}
+              />
+            </Box>
+
+            {/* Warehouse Selection */}
+            {selectedSupplier && (
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="subtitle2" sx={{ mb: 1, fontSize: '0.9rem', fontWeight: 600 }}>
+                  Warehouse
+                </Typography>
+                <FormControl fullWidth size="small">
+                  <Select
+                    value={selectedWarehouse}
+                    onChange={(e) => setSelectedWarehouse(e.target.value)}
+                    displayEmpty
+                    sx={{ borderRadius: 1.5 }}
+                  >
+                    <MenuItem value="" disabled>
+                      <em>Select a warehouse</em>
+                    </MenuItem>
+                    {entities
+                      .find(e => e.id === selectedSupplier)
+                      ?.warehouses?.map((warehouse) => (
+                        <MenuItem key={warehouse} value={warehouse}>
+                          {warehouse}
+                        </MenuItem>
+                      ))}
+                  </Select>
+                </FormControl>
+                
+                {/* Create New Warehouse Button */}
+                <Box sx={{ mt: 1 }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => setShowCreateWarehouseDialog(true)}
+                    sx={{
+                      borderRadius: 1.5,
+                      textTransform: 'none',
+                      fontWeight: 500,
+                      px: 2,
+                      py: 0.5,
+                      fontSize: '0.875rem'
+                    }}
+                  >
+                    + Create New Warehouse
+                  </Button>
+                </Box>
+              </Box>
+            )}
             
             <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1.5, mt: 2 }}>
               <Button
@@ -682,6 +814,7 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
                 size="small"
                 onClick={() => {
                   setSelectedSupplier('');
+                  setSelectedWarehouse('');
                   setFileError(null);
                 }}
                 sx={{
@@ -921,6 +1054,71 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
             }}
           >
             {creatingEntity ? 'Creating...' : 'Create Entity'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Create New Warehouse Dialog */}
+      <Dialog
+        open={showCreateWarehouseDialog}
+        onClose={() => {
+          setShowCreateWarehouseDialog(false);
+          setNewWarehouseName('');
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ pb: 1, fontSize: '1.1rem' }}>Create New Warehouse</DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            <TextField
+              fullWidth
+              size="small"
+              label="Warehouse Name *"
+              value={newWarehouseName}
+              onChange={(e) => setNewWarehouseName(e.target.value)}
+              placeholder="e.g., WAREHOUSE_1, Main Warehouse, etc."
+              required
+            />
+            
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+              This warehouse will be added to the selected entity: <strong>
+                {entities.find(e => e.id === selectedSupplier)?.entityName}
+              </strong>
+            </Typography>
+          </Box>
+          
+          {fileError && (
+            <Alert severity="error" sx={{ mt: 1.5, py: 1 }}>
+              {fileError}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ pt: 1, pb: 2 }}>
+          <Button
+            size="small"
+            onClick={() => {
+              setShowCreateWarehouseDialog(false);
+              setNewWarehouseName('');
+            }}
+            disabled={creatingWarehouse}
+            sx={{ textTransform: 'none' }}
+          >
+            Cancel
+          </Button>
+          <Button
+            size="small"
+            onClick={handleCreateWarehouse}
+            variant="contained"
+            disabled={creatingWarehouse || !newWarehouseName.trim()}
+            sx={{
+              borderRadius: 1.5,
+              textTransform: 'none',
+              fontWeight: 600,
+              px: 3
+            }}
+          >
+            {creatingWarehouse ? 'Creating...' : 'Create Warehouse'}
           </Button>
         </DialogActions>
       </Dialog>
