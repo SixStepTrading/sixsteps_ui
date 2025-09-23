@@ -22,7 +22,6 @@ const CreateEntityModal: React.FC<CreateEntityModalProps> = ({
     vatNumber: '',
     email: '',
     phone: '',
-    notes: '',
     status: 'ACTIVE' as const
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -68,20 +67,7 @@ const CreateEntityModal: React.FC<CreateEntityModalProps> = ({
     setIsSubmitting(true);
     
     try {
-      // Transform data for backend format
-      const backendData = {
-        entityName: formData.entityName,
-        entityType: formData.entityType.toLowerCase() as 'supplier' | 'manager' | 'pharmacy' | 'admin', // Convert to lowercase for create
-        country: formData.country || 'Italy', // Use full country name
-        address: formData.address,
-        vatNumber: formData.vatNumber,
-        email: formData.email,
-        phone: formData.phone,
-        warehouses: [], // Start with empty warehouses array
-        status: 'ACTIVE' // Add required status field
-      };
-      
-      await createEntity(backendData);
+      await createEntity(formData);
       showToast('Entity created successfully!', 'success');
       onEntityCreated();
       handleClose();
@@ -107,7 +93,6 @@ const CreateEntityModal: React.FC<CreateEntityModalProps> = ({
       vatNumber: '',
       email: '',
       phone: '',
-      notes: '',
       status: 'ACTIVE' as const
     });
     setErrors({});
@@ -244,20 +229,6 @@ const CreateEntityModal: React.FC<CreateEntityModalProps> = ({
                   onChange={(e) => handleInputChange('phone', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   placeholder="Enter phone number"
-                />
-              </div>
-
-              {/* Notes */}
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Notes
-                </label>
-                <textarea
-                  value={formData.notes}
-                  onChange={(e) => handleInputChange('notes', e.target.value)}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="Enter additional notes"
                 />
               </div>
             </div>

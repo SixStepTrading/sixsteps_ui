@@ -108,11 +108,10 @@ const SupplierStockUploadModal: React.FC<SupplierStockUploadModalProps> = ({
       await updateEntity({
         entityId: userEntity.id,
         entityName: userEntity.entityName,
-        entityType: userEntity.entityType.toUpperCase() as Entity['entityType'], // Convert to uppercase for update
-        country: userEntity.country || 'IT', // Use country code for update
-        warehouses: updatedWarehouses,
-        notes: userEntity.notes || '',
-        status: (userEntity.status || 'ACTIVE').toLowerCase() as any // Convert to lowercase for update
+        entityType: userEntity.entityType,
+        address: userEntity.address || '',
+        phone: userEntity.phone || '',
+        warehouses: updatedWarehouses
       });
       
       console.log('✅ New warehouse created:', newWarehouseName);

@@ -29,10 +29,73 @@ const formatActivityDetails = (activity: UserActivity): React.ReactNode => {
       if (activity.details.changes?.created) {
         const created = activity.details.changes.created;
         return (
-          <div className="space-y-1">
-            <div className="font-medium">User Created:</div>
-            <div className="text-xs text-gray-600 dark:text-gray-400">
-              {created.name} {created.surname} ({created.email})
+          <div className="space-y-1.5 p-2 bg-green-50 dark:bg-green-900/20 rounded-md border border-green-200 dark:border-green-800/30">
+            <div className="flex items-center space-x-1.5">
+              <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+              <div className="font-semibold text-green-700 dark:text-green-300 text-xs">User Created</div>
+            </div>
+            <div className="text-xs text-green-600 dark:text-green-400 space-y-1">
+              <div className="font-medium">{created.name} {created.surname}</div>
+              <div className="flex items-center space-x-1">
+                <span className="font-medium">Email:</span>
+                <span className="font-mono text-xs">{created.email}</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <span className="font-medium">Role:</span>
+                <span className="px-1.5 py-0.5 bg-green-100 dark:bg-green-800/30 text-green-700 dark:text-green-300 rounded text-xs font-medium">
+                  {created.role}
+                </span>
+              </div>
+              {created.entity && (
+                <div className="flex items-center space-x-1">
+                  <span className="font-medium">Entity:</span>
+                  <span className="font-mono text-xs">{created.entity}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      }
+      break;
+
+    case 'USER_EDIT':
+      if (activity.details.changes?.old && activity.details.changes?.new) {
+        const oldData = activity.details.changes.old;
+        const newData = activity.details.changes.new;
+        
+        // Find changed fields
+        const changes: string[] = [];
+        if (oldData.name !== newData.name || oldData.surname !== newData.surname) {
+          changes.push(`Name: ${oldData.name} ${oldData.surname} → ${newData.name} ${newData.surname}`);
+        }
+        if (oldData.email !== newData.email) {
+          changes.push(`Email: ${oldData.email} → ${newData.email}`);
+        }
+        if (oldData.role !== newData.role) {
+          changes.push(`Role: ${oldData.role} → ${newData.role}`);
+        }
+        if (oldData.entity !== newData.entity) {
+          changes.push(`Entity: ${oldData.entity || 'None'} → ${newData.entity || 'None'}`);
+        }
+
+        return (
+          <div className="space-y-1.5 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800/30">
+            <div className="flex items-center space-x-1.5">
+              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+              <div className="font-semibold text-blue-700 dark:text-blue-300 text-sm">User Updated</div>
+            </div>
+            <div className="text-xs text-blue-600 dark:text-blue-400">
+              {changes.length > 0 ? (
+                <div className="space-y-1">
+                  {changes.map((change, index) => (
+                    <div key={index} className="font-mono text-xs bg-blue-100 dark:bg-blue-800/30 p-1 rounded">
+                      {change}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="italic text-gray-500">No changes detected</div>
+              )}
             </div>
           </div>
         );
@@ -43,10 +106,84 @@ const formatActivityDetails = (activity: UserActivity): React.ReactNode => {
       if (activity.details.metadata?.customAction === 'PRODUCT_CSV_UPLOAD') {
         const meta = activity.details.metadata;
         return (
-          <div className="space-y-1">
-            <div className="font-medium">CSV Upload: {meta.fileName}</div>
-            <div className="text-xs text-gray-600 dark:text-gray-400">
-              Total: {meta.totalRows} | Created: {meta.created} | Updated: {meta.updated} | Errors: {meta.errors}
+          <div className="space-y-1.5 p-2 bg-purple-50 dark:bg-purple-900/20 rounded-md border border-purple-200 dark:border-purple-800/30">
+            <div className="flex items-center space-x-1.5">
+              <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
+              <div className="font-semibold text-purple-700 dark:text-purple-300 text-sm">CSV Upload</div>
+            </div>
+            <div className="text-xs text-purple-600 dark:text-purple-400 space-y-1">
+              <div className="font-medium">File: {meta.fileName}</div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex justify-between">
+                  <span className="font-medium">Total:</span>
+                  <span className="font-mono">{meta.totalRows}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Created:</span>
+                  <span className="font-mono text-green-600 dark:text-green-400">{meta.created}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Updated:</span>
+                  <span className="font-mono text-blue-600 dark:text-blue-400">{meta.updated}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Errors:</span>
+                  <span className="font-mono text-red-600 dark:text-red-400">{meta.errors}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+      // Handle SUPPLY_CSV_UPLOAD_ADMIN
+      if (activity.details.metadata?.customAction === 'SUPPLY_CSV_UPLOAD_ADMIN') {
+        const meta = activity.details.metadata;
+        const result = meta.uploadResult;
+        return (
+          <div className="space-y-1.5 p-2 bg-purple-50 dark:bg-purple-900/20 rounded-md border border-purple-200 dark:border-purple-800/30">
+            <div className="flex items-center space-x-1.5">
+              <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
+              <div className="font-semibold text-purple-700 dark:text-purple-300 text-sm">Admin Supply Upload</div>
+            </div>
+            <div className="text-xs text-purple-600 dark:text-purple-400 space-y-1">
+              <div className="font-medium">Warehouse: {meta.warehouse || 'N/A'}</div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex justify-between">
+                  <span className="font-medium">Processed:</span>
+                  <span className="font-mono">{result.processedRows}/{result.totalRows}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Created:</span>
+                  <span className="font-mono text-green-600 dark:text-green-400">{result.created}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Updated:</span>
+                  <span className="font-mono text-blue-600 dark:text-blue-400">{result.updated}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Skipped:</span>
+                  <span className="font-mono text-yellow-600 dark:text-yellow-400">{result.skipped}</span>
+                </div>
+              </div>
+              {!result.success && (
+                <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 rounded text-red-600 dark:text-red-400 text-xs border border-red-200 dark:border-red-800/30">
+                  <div className="font-medium">Error:</div>
+                  <div>{result.message}</div>
+                </div>
+              )}
+              {result.errors && result.errors.length > 0 && (
+                <div className="mt-2 text-xs text-red-600 dark:text-red-400">
+                  <div className="font-medium">Sample errors:</div>
+                  <div className="max-h-20 overflow-y-auto bg-red-50 dark:bg-red-900/20 p-2 rounded border border-red-200 dark:border-red-800/30">
+                    {result.errors.slice(0, 3).map((error: string, index: number) => (
+                      <div key={index} className="truncate">{error}</div>
+                    ))}
+                    {result.errors.length > 3 && (
+                      <div className="italic">... and {result.errors.length - 3} more errors</div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         );
@@ -57,49 +194,257 @@ const formatActivityDetails = (activity: UserActivity): React.ReactNode => {
       if (activity.details.changes?.created?.uploadResult) {
         const result = activity.details.changes.created.uploadResult;
         return (
-          <div className="space-y-1">
-            <div className="font-medium">Supply Upload</div>
-            <div className="text-xs text-gray-600 dark:text-gray-400">
-              Processed: {result.processedRows}/{result.totalRows} | 
-              Created: {result.created} | Skipped: {result.skipped}
+          <div className="space-y-1.5 p-2 bg-orange-50 dark:bg-orange-900/20 rounded-md border border-orange-200 dark:border-orange-800/30">
+            <div className="flex items-center space-x-1.5">
+              <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
+              <div className="font-semibold text-orange-700 dark:text-orange-300 text-sm">Supply Upload</div>
             </div>
-            {!result.success && (
-              <div className="text-xs text-red-600 dark:text-red-400">
-                {result.message}
+            <div className="text-xs text-orange-600 dark:text-orange-400 space-y-1">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex justify-between">
+                  <span className="font-medium">Processed:</span>
+                  <span className="font-mono">{result.processedRows}/{result.totalRows}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Created:</span>
+                  <span className="font-mono text-green-600 dark:text-green-400">{result.created}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Updated:</span>
+                  <span className="font-mono text-blue-600 dark:text-blue-400">{result.updated}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Skipped:</span>
+                  <span className="font-mono text-yellow-600 dark:text-yellow-400">{result.skipped}</span>
+                </div>
               </div>
-            )}
+              {!result.success && (
+                <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 rounded text-red-600 dark:text-red-400 text-xs border border-red-200 dark:border-red-800/30">
+                  <div className="font-medium">Error:</div>
+                  <div>{result.message}</div>
+                </div>
+              )}
+              {result.errors && result.errors.length > 0 && (
+                <div className="mt-2 text-xs text-red-600 dark:text-red-400">
+                  <div className="font-medium">Sample errors:</div>
+                  <div className="max-h-20 overflow-y-auto bg-red-50 dark:bg-red-900/20 p-2 rounded border border-red-200 dark:border-red-800/30">
+                    {result.errors.slice(0, 3).map((error: string, index: number) => (
+                      <div key={index} className="truncate">{error}</div>
+                    ))}
+                    {result.errors.length > 3 && (
+                      <div className="italic">... and {result.errors.length - 3} more errors</div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      }
+      break;
+
+    case 'SUPPLY_DELETE':
+      if (activity.details.changes?.deleted) {
+        const deleted = activity.details.changes.deleted;
+        let message = "All supplies deleted successfully.";
+        let entityInfo = "";
+        
+        // Handle both string and object cases
+        if (typeof deleted === 'string') {
+          message = deleted;
+        } else if (typeof deleted === 'object' && deleted !== null) {
+          if ('message' in deleted) {
+            message = deleted.message;
+          }
+        }
+        
+        // Try to get entity information from the activity details
+        if (activity.details.targetId) {
+          entityInfo = `Target ID: ${activity.details.targetId}`;
+        }
+        
+        return (
+          <div className="space-y-1.5 p-2 bg-red-50 dark:bg-red-900/20 rounded-md border border-red-200 dark:border-red-800/30">
+            <div className="flex items-center space-x-1.5">
+              <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+              <div className="font-semibold text-red-700 dark:text-red-300 text-xs">Supply Deleted</div>
+            </div>
+            <div className="text-xs text-red-600 dark:text-red-400 space-y-1">
+              <div>{message}</div>
+              {entityInfo && (
+                <div className="flex items-center space-x-1">
+                  <span className="font-medium">Entity:</span>
+                  <span className="font-mono text-xs">{entityInfo}</span>
+                </div>
+              )}
+            </div>
           </div>
         );
       }
       break;
 
     case 'LOGIN_SUCCESS':
-      return <span className="text-gray-400 italic">Successful login</span>;
+      return (
+        <div className="flex items-center space-x-1.5 p-2 bg-green-50 dark:bg-green-900/20 rounded-md border border-green-200 dark:border-green-800/30">
+          <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+          <span className="text-green-600 dark:text-green-400 font-medium text-xs">Successful login</span>
+        </div>
+      );
 
     case 'LOGIN_FAILED':
       if (activity.details.metadata?.attemptedEmail) {
         return (
-          <div className="space-y-1">
-            <div className="font-medium text-red-600 dark:text-red-400">Failed login attempt</div>
-            <div className="text-xs text-gray-600 dark:text-gray-400">
-              Email: {activity.details.metadata.attemptedEmail}
+          <div className="space-y-1.5 p-2 bg-red-50 dark:bg-red-900/20 rounded-md border border-red-200 dark:border-red-800/30">
+            <div className="flex items-center space-x-1.5">
+              <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+              <div className="font-semibold text-red-700 dark:text-red-300 text-sm">Failed login attempt</div>
+            </div>
+            <div className="text-xs text-red-600 dark:text-red-400">
+              <div className="flex items-center space-x-2">
+                <span className="font-medium">Email:</span>
+                <span className="font-mono">{activity.details.metadata.attemptedEmail}</span>
+              </div>
             </div>
           </div>
         );
       }
-      return <span className="text-red-500 italic">Login failed</span>;
+      return (
+        <div className="flex items-center space-x-2 p-2 bg-red-50 dark:bg-red-900/20 rounded-md border border-red-200 dark:border-red-800/30">
+          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+          <span className="text-red-500 font-medium text-sm">Login failed</span>
+        </div>
+      );
+
+    case 'USER_DELETE':
+      if (activity.details.changes?.deleted) {
+        const deleted = activity.details.changes.deleted;
+        return (
+          <div className="space-y-1.5 p-2 bg-red-50 dark:bg-red-900/20 rounded-md border border-red-200 dark:border-red-800/30">
+            <div className="flex items-center space-x-1.5">
+              <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+              <div className="font-semibold text-red-700 dark:text-red-300 text-sm">User Deleted</div>
+            </div>
+            <div className="text-xs text-red-600 dark:text-red-400 space-y-1">
+              <div className="font-medium">{deleted.name} {deleted.surname}</div>
+              <div className="flex items-center space-x-2">
+                <span className="font-medium">Email:</span>
+                <span className="font-mono">{deleted.email}</span>
+              </div>
+            </div>
+          </div>
+        );
+      }
+      break;
+
+    case 'ENTITY_CREATE':
+      if (activity.details.changes?.created) {
+        const created = activity.details.changes.created;
+        return (
+          <div className="space-y-1.5 p-2 bg-green-50 dark:bg-green-900/20 rounded-md border border-green-200 dark:border-green-800/30">
+            <div className="flex items-center space-x-1.5">
+              <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+              <div className="font-semibold text-green-700 dark:text-green-300 text-sm">Entity Created</div>
+            </div>
+            <div className="text-xs text-green-600 dark:text-green-400 space-y-1">
+              <div className="font-medium">{created.name}</div>
+              {created.description && (
+                <div className="flex items-center space-x-2">
+                  <span className="font-medium">Description:</span>
+                  <span>{created.description}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      }
+      break;
+
+    case 'ENTITY_EDIT':
+      if (activity.details.changes?.old && activity.details.changes?.new) {
+        const oldData = activity.details.changes.old;
+        const newData = activity.details.changes.new;
+        
+        const changes: string[] = [];
+        if (oldData.name !== newData.name) {
+          changes.push(`Name: ${oldData.name} → ${newData.name}`);
+        }
+        if (oldData.description !== newData.description) {
+          changes.push(`Description: ${oldData.description || 'None'} → ${newData.description || 'None'}`);
+        }
+
+        return (
+          <div className="space-y-1.5 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800/30">
+            <div className="flex items-center space-x-1.5">
+              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+              <div className="font-semibold text-blue-700 dark:text-blue-300 text-sm">Entity Updated</div>
+            </div>
+            <div className="text-xs text-blue-600 dark:text-blue-400">
+              {changes.length > 0 ? (
+                <div className="space-y-1">
+                  {changes.map((change, index) => (
+                    <div key={index} className="font-mono text-xs bg-blue-100 dark:bg-blue-800/30 p-1 rounded">
+                      {change}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="italic text-gray-500">No changes detected</div>
+              )}
+            </div>
+          </div>
+        );
+      }
+      break;
+
+    case 'ENTITY_DELETE':
+      if (activity.details.changes?.deleted) {
+        const deleted = activity.details.changes.deleted;
+        let message = "Entity deleted successfully.";
+        if (typeof deleted === 'string') {
+          message = deleted;
+        }
+        return (
+          <div className="space-y-1.5 p-2 bg-red-50 dark:bg-red-900/20 rounded-md border border-red-200 dark:border-red-800/30">
+            <div className="flex items-center space-x-1.5">
+              <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+              <div className="font-semibold text-red-700 dark:text-red-300 text-sm">Entity Deleted</div>
+            </div>
+            <div className="text-xs text-red-600 dark:text-red-400">
+              <div>{message}</div>
+            </div>
+          </div>
+        );
+      }
+      break;
 
     default:
+      // For unknown actions, try to format the details in a readable way
+      if (activity.details.metadata) {
+        return (
+          <div className="space-y-1.5 p-2 bg-gray-50 dark:bg-gray-800/50 rounded-md border border-gray-200 dark:border-gray-700/30">
+            <div className="font-semibold text-gray-700 dark:text-gray-300 text-sm">Action Details</div>
+            <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+              {Object.entries(activity.details.metadata).map(([key, value]) => (
+                <div key={key} className="flex justify-between items-center">
+                  <span className="font-medium">{key}:</span>
+                  <span className="ml-2 font-mono">{String(value)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      }
+      
       return (
-        <div className="text-xs text-gray-600 dark:text-gray-400 font-mono max-w-full truncate">
-          {JSON.stringify(activity.details)}
+        <div className="text-xs text-gray-600 dark:text-gray-400 font-mono max-w-full truncate p-2 bg-gray-50 dark:bg-gray-800/50 rounded border border-gray-200 dark:border-gray-700/30">
+          {JSON.stringify(activity.details, null, 2)}
         </div>
       );
   }
 
   return (
-    <div className="text-xs text-gray-600 dark:text-gray-400 font-mono max-w-full truncate">
-      {JSON.stringify(activity.details)}
+    <div className="text-xs text-gray-600 dark:text-gray-400 font-mono max-w-full truncate p-2 bg-gray-50 dark:bg-gray-800/50 rounded border border-gray-200 dark:border-gray-700/30">
+      {JSON.stringify(activity.details, null, 2)}
     </div>
   );
 };
@@ -310,7 +655,7 @@ const ActivitiesTable: React.FC<ActivitiesTableProps> = ({
   return (
     <div className="w-full flex flex-col gap-4">
       {/* Filter Panel */}
-      <div className="bg-gray-50 dark:bg-dark-bg-secondary p-4 rounded-lg border dark:border-dark-border-primary">
+      <div className="bg-gray-50 dark:bg-dark-bg-secondary p-4 rounded-md border dark:border-dark-border-primary">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-medium text-gray-900 dark:text-dark-text-primary">Filters</h3>
           <div className="flex items-center gap-2">
@@ -422,15 +767,15 @@ const ActivitiesTable: React.FC<ActivitiesTableProps> = ({
       >
         <div className={`${isDrawerCollapsed ? 'min-w-[800px]' : 'min-w-[1000px]'} transition-all duration-300`}>
           {/* Table header */}
-          <div className="flex items-center px-3 py-3 text-xs uppercase text-slate-500 dark:text-dark-text-muted font-semibold tracking-wider bg-gray-50 dark:bg-dark-bg-secondary rounded-t-lg rounded-xl my-1.5 border-b border-gray-200 dark:border-dark-border-primary">
-            <div className="w-[5%] text-center">#</div>
-            <div className="w-[25%] cursor-pointer select-none flex items-center" onClick={() => handleSort('user')}>
+          <div className="flex items-center px-4 py-2.5 text-xs uppercase text-slate-500 dark:text-dark-text-muted font-semibold tracking-wider bg-gray-50 dark:bg-dark-bg-secondary rounded-t-lg border-b border-gray-200 dark:border-dark-border-primary">
+            <div className="w-[3%] text-center">#</div>
+            <div className="w-[20%] cursor-pointer select-none flex items-center" onClick={() => handleSort('user')}>
               User {renderSortIcon('user')}
             </div>
-            <div className="w-[20%] cursor-pointer select-none flex items-center" onClick={() => handleSort('action')}>
+            <div className="w-[12%] cursor-pointer select-none flex items-center" onClick={() => handleSort('action')}>
               Action {renderSortIcon('action')}
             </div>
-            <div className="w-[30%]">Details</div>
+            <div className="w-[45%]">Details</div>
             <div className="w-[20%] cursor-pointer select-none flex items-center" onClick={() => handleSort('timestamp')}>
               Date & Time {renderSortIcon('timestamp')}
             </div>
@@ -454,37 +799,37 @@ const ActivitiesTable: React.FC<ActivitiesTableProps> = ({
                   key={activity.id}
                   className={`
                     flex items-center px-3 py-3 bg-white dark:bg-dark-bg-card border border-gray-100 dark:border-dark-border-primary
-                    hover:bg-gray-50 dark:hover:bg-dark-bg-hover
+                    hover:bg-blue-50 dark:hover:bg-blue-900/20
                     relative
                     rounded-xl my-1.5
                   `}
                 >
                   {/* Index */}
-                  <div className="w-[5%] flex items-center justify-center">
-                    <span className="text-xs text-gray-600 dark:text-dark-text-muted font-medium">{idx + 1}</span>
+                  <div className="w-[3%] flex items-center justify-center">
+                    <span className="text-xs text-gray-500 dark:text-dark-text-muted font-medium">{idx + 1}</span>
                   </div>
                   
                   {/* User */}
-                  <div className="w-[25%]">
+                  <div className="w-[20%]">
                     <div className="flex flex-col">
-                    <span className="font-medium text-sm text-slate-800 dark:text-dark-text-primary">
+                      <span className="font-medium text-sm text-slate-800 dark:text-dark-text-primary">
                         {activity.user.name} {activity.user.surname}
                       </span>
                       <span className="text-xs text-gray-500 dark:text-dark-text-muted">
                         {activity.user.email}
-                    </span>
+                      </span>
                     </div>
                   </div>
                   
                   {/* Action */}
-                  <div className="w-[20%]">
+                  <div className="w-[12%]">
                     <span className={`${actionClasses.bg} ${actionClasses.text} inline-block py-1 px-3 rounded text-xs font-medium border dark:border-opacity-30`}>
                       {activity.action}
                     </span>
                   </div>
                   
                   {/* Details */}
-                  <div className="w-[30%]">
+                  <div className="w-[45%] pr-4">
                     <div className="text-sm text-slate-700 dark:text-dark-text-secondary">
                       {formatActivityDetails(activity)}
                     </div>

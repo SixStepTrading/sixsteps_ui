@@ -139,11 +139,11 @@ const WarehouseListModal: React.FC<WarehouseListModalProps> = ({
       await updateEntity({
         entityId: entity.id,
         entityName: entity.entityName,
-        entityType: entity.entityType.toUpperCase() as Entity['entityType'], // Convert to uppercase for update
-        country: entity.country || 'IT', // Use country code for update
+        entityType: entity.entityType,
+        country: entity.country || 'IT',
         warehouses: updatedWarehouses,
         notes: entity.notes || '',
-        status: (entity.status || 'ACTIVE').toLowerCase() as any // Convert to lowercase for update
+        status: entity.status || 'ACTIVE'
       });
       
       console.log('✅ New warehouse created:', newWarehouseName);
