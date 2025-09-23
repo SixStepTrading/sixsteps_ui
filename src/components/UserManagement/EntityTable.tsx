@@ -250,11 +250,6 @@ const EntityTable: React.FC<EntityTableProps> = ({
                           {(entity.warehouses || []).length}
                         </span>
                       )}
-                      {(entity.warehouses || []).length > 0 && (
-                        <span className="ml-1 text-xs text-slate-500 dark:text-dark-text-muted">
-                          ({entity.warehouses?.join(', ')})
-                        </span>
-                      )}
                     </div>
                   </div>
                   
