@@ -6,6 +6,8 @@ export interface ProductPrice {
   stock: number;
   suppliers?: string[]; // Array of original suppliers for consolidated prices
   originalPrices?: ProductPrice[]; // Array of original price objects for stock details
+  warehouse?: string; // Warehouse name for this supply
+  entityName?: string; // Entity name for this supply
 }
 
 export interface Product {
@@ -19,6 +21,7 @@ export interface Product {
   publicPrice: number;
   vat: number;
   bestPrices: ProductPrice[];
+  allPrices?: ProductPrice[]; // All original prices for filtering (before consolidation)
   inStock: boolean;
   image?: string;
 }

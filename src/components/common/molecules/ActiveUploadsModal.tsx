@@ -19,6 +19,8 @@ import {
   ListItem,
   ListItemText,
   Divider,
+  Tabs,
+  Tab,
   Skeleton
 } from '@mui/material';
 import {
@@ -26,12 +28,11 @@ import {
   Refresh as RefreshIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
-  Schedule as ScheduleIcon,
   Error as ErrorIcon,
   CheckCircle as CheckCircleIcon,
   HourglassEmpty as HourglassEmptyIcon
 } from '@mui/icons-material';
-import { getActiveUploads, ActiveUploadsResponse, ActiveUpload } from '../../../utils/api';
+import { loadCompletedUploadsFromLogs, loadActiveUploads, ParsedUpload } from '../../../utils/logParser';
 
 interface ActiveUploadsModalProps {
   open: boolean;
@@ -57,29 +58,48 @@ const ActiveUploadsModal: React.FC<ActiveUploadsModalProps> = ({
       document.head.removeChild(style);
     };
   }, []);
-  const [result, setResult] = useState<ActiveUploadsResponse | null>(null);
+  const [activeTab, setActiveTab] = useState(0);
+  const [activeUploads, setActiveUploads] = useState<ParsedUpload[]>([]);
+  const [completedUploads, setCompletedUploads] = useState<ParsedUpload[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedUploads, setExpandedUploads] = useState<Set<string>>(new Set());
 
-  // Helper function to format time remaining
-  const formatTimeRemaining = (estimatedTimeRemaining?: number): string => {
-    if (!estimatedTimeRemaining || estimatedTimeRemaining <= 0) {
-      return 'Calculating...';
-    }
-
-    // Convert milliseconds to seconds first
-    const seconds = Math.floor(estimatedTimeRemaining / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-
-    if (minutes > 0) {
-      return `${minutes}m ${remainingSeconds}s`;
-    } else {
-      return `${remainingSeconds}s`;
-    }
-  };
+  // Skeleton component for upload history
+  const UploadHistorySkeleton = () => (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      {[1, 2, 3].map((index) => (
+        <Card key={index} sx={{ border: 1, borderColor: 'divider' }}>
+          <CardHeader
+            title={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Skeleton variant="text" width={120} height={24} />
+                <Skeleton variant="rectangular" width={80} height={24} sx={{ borderRadius: 1 }} />
+              </Box>
+            }
+            subheader={
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1 }}>
+                <Skeleton variant="text" width={200} height={16} />
+                <Skeleton variant="text" width={150} height={16} />
+                <Skeleton variant="text" width={180} height={16} />
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Skeleton variant="text" width={60} height={16} />
+                  <Skeleton variant="text" width={60} height={16} />
+                  <Skeleton variant="text" width={60} height={16} />
+                </Box>
+              </Box>
+            }
+          />
+          <CardContent sx={{ pt: 0 }}>
+            <Skeleton variant="text" width="100%" height={20} />
+            <Skeleton variant="text" width="80%" height={16} sx={{ mt: 1 }} />
+          </CardContent>
+        </Card>
+      ))}
+    </Box>
+  );
 
   // Helper function to format timestamp
   const formatTimestamp = (timestamp: number): string => {
@@ -126,9 +146,9 @@ const ActiveUploadsModal: React.FC<ActiveUploadsModalProps> = ({
     
     try {
       console.log('🔄 Fetching active uploads...');
-      const response = await getActiveUploads();
-      console.log('✅ Active uploads fetched:', response);
-      setResult(response);
+      const uploadsData = await loadActiveUploads();
+      console.log('✅ Active uploads fetched:', uploadsData);
+      setActiveUploads(uploadsData);
     } catch (err) {
       console.error('❌ Error fetching active uploads:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -141,19 +161,50 @@ const ActiveUploadsModal: React.FC<ActiveUploadsModalProps> = ({
     }
   };
 
+  const fetchCompletedUploads = async (isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoadingHistory(true);
+    }
+    setError(null);
+    
+    try {
+      console.log('🔄 Fetching completed uploads from logs...');
+      const uploadsData = await loadCompletedUploadsFromLogs();
+      console.log('✅ Completed uploads fetched:', uploadsData);
+      setCompletedUploads(uploadsData);
+    } catch (err) {
+      console.error('❌ Error fetching completed uploads:', err);
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      if (isRefresh) {
+        setRefreshing(false);
+      } else {
+        setLoadingHistory(false);
+      }
+    }
+  };
+
   // Fetch data when modal opens and set up auto-refresh
   useEffect(() => {
     if (open) {
-      fetchActiveUploads(false); // Initial load
+      // Load initial data for both tabs
+      fetchActiveUploads(false);
+      fetchCompletedUploads(false);
       
-      // Set up auto-refresh every 5 seconds
+      // Set up auto-refresh for active uploads only (every 5 seconds)
       const interval = setInterval(() => {
-        fetchActiveUploads(true); // Refresh
+        // Only refresh active uploads if we're on the active tab
+        if (activeTab === 0) {
+          fetchActiveUploads(true);
+        }
       }, 5000);
       
       return () => clearInterval(interval);
     }
-  }, [open]);
+  }, [open, activeTab]);
+
 
   return (
     <Dialog 
@@ -180,11 +231,17 @@ const ActiveUploadsModal: React.FC<ActiveUploadsModalProps> = ({
         borderColor: 'divider'
       }}>
         <Typography variant="h5" component="div" sx={{ fontWeight: 600 }}>
-          Monitor Active Uploads in the System {result?.uploads ? `(${result.uploads.length})` : ''}
+          Upload Monitor
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Button 
-            onClick={() => fetchActiveUploads(true)} 
+            onClick={() => {
+              if (activeTab === 0) {
+                fetchActiveUploads(true);
+              } else {
+                fetchCompletedUploads(true);
+              }
+            }} 
             disabled={loading || refreshing}
             size="small"
             sx={{ color: 'success.contrastText', minWidth: 'auto' }}
@@ -203,6 +260,26 @@ const ActiveUploadsModal: React.FC<ActiveUploadsModalProps> = ({
       </DialogTitle>
       
       <DialogContent dividers sx={{ p: 0, bgcolor: 'background.paper' }}>
+        {/* Tabs */}
+        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Tabs 
+            value={activeTab} 
+            onChange={(e, newValue) => setActiveTab(newValue)}
+            aria-label="upload tabs"
+          >
+            <Tab 
+              label={`Active Uploads ${activeUploads.length > 0 ? `(${activeUploads.length})` : ''}`} 
+              id="tab-0"
+              aria-controls="tabpanel-0"
+            />
+            <Tab 
+              label={`Upload History ${completedUploads.length > 0 ? `(${completedUploads.length})` : ''}`} 
+              id="tab-1"
+              aria-controls="tabpanel-1"
+            />
+          </Tabs>
+        </Box>
+
         {loading && (
           <Box sx={{ p: 3, textAlign: 'center' }}>
             <Typography variant="body1">Loading...</Typography>
@@ -217,7 +294,7 @@ const ActiveUploadsModal: React.FC<ActiveUploadsModalProps> = ({
           </Box>
         )}
 
-        {result && !loading && (
+        {!loading && (
           <Box sx={{ p: 3, position: 'relative' }}>
             {refreshing && (
               <Box sx={{ 
@@ -241,128 +318,246 @@ const ActiveUploadsModal: React.FC<ActiveUploadsModalProps> = ({
               </Box>
             )}
             
-            {result.uploads && result.uploads.length > 0 ? (
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {result.uploads.map((upload, index) => {
-                  const statusInfo = getStatusInfo(upload.status);
-                  const isExpanded = expandedUploads.has(upload.uploadId);
-                  
-                  return (
-                    <Card key={upload.uploadId} sx={{ border: 1, borderColor: 'divider' }}>
-                      <CardHeader
-                        title={
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Typography variant="h6">
-                              Upload {index + 1}
-                            </Typography>
-                            <Chip
-                              icon={statusInfo.icon}
-                              label={statusInfo.label}
-                              color={statusInfo.color as any}
-                              size="small"
-                            />
-                          </Box>
-                        }
-                        subheader={
-                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1 }}>
-                            <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
-                              <strong>Upload ID:</strong> {upload.uploadId}
-                            </Typography>
-                            <Typography variant="body2">
-                              <strong>Progress:</strong> Processed {upload.processedRows} of {upload.totalRows} rows...
-                            </Typography>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                              <Typography variant="body2">
-                                <strong>Skipped:</strong> {upload.skipped}
-                              </Typography>
-                              {upload.skipped > 0 && (
-                                <IconButton
-                                  size="small"
-                                  onClick={() => toggleExpanded(upload.uploadId)}
-                                  sx={{ p: 0.5 }}
-                                >
-                                  {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                                </IconButton>
-                              )}
-                            </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <ScheduleIcon fontSize="small" />
-                              <Typography variant="body2">
-                                <strong>Estimated Time Remaining:</strong> {formatTimeRemaining(upload.estimatedTimeRemaining)}
-                              </Typography>
-                            </Box>
-                          </Box>
-                        }
-                      />
+            {/* Active Uploads Tab */}
+            {activeTab === 0 && (
+              <Box>
+                {activeUploads.length > 0 ? (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {activeUploads.map((upload, index) => {
+                      const statusInfo = getStatusInfo('processing');
                       
-                      <CardContent sx={{ pt: 0 }}>
-                        {/* Progress Bar */}
-                        <Box sx={{ mb: 2 }}>
-                          <LinearProgress 
-                            variant="determinate" 
-                            value={upload.progress} 
-                            sx={{ height: 8, borderRadius: 4 }}
+                      return (
+                        <Card key={upload.id} sx={{ border: 1, borderColor: 'divider' }}>
+                          <CardHeader
+                            title={
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Typography variant="h6">
+                                  Active Upload {index + 1}
+                                </Typography>
+                                <Chip
+                                  icon={statusInfo.icon}
+                                  label={statusInfo.label}
+                                  color={statusInfo.color as any}
+                                  size="small"
+                                />
+                              </Box>
+                            }
+                            subheader={
+                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1 }}>
+                                <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
+                                  <strong>Upload ID:</strong> {upload.id}
+                                </Typography>
+                                <Typography variant="body2">
+                                  <strong>User:</strong> {upload.userName} ({upload.userEmail})
+                                </Typography>
+                                <Typography variant="body2">
+                                  <strong>Progress:</strong> Processed {upload.processedRows} of {upload.totalRows} rows
+                                </Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                  <Typography variant="body2">
+                                    <strong>Created:</strong> {upload.created}
+                                  </Typography>
+                                  <Typography variant="body2">
+                                    <strong>Updated:</strong> {upload.updated}
+                                  </Typography>
+                                  <Typography variant="body2">
+                                    <strong>Skipped:</strong> {upload.skipped}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            }
                           />
-                          <Typography variant="caption" sx={{ mt: 0.5, display: 'block' }}>
-                            {upload.progress.toFixed(1)}% complete
-                          </Typography>
-                        </Box>
-
-                        {/* Error List (Expandable) */}
-                        {upload.skipped > 0 && (
-                          <Collapse in={isExpanded}>
-                            <Box sx={{ mt: 2 }}>
-                              <Typography variant="subtitle2" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <ErrorIcon fontSize="small" color="error" />
-                                Error Details ({upload.errors.length} errors)
+                          
+                          <CardContent sx={{ pt: 0 }}>
+                            {/* Progress Bar for Active Uploads */}
+                            <Box sx={{ mb: 2 }}>
+                              <LinearProgress 
+                                variant="determinate" 
+                                value={(upload.processedRows / upload.totalRows) * 100} 
+                                sx={{ height: 8, borderRadius: 4 }}
+                              />
+                              <Typography variant="caption" sx={{ mt: 0.5, display: 'block' }}>
+                                {((upload.processedRows / upload.totalRows) * 100).toFixed(1)}% complete
                               </Typography>
-                              <Divider sx={{ mb: 1 }} />
-                              <List dense sx={{ maxHeight: 200, overflow: 'auto', bgcolor: 'grey.50' }}>
-                                {upload.errors.map((error, errorIndex) => (
-                                  <ListItem key={errorIndex} sx={{ py: 0.5 }}>
-                                    <ListItemText
-                                      primary={
-                                        <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
-                                          {error}
-                                        </Typography>
-                                      }
-                                    />
-                                  </ListItem>
-                                ))}
-                              </List>
                             </Box>
-                          </Collapse>
-                        )}
 
-                        {/* Additional Info */}
-                        <Box sx={{ mt: 2 }}>
-                          <Typography variant="caption" color="text.secondary">
-                            Created: {formatTimestamp(upload.startTime)}
-                          </Typography>
-                        </Box>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </Box>
-            ) : (
-              <Box sx={{ textAlign: 'center', py: 4 }}>
-                <Typography variant="h6" color="text.secondary" gutterBottom>
-                  No Active Uploads
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  There are currently no uploads in progress.
-                </Typography>
+                            {/* Additional Info */}
+                            <Box sx={{ mt: 2 }}>
+                              <Typography variant="caption" color="text.secondary">
+                                Started: {formatTimestamp(upload.timestamp)}
+                              </Typography>
+                            </Box>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </Box>
+                ) : (
+                  <Box sx={{ textAlign: 'center', py: 4 }}>
+                    <Typography variant="h6" color="text.secondary" gutterBottom>
+                      No Active Uploads
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      There are currently no uploads in progress.
+                    </Typography>
+                  </Box>
+                )}
               </Box>
             )}
-          </Box>
-        )}
 
-        {!result && !loading && !error && (
-          <Box sx={{ p: 3, textAlign: 'center' }}>
-            <Typography variant="body1" color="text.secondary">
-              No data available
-            </Typography>
+            {/* Upload History Tab */}
+            {activeTab === 1 && (
+              <Box sx={{ position: 'relative' }}>
+                {refreshing && activeTab === 1 && (
+                  <Box sx={{ 
+                    position: 'absolute', 
+                    top: 0, 
+                    left: 0, 
+                    right: 0, 
+                    bottom: 0, 
+                    bgcolor: 'rgba(255, 255, 255, 0.8)', 
+                    zIndex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <RefreshIcon sx={{ animation: 'spin 1s linear infinite', mb: 1 }} />
+                      <Typography variant="body2" color="text.secondary">
+                        Updating history...
+                      </Typography>
+                    </Box>
+                  </Box>
+                )}
+                
+                {loadingHistory ? (
+                  <UploadHistorySkeleton />
+                ) : completedUploads.length > 0 ? (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {completedUploads.map((upload, index) => {
+                      const statusInfo = getStatusInfo(upload.success ? 'completed' : 'failed');
+                      const isExpanded = expandedUploads.has(upload.id);
+                      
+                      return (
+                        <Card key={upload.id} sx={{ border: 1, borderColor: 'divider' }}>
+                          <CardHeader
+                            title={
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Typography variant="h6">
+                                  {upload.action === 'SUPPLY_CREATE' ? 'Supply Upload' : 
+                                   upload.action === 'PRODUCT_CSV_UPLOAD' ? 'Product Upload' :
+                                   upload.action === 'SUPPLY_CSV_UPLOAD_ADMIN' ? 'Admin Supply Upload' : 'Upload'} {index + 1}
+                                </Typography>
+                                <Chip
+                                  icon={statusInfo.icon}
+                                  label={statusInfo.label}
+                                  color={statusInfo.color as any}
+                                  size="small"
+                                />
+                              </Box>
+                            }
+                            subheader={
+                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1 }}>
+                                <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
+                                  <strong>Upload ID:</strong> {upload.id}
+                                </Typography>
+                                <Typography variant="body2">
+                                  <strong>User:</strong> {upload.userName} ({upload.userEmail})
+                                </Typography>
+                                <Typography variant="body2">
+                                  <strong>Results:</strong> Processed {upload.processedRows} of {upload.totalRows} rows
+                                </Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                  <Typography variant="body2">
+                                    <strong>Created:</strong> {upload.created}
+                                  </Typography>
+                                  <Typography variant="body2">
+                                    <strong>Updated:</strong> {upload.updated}
+                                  </Typography>
+                                  <Typography variant="body2">
+                                    <strong>Skipped:</strong> {upload.skipped}
+                                  </Typography>
+                                  {upload.errors.length > 0 && (
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => toggleExpanded(upload.id)}
+                                      sx={{ p: 0.5 }}
+                                    >
+                                      {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                                    </IconButton>
+                                  )}
+                                </Box>
+                                {upload.fileName && (
+                                  <Typography variant="body2">
+                                    <strong>File:</strong> {upload.fileName}
+                                  </Typography>
+                                )}
+                                {upload.warehouse && (
+                                  <Typography variant="body2">
+                                    <strong>Warehouse:</strong> {upload.warehouse}
+                                  </Typography>
+                                )}
+                              </Box>
+                            }
+                          />
+                            
+                          <CardContent sx={{ pt: 0 }}>
+                            {/* Status Message */}
+                            <Box sx={{ mb: 2 }}>
+                              <Typography variant="body2" color={upload.success ? 'success.main' : 'error.main'}>
+                                <strong>Status:</strong> {upload.message}
+                              </Typography>
+                            </Box>
+
+                            {/* Error List (Expandable) */}
+                            {upload.errors.length > 0 && (
+                              <Collapse in={isExpanded}>
+                                <Box sx={{ mt: 2 }}>
+                                  <Typography variant="subtitle2" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <ErrorIcon fontSize="small" color="error" />
+                                    Error Details ({upload.errors.length} errors)
+                                  </Typography>
+                                  <Divider sx={{ mb: 1 }} />
+                                  <List dense sx={{ maxHeight: 200, overflow: 'auto', bgcolor: 'grey.50' }}>
+                                    {upload.errors.map((error, errorIndex) => (
+                                      <ListItem key={errorIndex} sx={{ py: 0.5 }}>
+                                        <ListItemText
+                                          primary={
+                                            <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
+                                              {error}
+                                            </Typography>
+                                          }
+                                        />
+                                      </ListItem>
+                                    ))}
+                                  </List>
+                                </Box>
+                              </Collapse>
+                            )}
+
+                            {/* Additional Info */}
+                            <Box sx={{ mt: 2 }}>
+                              <Typography variant="caption" color="text.secondary">
+                                Completed: {formatTimestamp(upload.timestamp)}
+                              </Typography>
+                            </Box>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </Box>
+                ) : (
+                  <Box sx={{ textAlign: 'center', py: 4 }}>
+                    <Typography variant="h6" color="text.secondary" gutterBottom>
+                      No Upload History
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      No completed uploads found in the logs.
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            )}
           </Box>
         )}
       </DialogContent>

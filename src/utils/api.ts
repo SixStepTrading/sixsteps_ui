@@ -91,7 +91,10 @@ const consolidatePrices = (prices: ProductPrice[]): ProductPrice[] => {
     stock: consolidated.stock,
     supplier: consolidated.suppliers.join(', '), // For display purposes
     suppliers: consolidated.suppliers, // Keep original suppliers for detailed view
-    originalPrices: consolidated.originalPrices // Keep original price objects for stock details
+    originalPrices: consolidated.originalPrices, // Keep original price objects for stock details
+    // For consolidated prices, we'll use the first price's warehouse/entity info as representative
+    warehouse: consolidated.originalPrices[0]?.warehouse,
+    entityName: consolidated.originalPrices[0]?.entityName
   }));
 };
 
@@ -156,8 +159,13 @@ export const fetchProducts = async (
 
     // Create entity lookup map
     const entityMap = new Map<string, string>();
+    const entityWarehouseMap = new Map<string, { entityName: string; warehouses: string[] }>();
     entities.forEach(entity => {
       entityMap.set(entity.id, entity.entityName);
+      entityWarehouseMap.set(entity.id, {
+        entityName: entity.entityName,
+        warehouses: entity.warehouses || []
+      });
     });
 
     // Transform the API response to match our Product interface
@@ -166,18 +174,28 @@ export const fetchProducts = async (
       let bestPrices: ProductPrice[] = [];
 
       if (item.supplies && Array.isArray(item.supplies)) {
-        // New format with integrated supplies - use entityId to get supplier name
-        bestPrices = item.supplies.map((supply: any) => ({
-          supplier: entityMap.get(supply.entityId) || supply.supplier || supply.supplierName || `Supplier ${supply.entityId}` || "Unknown Supplier",
-          price: supply.price || supply.publicPrice || 0,
-          stock: supply.stock || supply.quantity || 0,
-        }));
+        // New format with integrated supplies - use entityId to get supplier name and warehouse info
+        bestPrices = item.supplies.map((supply: any) => {
+          const entityInfo = entityWarehouseMap.get(supply.entityId);
+          const entityName = entityInfo?.entityName || entityMap.get(supply.entityId) || supply.supplier || supply.supplierName || `Supplier ${supply.entityId}` || "Unknown Supplier";
+          const warehouse = supply.warehouse || "Default Warehouse";
+          
+          return {
+            supplier: entityName,
+            price: supply.price || supply.publicPrice || 0,
+            stock: supply.stock || supply.quantity || 0,
+            warehouse: warehouse,
+            entityName: entityName,
+          };
+        });
       } else if (item.suppliers && Array.isArray(item.suppliers)) {
         // Old format with separate suppliers
         bestPrices = item.suppliers.map((supplier: any) => ({
           supplier: supplier.name || supplier.supplier || "Unknown Supplier",
           price: supplier.price || supplier.publicPrice || 0,
           stock: supplier.stockQuantity || supplier.stock || 0,
+          warehouse: supplier.warehouse || "Default Warehouse",
+          entityName: supplier.name || supplier.supplier || "Unknown Supplier",
         }));
       } else {
         // No supply data, create default entry
@@ -186,6 +204,8 @@ export const fetchProducts = async (
             supplier: "Internal Stock",
             price: item.publicPrice || 0,
             stock: 0,
+            warehouse: "Internal Warehouse",
+            entityName: "Internal Stock",
           },
         ];
       }
@@ -195,6 +215,32 @@ export const fetchProducts = async (
       
       // Consolidate prices with same value but different suppliers
       bestPrices = consolidatePrices(bestPrices);
+
+      // Keep original prices for filtering (before consolidation)
+      let allOriginalPrices: ProductPrice[] = [];
+      if (item.supplies && Array.isArray(item.supplies)) {
+        allOriginalPrices = item.supplies.map((supply: any) => {
+          const entityInfo = entityWarehouseMap.get(supply.entityId);
+          const entityName = entityInfo?.entityName || entityMap.get(supply.entityId) || supply.supplier || supply.supplierName || `Supplier ${supply.entityId}` || "Unknown Supplier";
+          const warehouse = supply.warehouse || "Default Warehouse";
+          
+          return {
+            supplier: entityName,
+            price: supply.price || supply.publicPrice || 0,
+            stock: supply.stock || supply.quantity || 0,
+            warehouse: warehouse,
+            entityName: entityName,
+          };
+        });
+      } else if (item.suppliers && Array.isArray(item.suppliers)) {
+        allOriginalPrices = item.suppliers.map((supplier: any) => ({
+          supplier: supplier.name || supplier.supplier || "Unknown Supplier",
+          price: supplier.price || supplier.publicPrice || 0,
+          stock: supplier.stockQuantity || supplier.stock || 0,
+          warehouse: supplier.warehouse || "Default Warehouse",
+          entityName: supplier.name || supplier.supplier || "Unknown Supplier",
+        }));
+      }
 
       return {
         id: item.id?.toString() || item._id?.toString() || "",
@@ -207,18 +253,38 @@ export const fetchProducts = async (
         publicPrice: item.publicPrice || item.price || 0,
         vat: item.publicVat || item.vatRate || item.vat || 22, // Use publicVat from backend
         bestPrices,
+        allPrices: allOriginalPrices, // Add all original prices for filtering
         inStock: bestPrices.some((price) => price.stock > 0),
       };
     });
 
-    // Extract unique suppliers from products
+    // Extract unique suppliers from ALL original data (not just bestPrices)
     const allSuppliers = new Set<string>();
-    products.forEach((product) => {
-      product.bestPrices.forEach((price) => {
-        if (price.supplier) {
-          allSuppliers.add(price.supplier);
-        }
-      });
+    
+    // Extract suppliers from original API response data
+    response.data.products.forEach((item: any) => {
+      if (item.supplies && Array.isArray(item.supplies)) {
+        // New format with integrated supplies
+        item.supplies.forEach((supply: any) => {
+          const entityInfo = entityWarehouseMap.get(supply.entityId);
+          const entityName = entityInfo?.entityName || entityMap.get(supply.entityId) || supply.supplier || supply.supplierName || `Supplier ${supply.entityId}` || "Unknown Supplier";
+          const warehouse = supply.warehouse || "Default Warehouse";
+          
+          // Create supplier name with warehouse info: "Entity Name | Warehouse Name"
+          const supplierWithWarehouse = `${entityName} | ${warehouse}`;
+          allSuppliers.add(supplierWithWarehouse);
+        });
+      } else if (item.suppliers && Array.isArray(item.suppliers)) {
+        // Old format with separate suppliers
+        item.suppliers.forEach((supplier: any) => {
+          const entityName = supplier.name || supplier.supplier || "Unknown Supplier";
+          const warehouse = supplier.warehouse || "Default Warehouse";
+          
+          // Create supplier name with warehouse info: "Entity Name | Warehouse Name"
+          const supplierWithWarehouse = `${entityName} | ${warehouse}`;
+          allSuppliers.add(supplierWithWarehouse);
+        });
+      }
     });
 
     console.log(`✅ Processed ${products.length} products`);
@@ -282,14 +348,11 @@ export interface LoginResponse {
 export interface Entity {
   id: string;
   entityType:
-    | "PHARMA"
-    | "LANDLORD"
-    | "TENANT"
-    | "ADMIN"
-    | "PHARMACY"
     | "SUPPLIER"
-    | "company"
-    | "MANAGER";
+    | "MANAGER"
+    | "PHARMACY"
+    | "ADMIN"
+    | "company"; // Backend compatibility
   entityName: string;
   country?: string;
   notes?: string;
@@ -298,18 +361,19 @@ export interface Entity {
   referralContacts?: string;
   username?: string;
   crmId?: string;
+  warehouses?: string[]; // Array of warehouse names
+  address?: string; // Entity address
+  phone?: string; // Entity phone
   createdAt?: string;
   updatedAt?: string;
 }
 
 export interface CreateEntityData {
   entityType:
-    | "PHARMA"
-    | "LANDLORD"
-    | "TENANT"
-    | "ADMIN"
+    | "SUPPLIER"
+    | "MANAGER"
     | "PHARMACY"
-    | "SUPPLIER";
+    | "ADMIN";
   entityName: string;
   country: string;
   notes?: string;
@@ -318,6 +382,7 @@ export interface CreateEntityData {
   vatNumber?: string;
   email?: string;
   phone?: string;
+  warehouses?: string[]; // Array of warehouse names
 }
 
 export interface CreateUserData {
@@ -435,6 +500,9 @@ export const getAllEntities = async (): Promise<Entity[]> => {
         referralContacts: item.entity.referralContacts || "",
         username: item.entity.username || "",
         crmId: item.entity.crmId || "",
+        warehouses: item.entity.warehouses || [], // Map warehouses array
+        address: item.entity.address || "", // Map address
+        phone: item.entity.phone || "", // Map phone
         createdAt:
           item.entity.createdAt ||
           new Date(item.entity.lastUpdated).toISOString(),
@@ -456,6 +524,45 @@ export const getAllEntities = async (): Promise<Entity[]> => {
         error.message ||
         "Failed to fetch entities"
     );
+  }
+};
+
+// Get current user entity
+export const getCurrentUserEntity = async (): Promise<Entity> => {
+  try {
+    console.log("🔍 Fetching current user entity...");
+    const response = await sixstepClient.get("/users/get");
+    
+    console.log("✅ Current user entity response:", response.data);
+    
+    if (response.data.error) {
+      throw new Error(response.data.message || "Failed to fetch user entity");
+    }
+    
+    // Map the response to our Entity interface
+    const entity = {
+      id: response.data.entity._id,
+      entityType: response.data.entity.entityType,
+      entityName: response.data.entity.entityName,
+      country: response.data.entity.country || "Unknown",
+      notes: response.data.entity.notes || "",
+      status: response.data.entity.status || "ACTIVE",
+      referralName: response.data.entity.referralName || "",
+      referralContacts: response.data.entity.referralContacts || "",
+      username: response.data.entity.username || "",
+      crmId: response.data.entity.crmId || "",
+      warehouses: response.data.entity.warehouses || [], // Map warehouses array
+      address: response.data.entity.address || "", // Map address
+      phone: response.data.entity.phone || "", // Map phone
+      createdAt: response.data.entity.createdAt || new Date(response.data.entity.lastUpdated).toISOString(),
+      updatedAt: response.data.entity.updatedAt || new Date(response.data.entity.lastUpdated).toISOString(),
+    };
+    
+    console.log("📊 Mapped current user entity:", entity);
+    return entity;
+  } catch (error) {
+    console.error("❌ Error fetching current user entity:", error);
+    throw error;
   }
 };
 
@@ -504,7 +611,8 @@ export const createEntity = async (
       address: entityData.address || "",
       vatNumber: entityData.vatNumber || "",
       email: entityData.email || "",
-      phone: entityData.phone || ""
+      phone: entityData.phone || "",
+      warehouses: entityData.warehouses || [] // Include warehouses array
     };
     
     console.log("Mapped payload for backend:", backendPayload);
@@ -847,11 +955,190 @@ export const deleteEntity = async (entityId: string): Promise<void> => {
   }
 };
 
+// Reset supplies for entity
+export const resetEntitySupplies = async (entityId: string, warehouse?: string): Promise<void> => {
+  try {
+    console.log("Resetting supplies for entity:", entityId, "warehouse:", warehouse);
+    const response = await sixstepClient.post("/supply/delete-all-for-entity", {
+      entityId: entityId,
+      warehouse: warehouse
+    });
+    console.log("Reset Entity Supplies API response:", response.data);
+  } catch (error: any) {
+    console.error("Reset entity supplies error:", error);
+    throw new Error(
+      error.response?.data?.message ||
+        error.message ||
+        "Failed to reset entity supplies"
+    );
+  }
+};
+
 // Check if user is authenticated
 export const isAuthenticated = (): boolean => {
   const token = localStorage.getItem("sixstep_token");
   const user = localStorage.getItem("sixstep_user");
   return !!(token && user);
+};
+
+// Fetch logs with warehouse filtering
+export const fetchWarehouseLogs = async (warehouseName: string): Promise<any[]> => {
+  try {
+    console.log("🔍 Fetching logs for warehouse:", warehouseName);
+    
+    // First, get all recent logs and filter client-side since the warehouse field is nested
+    const response = await sixstepClient.post("/logs/get",{
+      "page": 1,
+      "limit": 20000000
+    });
+    
+    console.log("📊 All logs response:", response.data);
+    
+    // Filter logs that have the warehouse in details.metadata.warehouse
+    const filteredLogs = (response.data.logs || []).filter((log: any) => {
+      // Check if warehouse exists in details.metadata.warehouse
+      console.log("🔍 Checking log:", log);
+      const warehouseInMetadata = log.details?.metadata?.warehouse === warehouseName;
+      // Also check the top-level warehouse field for backward compatibility
+      const warehouseTopLevel = log.warehouse === warehouseName;
+      
+      return warehouseInMetadata || warehouseTopLevel;
+    });
+    
+    console.log("✅ Filtered warehouse logs:", filteredLogs);
+    return filteredLogs.slice(0, 1); // Return only the most recent
+  } catch (error) {
+    console.error("❌ Error fetching warehouse logs:", error);
+    throw error;
+  }
+};
+
+// Fetch warehouse statistics
+export const fetchWarehouseStats = async (entityId: string, warehouseName: string): Promise<{
+  totalProducts: number;
+  totalStock: number;
+  totalValue: number;
+  lastActivity: string;
+  recentUploads: number;
+}> => {
+  try {
+    console.log("📊 Fetching warehouse stats for:", { entityId, warehouseName });
+    
+    // Get products to calculate stats
+    const productsResponse = await sixstepClient.post("/products/get", {
+      page: 1,
+      limit: 1000 // Get more products to calculate accurate stats
+    });
+    
+    // Filter products that have supplies in this specific warehouse
+    const warehouseProducts = productsResponse.data.products.filter((product: any) => {
+      if (product.supplies && Array.isArray(product.supplies)) {
+        return product.supplies.some((supply: any) => 
+          supply.entityId === entityId && supply.warehouse === warehouseName
+        );
+      }
+      return false;
+    });
+    
+    // Calculate statistics
+    let totalStock = 0;
+    let totalValue = 0;
+    
+    warehouseProducts.forEach((product: any) => {
+      if (product.supplies && Array.isArray(product.supplies)) {
+        product.supplies.forEach((supply: any) => {
+          if (supply.entityId === entityId && supply.warehouse === warehouseName) {
+            totalStock += supply.stock || supply.quantity || 0;
+            totalValue += (supply.stock || supply.quantity || 0) * (supply.price || supply.publicPrice || 0);
+          }
+        });
+      }
+    });
+    
+    // Get recent activity count (last 7 days)
+    const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+    const logsResponse = await sixstepClient.post("/logs/get", {
+      page: 1,
+      limit: 1000
+    });
+    
+    const recentUploads = (logsResponse.data.logs || []).filter((log: any) => {
+      const isWarehouseLog = log.details?.metadata?.warehouse === warehouseName || log.warehouse === warehouseName;
+      const isRecent = log.timestamp > sevenDaysAgo;
+      const isUploadAction = log.customAction?.includes('CSV_UPLOAD') || log.customAction?.includes('UPLOAD');
+      return isWarehouseLog && isRecent && isUploadAction;
+    }).length;
+    
+    const stats = {
+      totalProducts: warehouseProducts.length,
+      totalStock: totalStock,
+      totalValue: Math.round(totalValue * 100) / 100, // Round to 2 decimal places
+      lastActivity: warehouseProducts.length > 0 ? 'Active' : 'No activity',
+      recentUploads: recentUploads
+    };
+    
+    console.log("✅ Warehouse stats calculated:", stats);
+    return stats;
+  } catch (error) {
+    console.error("❌ Error fetching warehouse stats:", error);
+    // Return default stats on error
+    return {
+      totalProducts: 0,
+      totalStock: 0,
+      totalValue: 0,
+      lastActivity: 'Unknown',
+      recentUploads: 0
+    };
+  }
+};
+
+// Delete warehouse supplies
+export const deleteWarehouseSupplies = async (entityId: string, warehouseName: string): Promise<void> => {
+  try {
+    console.log("🗑️ Deleting supplies for warehouse:", { entityId, warehouseName });
+    const response = await sixstepClient.post("/supply/delete-all-for-entity", {
+      entityId: entityId,
+      warehouse: warehouseName
+    });
+    console.log("✅ Warehouse supplies deleted successfully:", response.data);
+  } catch (error) {
+    console.error("❌ Error deleting warehouse supplies:", error);
+    throw error;
+  }
+};
+
+// Remove warehouse from entity
+export const removeWarehouseFromEntity = async (entityId: string, warehouseName: string): Promise<void> => {
+  try {
+    console.log("🏢 Removing warehouse from entity:", { entityId, warehouseName });
+    
+    // First get current entity data
+    const entities = await getAllEntities();
+    const entity = entities.find(e => e.id === entityId);
+    
+    if (!entity) {
+      throw new Error("Entity not found");
+    }
+    
+    // Remove warehouse from the list
+    const updatedWarehouses = (entity.warehouses || []).filter(w => w !== warehouseName);
+    
+    // Use POST /entities/update endpoint directly
+    const response = await sixstepClient.post("/entities/update", {
+      entityId: entityId,
+      entityType: entity.entityType,
+      entityName: entity.entityName,
+      country: entity.country || "IT",
+      warehouses: updatedWarehouses,
+      notes: entity.notes || "",
+      status: entity.status || "active"
+    });
+    
+    console.log("✅ Warehouse removed from entity successfully:", response.data);
+  } catch (error) {
+    console.error("❌ Error removing warehouse from entity:", error);
+    throw error;
+  }
 };
 
 // Get current user from localStorage
@@ -1109,17 +1396,33 @@ export const uploadProductsCSV = async (
 // Upload Supplies CSV (Supplier) - for updating own stock levels
 export const uploadSuppliesCSV = async (
   file: File,
-  columnMapping: ColumnMapping
+  columnMapping: ColumnMapping,
+  entityId?: string,
+  warehouse?: string
 ): Promise<UploadResponse> => {
   try {
     console.log("🚀 Starting supplies CSV upload...", {
       fileName: file.name,
       mapping: columnMapping,
+      entityId: entityId,
+      warehouse: warehouse,
     });
 
     const formData = new FormData();
     formData.append("csvFile", file);
     // formData.append("columnMapping", JSON.stringify(columnMapping));
+    if (entityId) {
+      formData.append("entityId", entityId);
+    }
+    if (warehouse) {
+      formData.append("warehouse", warehouse);
+    }
+
+    console.log("📤 FormData prepared:", {
+      fileAppended: formData.has("csvFile"),
+      entityAppended: formData.has("entityId"),
+      warehouseAppended: formData.has("warehouse"),
+    });
 
     const response = await sixstepClient.post("/upload/supplies", formData, {
       headers: {
@@ -1139,7 +1442,8 @@ export const uploadSuppliesCSV = async (
 export const uploadSuppliesAdminCSV = async (
   file: File,
   columnMapping: ColumnMapping,
-  supplierId: string
+  supplierId: string,
+  warehouse?: string
 ): Promise<UploadResponse> => {
   try {
     console.log("🚀 Starting admin supplies file upload...", {
@@ -1148,17 +1452,22 @@ export const uploadSuppliesAdminCSV = async (
       fileType: file.type,
       mapping: columnMapping,
       entityId: supplierId,
+      warehouse: warehouse,
     });
 
     const formData = new FormData();
     formData.append("csvFile", file);
     // formData.append("columnMapping", JSON.stringify(columnMapping));
     formData.append("entityId", supplierId);
+    if (warehouse) {
+      formData.append("warehouse", warehouse);
+    }
 
     console.log("📤 FormData prepared:", {
       fileAppended: formData.has("csvFile"),
       mappingAppended: false, // Column mapping disabled - file should have correct headers
       entityAppended: formData.has("entityId"),
+      warehouseAppended: formData.has("warehouse"),
     });
 
     console.log("🌐 Making API request to: POST /upload/supplies/admin");

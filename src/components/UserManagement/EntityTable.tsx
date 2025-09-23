@@ -1,6 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { Entity } from '../../utils/api';
 import { SidebarContext } from '../../contexts/SidebarContext';
+import WarehouseListModal from './WarehouseListModal';
 
 interface EntityTableProps {
   entities: Entity[];
@@ -8,6 +9,7 @@ interface EntityTableProps {
   hasActiveFilters?: boolean;
   onEditEntity: (entity: Entity) => void;
   onDeleteEntity: (entity: Entity) => void;
+  onResetSupplies: (entity: Entity) => void;
 }
 
 const EntityTable: React.FC<EntityTableProps> = ({
@@ -15,13 +17,18 @@ const EntityTable: React.FC<EntityTableProps> = ({
   totalEntities,
   hasActiveFilters = false,
   onEditEntity,
-  onDeleteEntity
+  onDeleteEntity,
+  onResetSupplies
 }) => {
   const { isDrawerCollapsed } = useContext(SidebarContext);
   
   // Add sort state
   const [sortBy, setSortBy] = useState<string>('entityName');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  
+  // Warehouse modal state
+  const [warehouseModalOpen, setWarehouseModalOpen] = useState(false);
+  const [selectedEntityForWarehouses, setSelectedEntityForWarehouses] = useState<Entity | null>(null);
 
   // Apply sorting
   const sortedEntities = [...entities].sort((a, b) => {
@@ -33,11 +40,13 @@ const EntityTable: React.FC<EntityTableProps> = ({
       case 'entityType':
         comparison = a.entityType.localeCompare(b.entityType);
         break;
+      case 'warehouses':
+        const warehousesA = (a.warehouses || []).length;
+        const warehousesB = (b.warehouses || []).length;
+        comparison = warehousesA - warehousesB;
+        break;
       case 'country':
         comparison = (a.country || '').localeCompare(b.country || '');
-        break;
-      case 'status':
-        comparison = (a.status || 'ACTIVE').localeCompare(b.status || 'ACTIVE');
         break;
       case 'createdAt':
         const dateA = new Date(a.createdAt || 0);
@@ -65,6 +74,20 @@ const EntityTable: React.FC<EntityTableProps> = ({
       setSortBy(column);
       setSortDirection('asc');
     }
+  };
+
+  // Handle warehouse count click
+  const handleWarehouseCountClick = (entity: Entity) => {
+    if ((entity.warehouses || []).length > 1) {
+      setSelectedEntityForWarehouses(entity);
+      setWarehouseModalOpen(true);
+    }
+  };
+
+  // Handle warehouse modal close
+  const handleWarehouseModalClose = () => {
+    setWarehouseModalOpen(false);
+    setSelectedEntityForWarehouses(null);
   };
 
   // Entity type color mapping
@@ -131,13 +154,13 @@ const EntityTable: React.FC<EntityTableProps> = ({
             <div className="w-[15%] text-center cursor-pointer select-none flex items-center justify-center" onClick={() => handleSort('entityType')}>
               Type {renderSortIcon('entityType')}
             </div>
-            <div className="w-[15%] cursor-pointer select-none flex items-center" onClick={() => handleSort('country')}>
+            <div className="w-[12%] text-center cursor-pointer select-none flex items-center justify-center" onClick={() => handleSort('warehouses')}>
+              Warehouses {renderSortIcon('warehouses')}
+            </div>
+            <div className="w-[18%] cursor-pointer select-none flex items-center" onClick={() => handleSort('country')}>
               Country {renderSortIcon('country')}
             </div>
-            <div className="w-[10%] text-center cursor-pointer select-none flex items-center justify-center" onClick={() => handleSort('status')}>
-              Status {renderSortIcon('status')}
-            </div>
-            <div className="w-[15%] cursor-pointer select-none flex items-center" onClick={() => handleSort('createdAt')}>
+            <div className="w-[20%] cursor-pointer select-none flex items-center" onClick={() => handleSort('createdAt')}>
               Created {renderSortIcon('createdAt')}
             </div>
             <div className="w-[15%] text-center">Notes</div>
@@ -163,9 +186,6 @@ const EntityTable: React.FC<EntityTableProps> = ({
           ) : (
             sortedEntities.map((entity, idx) => {
               const typeClasses = getEntityTypeColorClasses(entity.entityType);
-              const statusClasses = (entity.status || 'ACTIVE') === 'ACTIVE' 
-                ? { bg: 'bg-green-50 dark:bg-green-900/30', text: 'text-green-600 dark:text-green-400' } 
-                : { bg: 'bg-gray-50 dark:bg-gray-800', text: 'text-gray-500 dark:text-gray-400' };
 
               return (
                 <div 
@@ -202,22 +222,37 @@ const EntityTable: React.FC<EntityTableProps> = ({
                     </span>
                   </div>
                   
+                  {/* Warehouses Count */}
+                  <div className="w-[12%] flex justify-center">
+                    <div className="flex items-center">
+                      {(entity.warehouses || []).length > 1 ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleWarehouseCountClick(entity);
+                          }}
+                          className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline cursor-pointer"
+                          title="Click to view warehouse activity"
+                        >
+                          {(entity.warehouses || []).length}
+                        </button>
+                      ) : (
+                        <span className="text-sm font-medium text-slate-700 dark:text-dark-text-secondary">
+                          {(entity.warehouses || []).length}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  
                   {/* Country */}
-                  <div className="w-[15%]">
+                  <div className="w-[18%]">
                     <span className="text-sm text-slate-700 dark:text-dark-text-secondary">
                       {entity.country || 'N/A'}
                     </span>
                   </div>
                   
-                  {/* Status */}
-                  <div className="w-[10%] flex justify-center">
-                    <span className={`${statusClasses.bg} ${statusClasses.text} inline-block py-1 px-3 rounded text-xs font-medium border dark:border-opacity-30`}>
-                      {entity.status || 'ACTIVE'}
-                    </span>
-                  </div>
-                  
                   {/* Created Date */}
-                  <div className="w-[15%]">
+                  <div className="w-[20%]">
                     <span className="text-sm text-gray-500 dark:text-dark-text-muted">
                       {formatDate(entity.createdAt)}
                     </span>
@@ -233,28 +268,58 @@ const EntityTable: React.FC<EntityTableProps> = ({
                   {/* Actions */}
                   <div className="w-[5%] flex justify-center gap-1">
                     <button 
-                      className="text-blue-600 dark:text-blue-400 p-1 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-full"
+                      className="text-blue-600 dark:text-blue-400 p-1 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-full group relative"
                       onClick={(e) => { 
                         e.stopPropagation(); 
                         onEditEntity(entity); 
                       }}
                       aria-label="Edit entity"
+                      title="Edit entity"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                       </svg>
+                      {/* Tooltip */}
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                        Edit Entity
+                      </div>
                     </button>
                     <button 
-                      className="text-red-600 dark:text-red-400 p-1 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-full"
+                      className="text-orange-600 dark:text-orange-400 p-1 hover:bg-orange-50 dark:hover:bg-orange-900/30 rounded-full group relative"
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        onResetSupplies(entity); 
+                      }}
+                      aria-label="Reset supplies"
+                      title="Reset all supplies for this entity"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        {/* Main cube/box icon */}
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        {/* Diagonal slash line for reset/delete indication */}
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 3l18 18" />
+                      </svg>
+                      {/* Tooltip */}
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                        Reset Supplies
+                      </div>
+                    </button>
+                    <button 
+                      className="text-red-600 dark:text-red-400 p-1 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-full group relative"
                       onClick={(e) => { 
                         e.stopPropagation(); 
                         onDeleteEntity(entity); 
                       }}
                       aria-label="Delete entity"
+                      title="Delete entity"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
+                      {/* Tooltip */}
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                        Delete Entity
+                      </div>
                     </button>
                   </div>
                 </div>
@@ -263,6 +328,13 @@ const EntityTable: React.FC<EntityTableProps> = ({
           )}
         </div>
       </div>
+      
+      {/* Warehouse List Modal */}
+      <WarehouseListModal
+        isOpen={warehouseModalOpen}
+        onClose={handleWarehouseModalClose}
+        entity={selectedEntityForWarehouses}
+      />
     </div>
   );
 };

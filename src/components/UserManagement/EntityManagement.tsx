@@ -5,6 +5,7 @@ import { SearchIcon, PlusIcon, FilterIcon } from '@heroicons/react/outline';
 import EditEntityModal from './EditEntityModal';
 import DeleteEntityModal from './DeleteEntityModal';
 import CreateEntityModal from './CreateEntityModal';
+import ResetSuppliesModal from './ResetSuppliesModal';
 import EntityTable from './EntityTable';
 import ApiErrorMessage from '../common/atoms/ApiErrorMessage';
 
@@ -34,6 +35,7 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ openCreateModal = f
   // Modal states
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [resetSuppliesModalOpen, setResetSuppliesModalOpen] = useState(false);
   const [showCreateEntityModal, setShowCreateEntityModal] = useState(false);
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null);
 
@@ -84,6 +86,11 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ openCreateModal = f
     setDeleteModalOpen(true);
   };
 
+  const handleResetSupplies = (entity: Entity) => {
+    setSelectedEntity(entity);
+    setResetSuppliesModalOpen(true);
+  };
+
   const handleCloseEditModal = () => {
     setEditModalOpen(false);
     setSelectedEntity(null);
@@ -94,12 +101,22 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ openCreateModal = f
     setSelectedEntity(null);
   };
 
+  const handleCloseResetSuppliesModal = () => {
+    setResetSuppliesModalOpen(false);
+    setSelectedEntity(null);
+  };
+
   const handleEntityUpdated = async () => {
     await loadEntities(); // Refresh the entities list
   };
 
   const handleEntityDeleted = async () => {
     await loadEntities(); // Refresh the entities list
+  };
+
+  const handleSuppliesReset = async () => {
+    await loadEntities(); // Refresh the entities list
+    showToast('Supplies reset successfully!', 'success');
   };
 
   const handleRefresh = async () => {
@@ -343,6 +360,7 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ openCreateModal = f
           hasActiveFilters={!!(filters.search || filters.entityType || filters.activeOnly)}
           onEditEntity={handleEditEntity}
           onDeleteEntity={handleDeleteEntity}
+          onResetSupplies={handleResetSupplies}
         />
       )}
 
@@ -359,6 +377,13 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ openCreateModal = f
         onClose={handleCloseDeleteModal}
         entity={selectedEntity}
         onEntityDeleted={handleEntityDeleted}
+      />
+
+      <ResetSuppliesModal
+        isOpen={resetSuppliesModalOpen}
+        onClose={handleCloseResetSuppliesModal}
+        entity={selectedEntity}
+        onSuppliesReset={handleSuppliesReset}
       />
       
       <CreateEntityModal
