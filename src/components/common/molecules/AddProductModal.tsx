@@ -35,6 +35,7 @@ import * as XLSX from 'xlsx';
 import { uploadProductsCSV, ColumnMapping } from '../../../utils/api';
 import { useUploadProgress } from '../../../hooks/useUploadProgress';
 import UploadProgressBar from '../../common/atoms/UploadProgressBar';
+import UploadResultModal from './UploadResultModal';
 
 export interface ProductFormData {
   // Core API fields (what the backend expects)
@@ -91,6 +92,8 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [processedProducts, setProcessedProducts] = useState<ProductFormData[]>([]);
   const [activeStep, setActiveStep] = useState(0);
+  const [uploadResult, setUploadResult] = useState<any>(null);
+  const [showResultModal, setShowResultModal] = useState(false);
   
   // Stepper configuration
   const steps = ['Upload Files', 'Map Columns', 'Preview & Import'];
@@ -123,8 +126,9 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       console.log('📊 Bulk import completed via progress tracking:', result);
       setIsProcessing(false);
       
-      // Reset form and close
-      handleCancel();
+      // Show result modal
+      setUploadResult(result);
+      setShowResultModal(true);
     },
     onError: (error) => {
       console.error('📊 Bulk import progress error:', error);
@@ -1340,6 +1344,18 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
           </Button>
         )}
       </DialogActions>
+      
+      {/* Upload Result Modal */}
+      <UploadResultModal
+        open={showResultModal}
+        onClose={() => {
+          setShowResultModal(false);
+          setUploadResult(null);
+          handleCancel(); // Reset form and close main modal
+        }}
+        result={uploadResult}
+        uploadType="products"
+      />
     </Dialog>
   );
 };

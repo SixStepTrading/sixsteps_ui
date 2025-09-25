@@ -682,12 +682,12 @@ const ProductTable: React.FC<ProductTableProps> = ({
                   }}
                 >
                   {/* Row number and Checkbox combined */}
-                  <div className={`${isDrawerCollapsed ? 'w-[6%]' : 'w-[6.5%]'} flex items-start pt-1 px-1`}>
-                    <div className="flex items-center gap-1">
-                      <span className="w-12 text-xs text-gray-600 dark:text-dark-text-muted font-medium text-left">{startIndex + idx + 1}</span>
+                  <div className={`${isDrawerCollapsed ? 'w-[5%]' : 'w-[5.5%]'} flex items-start pt-1 px-0`}>
+                    <div className="flex items-center gap-0">
+                      <span className="w-6 text-xs text-gray-600 dark:text-dark-text-muted font-medium text-left">{startIndex + idx + 1}</span>
                       {isExceeded ? (
                         <Tooltip text={errorMessage} position="top">
-                          <div className="flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-white text-xs font-bold">
+                          <div className="flex items-center justify-center w-4 h-4 rounded-full bg-amber-500 text-white text-xs font-bold">
                             !
                           </div>
                         </Tooltip>

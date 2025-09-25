@@ -216,7 +216,9 @@ const ActiveUploadsModal: React.FC<ActiveUploadsModalProps> = ({
         sx: {
           borderRadius: 3,
           boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          minHeight: '90vh',
+          maxHeight: '95vh'
         }
       }}
     >
@@ -259,7 +261,12 @@ const ActiveUploadsModal: React.FC<ActiveUploadsModalProps> = ({
         </Box>
       </DialogTitle>
       
-      <DialogContent dividers sx={{ p: 0, bgcolor: 'background.paper' }}>
+      <DialogContent dividers sx={{ 
+        height: 'calc(90vh - 120px)', 
+        overflow: 'auto',
+        p: 0,
+        bgcolor: 'background.paper'
+      }}>
         {/* Tabs */}
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tabs 
