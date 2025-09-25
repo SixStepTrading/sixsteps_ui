@@ -47,7 +47,8 @@ const ModernDialog: React.FC<ModernDialogProps> = ({
         sx: {
           borderRadius: 3,
           boxShadow: '0 24px 48px rgba(0, 0, 0, 0.15)',
-          minHeight: '60vh'
+          minHeight: '90vh',
+          maxHeight: '95vh'
         }
       }}
     >
@@ -93,7 +94,12 @@ const ModernDialog: React.FC<ModernDialogProps> = ({
         </Box>
       )}
       
-      <DialogContent dividers sx={{ p: 0, bgcolor: 'background.paper' }}>
+      <DialogContent dividers sx={{ 
+        p: 0, 
+        bgcolor: 'background.paper',
+        height: 'calc(90vh - 200px)',
+        overflow: 'auto'
+      }}>
         <Box sx={{ p: 3 }}>
           {children}
         </Box>
