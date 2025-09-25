@@ -147,24 +147,24 @@ const EntityTable: React.FC<EntityTableProps> = ({
         <div className={`${isDrawerCollapsed ? 'min-w-[1000px]' : 'min-w-[1200px]'} transition-all duration-300`}>
           {/* Table header */}
           <div className="flex items-center px-3 py-3 text-xs uppercase text-slate-500 dark:text-dark-text-muted font-semibold tracking-wider bg-gray-50 dark:bg-dark-bg-secondary rounded-t-lg rounded-xl my-1.5 border-b border-gray-200 dark:border-dark-border-primary">
-            <div className="w-[5%] text-center">#</div>
-            <div className="w-[30%] cursor-pointer select-none flex items-center" onClick={() => handleSort('entityName')}>
+            <div className="w-[4%] text-center">#</div>
+            <div className="w-[28%] cursor-pointer select-none flex items-center" onClick={() => handleSort('entityName')}>
               Entity Name {renderSortIcon('entityName')}
             </div>
-            <div className="w-[15%] text-center cursor-pointer select-none flex items-center justify-center" onClick={() => handleSort('entityType')}>
+            <div className="w-[12%] text-center cursor-pointer select-none flex items-center justify-center" onClick={() => handleSort('entityType')}>
               Type {renderSortIcon('entityType')}
             </div>
-            <div className="w-[12%] text-center cursor-pointer select-none flex items-center justify-center" onClick={() => handleSort('warehouses')}>
+            <div className="w-[10%] text-center cursor-pointer select-none flex items-center justify-center" onClick={() => handleSort('warehouses')}>
               Warehouses {renderSortIcon('warehouses')}
             </div>
-            <div className="w-[12%] cursor-pointer select-none flex items-center" onClick={() => handleSort('country')}>
+            <div className="w-[10%] cursor-pointer select-none flex items-center" onClick={() => handleSort('country')}>
               Country {renderSortIcon('country')}
             </div>
-            <div className="w-[12%] cursor-pointer select-none flex items-center" onClick={() => handleSort('createdAt')}>
+            <div className="w-[10%] cursor-pointer select-none flex items-center" onClick={() => handleSort('createdAt')}>
               Created {renderSortIcon('createdAt')}
             </div>
-            <div className="w-[10%] text-center">Notes</div>
-            <div className="w-[4%] text-center">Actions</div>
+            <div className="w-[8%] text-center">Notes</div>
+            <div className="w-[18%] text-center">Actions</div>
           </div>
           
           {/* Table rows */}
@@ -198,12 +198,12 @@ const EntityTable: React.FC<EntityTableProps> = ({
                   `}
                 >
                   {/* Index */}
-                  <div className="w-[5%] flex items-center justify-center">
+                  <div className="w-[4%] flex items-center justify-center">
                     <span className="text-xs text-gray-600 dark:text-dark-text-muted font-medium">{idx + 1}</span>
                   </div>
                   
                   {/* Entity Name & Avatar */}
-                  <div className="w-[30%] flex items-center">
+                  <div className="w-[28%] flex items-center">
                     <div className={`${getAvatarColorClass(entity.entityType)} text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs mr-3`}>
                       {entity.entityName.charAt(0).toUpperCase()}
                     </div>
@@ -216,14 +216,14 @@ const EntityTable: React.FC<EntityTableProps> = ({
                   </div>
                   
                   {/* Entity Type */}
-                  <div className="w-[15%] flex justify-center">
+                  <div className="w-[12%] flex justify-center">
                     <span className={`${typeClasses.bg} ${typeClasses.text} inline-block py-1 px-3 rounded text-xs font-medium border dark:border-opacity-30`}>
                       {entity.entityType}
                     </span>
                   </div>
                   
                   {/* Warehouses Count */}
-                  <div className="w-[12%] flex justify-center">
+                  <div className="w-[10%] flex justify-center">
                     <div className="flex items-center">
                       {(entity.warehouses || []).length > 0 ? (
                         <button
@@ -245,28 +245,28 @@ const EntityTable: React.FC<EntityTableProps> = ({
                   </div>
                   
                   {/* Country */}
-                  <div className="w-[12%]">
+                  <div className="w-[10%]">
                     <span className="text-sm text-slate-700 dark:text-dark-text-secondary">
                       {entity.country || 'N/A'}
                     </span>
                   </div>
                   
                   {/* Created Date */}
-                  <div className="w-[12%]">
+                  <div className="w-[10%]">
                     <span className="text-sm text-gray-500 dark:text-dark-text-muted">
                       {formatDate(entity.createdAt)}
                     </span>
                   </div>
                   
                   {/* Notes */}
-                  <div className="w-[10%]">
-                    <span className="text-sm text-slate-700 dark:text-dark-text-secondary truncate block max-w-[100px]" title={entity.notes || ''}>
+                  <div className="w-[8%]">
+                    <span className="text-sm text-slate-700 dark:text-dark-text-secondary truncate block max-w-[80px]" title={entity.notes || ''}>
                       {entity.notes || 'N/A'}
                     </span>
                   </div>
                   
                   {/* Actions */}
-                  <div className="w-[4%] flex justify-center gap-1">
+                  <div className="w-[18%] flex justify-center gap-2">
                     <button 
                       className="text-blue-600 dark:text-blue-400 p-1 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-full group relative"
                       onClick={(e) => { 
