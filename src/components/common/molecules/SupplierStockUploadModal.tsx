@@ -18,6 +18,7 @@ import { uploadSuppliesCSV, getCurrentUserEntity, updateEntity, Entity } from '.
 import { useUploadProgress } from '../../../hooks';
 import { useUser } from '../../../contexts/UserContext';
 import { ModernDialog, FileUploadArea, ColumnMappingTable, DataPreviewTable } from './upload';
+import UploadResultModal from './UploadResultModal';
 import * as XLSX from 'xlsx';
 
 interface SupplierStockUploadModalProps {
@@ -46,6 +47,8 @@ const SupplierStockUploadModal: React.FC<SupplierStockUploadModalProps> = ({
   const [mappedFields, setMappedFields] = useState<Record<string, string>>({});
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
+  const [uploadResult, setUploadResult] = useState<any>(null);
+  const [showResultModal, setShowResultModal] = useState(false);
   
   // Warehouse selection states
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
@@ -133,8 +136,9 @@ const SupplierStockUploadModal: React.FC<SupplierStockUploadModalProps> = ({
       console.log('📊 Stock upload completed via progress tracking:', result);
       setIsProcessing(false);
       if (result) {
-        onSuccess?.();
-        handleCancel();
+        // Show result modal
+        setUploadResult(result);
+        setShowResultModal(true);
       }
     },
     onError: (error: Error) => {
@@ -860,6 +864,19 @@ const SupplierStockUploadModal: React.FC<SupplierStockUploadModalProps> = ({
           </Button>
         </DialogActions>
       </Dialog>
+      
+      {/* Upload Result Modal */}
+      <UploadResultModal
+        open={showResultModal}
+        onClose={() => {
+          setShowResultModal(false);
+          setUploadResult(null);
+          onSuccess?.();
+          handleCancel(); // Reset form and close main modal
+        }}
+        result={uploadResult}
+        uploadType="stock"
+      />
     </>
   );
 };
