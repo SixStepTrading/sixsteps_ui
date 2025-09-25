@@ -78,7 +78,7 @@ const EntityTable: React.FC<EntityTableProps> = ({
 
   // Handle warehouse count click
   const handleWarehouseCountClick = (entity: Entity) => {
-    if ((entity.warehouses || []).length > 1) {
+    if ((entity.warehouses || []).length > 0) {
       setSelectedEntityForWarehouses(entity);
       setWarehouseModalOpen(true);
     }
@@ -225,7 +225,7 @@ const EntityTable: React.FC<EntityTableProps> = ({
                   {/* Warehouses Count */}
                   <div className="w-[12%] flex justify-center">
                     <div className="flex items-center">
-                      {(entity.warehouses || []).length > 1 ? (
+                      {(entity.warehouses || []).length > 0 ? (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
