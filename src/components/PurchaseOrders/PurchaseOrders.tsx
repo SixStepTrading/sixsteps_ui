@@ -234,7 +234,6 @@ const PurchaseOrders: React.FC = () => {
         showToast('Failed to reject counter offer', 'error');
       }
     } catch (error) {
-      console.error('Error rejecting counter offer:', error);
       showToast('Error rejecting counter offer', 'error');
     }
     setCounterOfferModalOpen(false);

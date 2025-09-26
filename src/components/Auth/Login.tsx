@@ -71,7 +71,6 @@ const Login: React.FC = () => {
       
       showToast('Login successful! Welcome back.', 'success');
     } catch (error: any) {
-      console.error('Login error:', error);
       showToast(
         error.message || 'Login failed. Please check your credentials.',
         'error'

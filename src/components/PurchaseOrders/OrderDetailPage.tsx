@@ -35,7 +35,6 @@ const OrderDetailPage: React.FC = () => {
           navigate('/purchase-orders');
         }
       } catch (error) {
-        console.error('Error loading order details:', error);
         showToast('Error loading order details', 'error');
         navigate('/purchase-orders');
       } finally {

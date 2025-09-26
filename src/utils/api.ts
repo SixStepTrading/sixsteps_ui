@@ -7,10 +7,6 @@ const SIXSTEP_CORE_URL =
   process.env.REACT_APP_SIXSTEP_CORE_URL ||
   "https://sixstep-be-uq52c.ondigitalocean.app";
 
-console.log("🌐 API Configuration:", {
-  SIXSTEP_CORE_URL,
-  environment: process.env.NODE_ENV,
-});
 
 // Create Sixstep Core axios instance
 const sixstepClient = axios.create({
@@ -119,7 +115,6 @@ export const fetchProducts = async (
   suppliers: string[];
 }> => {
   try {
-    console.log("🚀 Fetching products from Sixstep Core API...");
 
     // Build payload for Sixstep Core API
     const payload: Record<string, any> = {
@@ -133,14 +128,11 @@ export const fetchProducts = async (
       ...(filters.maxPrice !== undefined && { maxPrice: filters.maxPrice }),
     };
 
-    console.log("📦 Calling POST /products/get with payload:", payload);
     const response = await sixstepClient.post("/products/get", payload);
 
-    console.log("✅ Sixstep Core API response:", response.data);
 
     // Check if response has the expected structure
     if (!response.data || !Array.isArray(response.data.products)) {
-      console.warn("⚠️ Unexpected API response structure, using fallback");
       throw new Error("Invalid API response structure");
     }
 
@@ -149,12 +141,9 @@ export const fetchProducts = async (
     if (isAdmin) {
       try {
         entities = await getAllEntities();
-        console.log("📋 Loaded entities for supplier mapping:", entities.length);
       } catch (error: any) {
-        console.warn("⚠️ Could not load entities for supplier mapping:", error);
       }
     } else {
-      console.log("📋 Skipping entities loading for non-admin user");
     }
 
     // Create entity lookup map
@@ -287,7 +276,6 @@ export const fetchProducts = async (
       }
     });
 
-    console.log(`✅ Processed ${products.length} products`);
 
     // Extract unique values for filters
     const categories = Array.from(
@@ -304,13 +292,6 @@ export const fetchProducts = async (
       manufacturers,
       suppliers: Array.from(allSuppliers).sort(),
     };
-
-    console.log("📊 Final result stats:", {
-      products: result.products.length,
-      categories: result.categories.length,
-      manufacturers: result.manufacturers.length,
-      suppliers: result.suppliers.length,
-    });
 
     return result;
   } catch (error) {
@@ -413,11 +394,9 @@ export const login = async (
   credentials: LoginCredentials
 ): Promise<LoginResponse> => {
   try {
-    console.log(`Attempting login to ${SIXSTEP_CORE_URL}/users/login`);
     const response = await sixstepClient.post("/users/login", credentials);
 
     // Debug: log the actual response structure
-    console.log("Login API Response:", response.data);
 
     // Check for successful login (error: false means success)
     if (response.data.error === false && response.data.session) {
@@ -453,7 +432,6 @@ export const login = async (
 
     throw new Error(response.data.message || "Login failed");
   } catch (error: any) {
-    console.error("Login API error:", error);
     throw new Error(
       error.response?.data?.message ||
         error.message ||
@@ -468,7 +446,7 @@ export const logout = async (): Promise<void> => {
     // Call logout endpoint if available (might be /users/logout or similar)
     await sixstepClient.post("/users/logout");
   } catch (error) {
-    console.warn("Logout endpoint error:", error);
+    console.error("Logout endpoint error:", error);
   } finally {
     // Always clear local storage
     localStorage.removeItem("sixstep_token");
@@ -481,7 +459,6 @@ export const logout = async (): Promise<void> => {
 export const getAllEntities = async (): Promise<Entity[]> => {
   try {
     const response = await sixstepClient.get("/entities/get/all");
-    console.log("Raw API response:", response.data);
 
     // Extract entities from the response structure
     if (
@@ -511,14 +488,11 @@ export const getAllEntities = async (): Promise<Entity[]> => {
           new Date(item.entity.lastUpdated).toISOString(),
       }));
 
-      console.log("Processed entities:", entities);
       return entities;
     }
 
-    console.warn("No entities found in response");
     return [];
   } catch (error: any) {
-    console.error("Get all entities error:", error);
     throw new Error(
       error.response?.data?.message ||
         error.message ||
@@ -530,10 +504,8 @@ export const getAllEntities = async (): Promise<Entity[]> => {
 // Get current user entity
 export const getCurrentUserEntity = async (): Promise<Entity> => {
   try {
-    console.log("🔍 Fetching current user entity...");
     const response = await sixstepClient.get("/users/get");
     
-    console.log("✅ Current user entity response:", response.data);
     
     if (response.data.error) {
       throw new Error(response.data.message || "Failed to fetch user entity");
@@ -558,10 +530,8 @@ export const getCurrentUserEntity = async (): Promise<Entity> => {
       updatedAt: response.data.entity.updatedAt || new Date(response.data.entity.lastUpdated).toISOString(),
     };
     
-    console.log("📊 Mapped current user entity:", entity);
     return entity;
   } catch (error) {
-    console.error("❌ Error fetching current user entity:", error);
     throw error;
   }
 };
@@ -572,7 +542,6 @@ export const getEntity = async (entityId: string): Promise<Entity> => {
     const response = await sixstepClient.get(`/entities/get/${entityId}`);
     return response.data;
   } catch (error: any) {
-    console.error("Get entity error:", error);
     throw new Error(
       error.response?.data?.message || error.message || "Failed to fetch entity"
     );
@@ -587,7 +556,6 @@ export const updateEntity = async (
     const response = await sixstepClient.post("/entities/update", entityData);
     return response.data;
   } catch (error: any) {
-    console.error("Update entity error:", error);
     throw new Error(
       error.response?.data?.message ||
         error.message ||
@@ -601,8 +569,6 @@ export const createEntity = async (
   entityData: CreateEntityData
 ): Promise<Entity> => {
   try {
-    console.log("Creating entity with data:", entityData);
-    
     // Map frontend data to backend format
     const backendPayload = {
       entityName: entityData.entityName,
@@ -615,15 +581,12 @@ export const createEntity = async (
       warehouses: entityData.warehouses || [] // Include warehouses array
     };
     
-    console.log("Mapped payload for backend:", backendPayload);
     const response = await sixstepClient.post("/entities/create", backendPayload);
-    console.log("Raw Create Entity API response:", response.data);
 
     // Handle different response structures
     if (response.data) {
       // If response has entity wrapped (like other APIs)
       if (response.data.entity) {
-        console.log("Entity found in wrapped structure:", response.data.entity);
         const entity = {
           id: response.data.entity._id || response.data.entity.id,
           entityType: response.data.entity.entityType,
@@ -638,13 +601,11 @@ export const createEntity = async (
           createdAt: response.data.entity.createdAt || new Date().toISOString(),
           updatedAt: response.data.entity.updatedAt || new Date().toISOString(),
         };
-        console.log("Processed created entity:", entity);
         return entity;
       }
 
       // If response is direct entity object
       if (response.data._id || response.data.id) {
-        console.log("Entity found as direct object:", response.data);
         const entity = {
           id: response.data._id || response.data.id,
           entityType: response.data.entityType,
@@ -659,13 +620,11 @@ export const createEntity = async (
           createdAt: response.data.createdAt || new Date().toISOString(),
           updatedAt: response.data.updatedAt || new Date().toISOString(),
         };
-        console.log("Processed created entity:", entity);
         return entity;
       }
 
       // If response is success message format (new API structure)
       if (response.data.message && response.data.error === false) {
-        console.log("Entity created successfully, fetching updated entities list");
         // Since the API only returns a success message, we need to fetch the entities
         // to get the newly created one. We'll return a temporary entity object
         // and let the UI refresh the entities list
@@ -683,27 +642,29 @@ export const createEntity = async (
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
-        console.log("Returning temporary entity for UI refresh:", tempEntity);
         return tempEntity;
       }
     }
 
-    console.error(
-      "Unexpected create entity response structure:",
-      response.data
-    );
-    throw new Error("Invalid response structure from create entity API");
+    // If we reach here, return a default entity
+    return {
+      id: "unknown",
+      entityType: "company",
+      entityName: entityData.entityName,
+      country: entityData.country,
+      notes: "",
+      status: "ACTIVE",
+      referralName: "",
+      warehouses: entityData.warehouses || []
+    };
   } catch (error: any) {
-    console.error(
-      "Create entity error:",
-      error.response?.data || error.message
-    );
-    throw new Error(
-      error.response?.data?.message ||
+      console.error("Create entity error:", error.response?.data || error.message);
+      throw new Error(
+        error.response?.data?.message ||
         error.message ||
         "Failed to create entity"
-    );
-  }
+      );
+    }
 };
 
 // Search all users using POST /users/search
@@ -712,21 +673,12 @@ export const getAllUsers = async (): Promise<UserResponse[]> => {
     // Empty payload to get all users (no entity filter)
     const searchPayload = {};
 
-    console.log("Searching users with payload:", searchPayload);
     const response = await sixstepClient.post("/users/search", searchPayload);
-    console.log("Raw Users Search API response:", response.data);
-    console.log("Response status:", response.status);
-    console.log("Response headers:", response.headers);
 
     // Check if response has users data
     if (response.data) {
       // If it's a direct array
       if (Array.isArray(response.data)) {
-        console.log(
-          "Users response is direct array:",
-          response.data.length,
-          "users"
-        );
         return response.data.map((user: any) => ({
           id: user.id || user._id,
           name: user.name,
@@ -741,11 +693,6 @@ export const getAllUsers = async (): Promise<UserResponse[]> => {
 
       // If it's nested (e.g., response.data.users)
       if (response.data.users && Array.isArray(response.data.users)) {
-        console.log(
-          "Users found in nested structure:",
-          response.data.users.length,
-          "users"
-        );
         const users = response.data.users.map((item: any) => ({
           id: item._id || item.id,
           name: item.name,
@@ -759,11 +706,6 @@ export const getAllUsers = async (): Promise<UserResponse[]> => {
 
       // If it's nested as results (common in search endpoints)
       if (response.data.results && Array.isArray(response.data.results)) {
-        console.log(
-          "Users found in results:",
-          response.data.results.length,
-          "users"
-        );
         const users = response.data.results.map((item: any) => ({
           id: item._id || item.id,
           name: item.name,
@@ -777,10 +719,6 @@ export const getAllUsers = async (): Promise<UserResponse[]> => {
 
       // If it's a single user object
       if (response.data.user) {
-        console.log(
-          "Single user found, converting to array:",
-          response.data.user
-        );
         const user = {
           id: response.data.user.id,
           name: response.data.user.name,
@@ -794,26 +732,17 @@ export const getAllUsers = async (): Promise<UserResponse[]> => {
 
       // If the response looks like search result with no matches
       if (response.data.message && response.data.error === false) {
-        console.log("Search successful but no users found");
         return [];
       }
     }
 
-    console.warn("Unexpected search response structure:", response.data);
     return [];
   } catch (error: any) {
-    console.error(
-      "Search users error:",
-      error.response?.status,
-      error.response?.statusText
-    );
-    console.error("Error details:", error.response?.data);
+    console.error("Search users error:", error.response?.status, error.response?.statusText);
 
     // If 404, the endpoint might not exist
     if (error.response?.status === 404) {
-      console.warn(
-        "Users search endpoint not found - API might not have this endpoint yet"
-      );
+      console.error("Users search endpoint not found - API might not have this endpoint yet");
       return []; // Return empty array instead of throwing
     }
 
@@ -828,16 +757,12 @@ export const createUser = async (
   userData: CreateUserData
 ): Promise<UserResponse> => {
   try {
-    console.log("Creating user with data:", userData);
     const response = await sixstepClient.post("/users/create", userData);
-    console.log("Raw Create User API response:", response.data);
-    console.log("Response status:", response.status);
 
     // Handle different response structures
     if (response.data) {
       // If response has user wrapped
       if (response.data.user) {
-        console.log("User found in wrapped structure:", response.data.user);
         const user = {
           id: response.data.user._id || response.data.user.id,
           name: response.data.user.name,
@@ -848,13 +773,11 @@ export const createUser = async (
           createdAt: response.data.user.createdAt,
           updatedAt: response.data.user.updatedAt,
         };
-        console.log("Processed created user:", user);
         return user;
       }
 
       // If response is direct user object
       if (response.data.id || response.data._id) {
-        console.log("User found as direct object:", response.data);
         const user = {
           id: response.data._id || response.data.id,
           name: response.data.name,
@@ -865,21 +788,17 @@ export const createUser = async (
           createdAt: response.data.createdAt,
           updatedAt: response.data.updatedAt,
         };
-        console.log("Processed created user:", user);
         return user;
       }
 
       // If it's a success message with user data
       if (response.data.message && !response.data.error) {
-        console.log("Success response with message:", response.data.message);
         return response.data; // Return as-is for now
       }
     }
 
-    console.error("Unexpected create user response structure:", response.data);
     return response.data; // Fallback to raw response
   } catch (error: any) {
-    console.error("Create user error:", error.response?.data || error.message);
     throw new Error(
       error.response?.data?.message || error.message || "Failed to create user"
     );
@@ -899,15 +818,11 @@ export interface EditUserData {
 
 export const editUser = async (userData: EditUserData): Promise<void> => {
   try {
-    console.log("Editing user with data:", userData);
     const response = await sixstepClient.post("/users/edit", userData);
-    console.log("Edit User API response:", response.data);
-    console.log("Response status:", response.status);
 
     // API returns no response body on success
     return;
   } catch (error: any) {
-    console.error("Edit user error:", error.response?.data || error.message);
     throw new Error(
       error.response?.data?.message || error.message || "Failed to edit user"
     );
@@ -923,15 +838,11 @@ export const deleteUserById = async (
   userData: DeleteUserData
 ): Promise<void> => {
   try {
-    console.log("Deleting user with ID:", userData.userId);
     const response = await sixstepClient.post("/users/delete", userData);
-    console.log("Delete User API response:", response.data);
-    console.log("Response status:", response.status);
 
     // API returns no response body on success
     return;
   } catch (error: any) {
-    console.error("Delete user error:", error.response?.data || error.message);
     throw new Error(
       error.response?.data?.message || error.message || "Failed to delete user"
     );
@@ -944,9 +855,7 @@ export const deleteEntity = async (entityId: string): Promise<void> => {
     const response = await sixstepClient.post("/entities/delete", {
       entityId: entityId
     });
-    console.log("Delete Entity API response:", response.data);
   } catch (error: any) {
-    console.error("Delete entity error:", error);
     throw new Error(
       error.response?.data?.message ||
         error.message ||
@@ -958,14 +867,11 @@ export const deleteEntity = async (entityId: string): Promise<void> => {
 // Reset supplies for entity
 export const resetEntitySupplies = async (entityId: string, warehouse?: string): Promise<void> => {
   try {
-    console.log("Resetting supplies for entity:", entityId, "warehouse:", warehouse);
     const response = await sixstepClient.post("/supply/delete-all-for-entity", {
       entityId: entityId,
       warehouse: warehouse
     });
-    console.log("Reset Entity Supplies API response:", response.data);
   } catch (error: any) {
-    console.error("Reset entity supplies error:", error);
     throw new Error(
       error.response?.data?.message ||
         error.message ||
@@ -984,7 +890,6 @@ export const isAuthenticated = (): boolean => {
 // Fetch logs with warehouse filtering
 export const fetchWarehouseLogs = async (warehouseName: string): Promise<any[]> => {
   try {
-    console.log("🔍 Fetching logs for warehouse:", warehouseName);
     
     // First, get all recent logs and filter client-side since the warehouse field is nested
     const response = await sixstepClient.post("/logs/get",{
@@ -992,12 +897,10 @@ export const fetchWarehouseLogs = async (warehouseName: string): Promise<any[]> 
       "limit": 20000000
     });
     
-    console.log("📊 All logs response:", response.data);
     
     // Filter logs that have the warehouse in details.metadata.warehouse
     const filteredLogs = (response.data.logs || []).filter((log: any) => {
       // Check if warehouse exists in details.metadata.warehouse
-      console.log("🔍 Checking log:", log);
       const warehouseInMetadata = log.details?.metadata?.warehouse === warehouseName;
       // Also check the top-level warehouse field for backward compatibility
       const warehouseTopLevel = log.warehouse === warehouseName;
@@ -1005,10 +908,8 @@ export const fetchWarehouseLogs = async (warehouseName: string): Promise<any[]> 
       return warehouseInMetadata || warehouseTopLevel;
     });
     
-    console.log("✅ Filtered warehouse logs:", filteredLogs);
     return filteredLogs.slice(0, 1); // Return only the most recent
   } catch (error) {
-    console.error("❌ Error fetching warehouse logs:", error);
     throw error;
   }
 };
@@ -1022,7 +923,6 @@ export const fetchWarehouseStats = async (entityId: string, warehouseName: strin
   recentUploads: number;
 }> => {
   try {
-    console.log("📊 Fetching warehouse stats for:", { entityId, warehouseName });
     
     // Get products to calculate stats
     const productsResponse = await sixstepClient.post("/products/get", {
@@ -1077,10 +977,8 @@ export const fetchWarehouseStats = async (entityId: string, warehouseName: strin
       recentUploads: recentUploads
     };
     
-    console.log("✅ Warehouse stats calculated:", stats);
     return stats;
   } catch (error) {
-    console.error("❌ Error fetching warehouse stats:", error);
     // Return default stats on error
     return {
       totalProducts: 0,
@@ -1095,14 +993,11 @@ export const fetchWarehouseStats = async (entityId: string, warehouseName: strin
 // Delete warehouse supplies
 export const deleteWarehouseSupplies = async (entityId: string, warehouseName: string): Promise<void> => {
   try {
-    console.log("🗑️ Deleting supplies for warehouse:", { entityId, warehouseName });
     const response = await sixstepClient.post("/supply/delete-all-for-entity", {
       entityId: entityId,
       warehouse: warehouseName
     });
-    console.log("✅ Warehouse supplies deleted successfully:", response.data);
   } catch (error) {
-    console.error("❌ Error deleting warehouse supplies:", error);
     throw error;
   }
 };
@@ -1110,7 +1005,6 @@ export const deleteWarehouseSupplies = async (entityId: string, warehouseName: s
 // Remove warehouse from entity
 export const removeWarehouseFromEntity = async (entityId: string, warehouseName: string): Promise<void> => {
   try {
-    console.log("🏢 Removing warehouse from entity:", { entityId, warehouseName });
     
     // First get current entity data
     const entities = await getAllEntities();
@@ -1134,9 +1028,7 @@ export const removeWarehouseFromEntity = async (entityId: string, warehouseName:
       status: entity.status || "active"
     });
     
-    console.log("✅ Warehouse removed from entity successfully:", response.data);
   } catch (error) {
-    console.error("❌ Error removing warehouse from entity:", error);
     throw error;
   }
 };
@@ -1147,7 +1039,6 @@ export const getCurrentUser = (): AuthUser | null => {
     const userStr = localStorage.getItem("sixstep_user");
     return userStr ? JSON.parse(userStr) : null;
   } catch (error) {
-    console.error("Error parsing user data:", error);
     localStorage.removeItem("sixstep_user");
     return null;
   }
@@ -1206,16 +1097,13 @@ export const getLogs = async (
       limit: 1000000,
     };
 
-    console.log("Fetching logs from API...", payload);
 
     const response = await sixstepClient.post("/logs/get", payload);
 
-    console.log("Logs API response:", response.data);
 
     if (response.data && !response.data.error) {
       return response.data;
     } else {
-      console.error("Invalid logs response format:", response.data);
       return {
         message: "Error",
         error: true,
@@ -1224,7 +1112,6 @@ export const getLogs = async (
       };
     }
   } catch (error) {
-    console.error("Error fetching logs:", error);
     return {
       message: "Error",
       error: true,
@@ -1242,13 +1129,11 @@ export const downloadLogs = async (): Promise<void> => {
       endDate: "3000-12-31",
     };
 
-    console.log("Downloading logs CSV...", payload);
 
     const response = await sixstepClient.post("/logs/download", payload, {
       responseType: "blob",
     });
 
-    console.log("Logs download response:", response);
 
     // Create blob from response
     const blob = new Blob([response.data], { type: "text/csv" });
@@ -1265,9 +1150,7 @@ export const downloadLogs = async (): Promise<void> => {
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
 
-    console.log("Logs CSV downloaded successfully");
   } catch (error) {
-    console.error("Error downloading logs:", error);
     throw error;
   }
 };
@@ -1345,10 +1228,6 @@ export const uploadProductsCSV = async (
   columnMapping: ColumnMapping
 ): Promise<UploadResponse> => {
   try {
-    console.log("🚀 Starting products file upload...", {
-      fileName: file.name,
-      mapping: columnMapping,
-    });
 
     const formData = new FormData();
     formData.append("csvFile", file);
@@ -1360,25 +1239,9 @@ export const uploadProductsCSV = async (
       },
     });
 
-    console.log("✅ Products file uploaded successfully:", response.data);
-    console.log("🔍 Raw API Response Details:", {
-      status: response.status,
-      statusText: response.statusText,
-      data: response.data,
-      dataType: typeof response.data,
-      dataKeys: Object.keys(response.data || {}),
-      hasUploadId: !!(response.data && response.data.uploadId),
-      uploadId: response.data?.uploadId,
-      success: response.data?.success,
-      error: response.data?.error,
-    });
-
     // Check if server returned an error even with 200 status
     if (response.data?.error || response.data?.success === false) {
-      console.error(
-        "❌ Server returned error in response body:",
-        response.data
-      );
+      console.error("❌ Server returned error in response body:", response.data);
       throw new Error(
         response.data?.message ||
           response.data?.reason ||
@@ -1388,7 +1251,6 @@ export const uploadProductsCSV = async (
 
     return response.data;
   } catch (error) {
-    console.error("❌ Error uploading products:", error);
     throw error;
   }
 };
@@ -1401,12 +1263,6 @@ export const uploadSuppliesCSV = async (
   warehouse?: string
 ): Promise<UploadResponse> => {
   try {
-    console.log("🚀 Starting supplies CSV upload...", {
-      fileName: file.name,
-      mapping: columnMapping,
-      entityId: entityId,
-      warehouse: warehouse,
-    });
 
     const formData = new FormData();
     formData.append("csvFile", file);
@@ -1418,22 +1274,14 @@ export const uploadSuppliesCSV = async (
       formData.append("warehouse", warehouse);
     }
 
-    console.log("📤 FormData prepared:", {
-      fileAppended: formData.has("csvFile"),
-      entityAppended: formData.has("entityId"),
-      warehouseAppended: formData.has("warehouse"),
-    });
-
     const response = await sixstepClient.post("/upload/supplies", formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
     });
 
-    console.log("✅ Supplies uploaded successfully:", response.data);
     return response.data;
   } catch (error) {
-    console.error("❌ Error uploading supplies:", error);
     throw error;
   }
 };
@@ -1446,14 +1294,6 @@ export const uploadSuppliesAdminCSV = async (
   warehouse?: string
 ): Promise<UploadResponse> => {
   try {
-    console.log("🚀 Starting admin supplies file upload...", {
-      fileName: file.name,
-      fileSize: file.size,
-      fileType: file.type,
-      mapping: columnMapping,
-      entityId: supplierId,
-      warehouse: warehouse,
-    });
 
     const formData = new FormData();
     formData.append("csvFile", file);
@@ -1462,18 +1302,6 @@ export const uploadSuppliesAdminCSV = async (
     if (warehouse) {
       formData.append("warehouse", warehouse);
     }
-
-    console.log("📤 FormData prepared:", {
-      fileAppended: formData.has("csvFile"),
-      mappingAppended: false, // Column mapping disabled - file should have correct headers
-      entityAppended: formData.has("entityId"),
-      warehouseAppended: formData.has("warehouse"),
-    });
-
-    console.log("🌐 Making API request to: POST /upload/supplies/admin");
-    console.log(
-      "📡 Request headers will include: Content-Type: multipart/form-data"
-    );
 
     const response = await sixstepClient.post(
       "/upload/supplies/admin",
@@ -1485,26 +1313,13 @@ export const uploadSuppliesAdminCSV = async (
       }
     );
 
-    console.log("✅ Admin supplies uploaded successfully!");
-    console.log("📊 API Response status:", response.status);
-    console.log("📊 API Response data:", response.data);
-    console.log("📊 API Response headers:", response.headers);
 
     return response.data;
   } catch (error: any) {
-    console.error("❌ Error uploading admin supplies:", error);
 
     if (error.response) {
-      console.error("📍 API Error Details:");
-      console.error("  Status:", error.response.status);
-      console.error("  Status Text:", error.response.statusText);
-      console.error("  Data:", error.response.data);
-      console.error("  Headers:", error.response.headers);
     } else if (error.request) {
-      console.error("📍 Network Error - No response received:");
-      console.error("  Request:", error.request);
     } else {
-      console.error("📍 Request Setup Error:", error.message);
     }
 
     throw error;
@@ -1521,12 +1336,10 @@ export const validateCSVHeaders = async (
 
     reader.onload = (e) => {
       try {
-        console.log("📋 Validating file headers for:", file.name);
         let headers: string[] = [];
 
         if (isExcelFile) {
           // Handle Excel files using XLSX library
-          console.log("📊 Processing Excel file...");
           const data = e.target?.result as ArrayBuffer;
           const workbook = XLSX.read(data, { type: "array" });
 
@@ -1536,10 +1349,8 @@ export const validateCSVHeaders = async (
 
           // Extract headers from first row
           headers = (jsonData[0] as string[]) || [];
-          console.log("📊 Excel headers detected:", headers);
         } else {
           // Handle CSV files as text
-          console.log("📊 Processing CSV file...");
           const content = e.target?.result as string;
 
           // Get only first line for performance (as requested)
@@ -1552,15 +1363,12 @@ export const validateCSVHeaders = async (
             firstLine.split(";").length > firstLine.split(",").length
           ) {
             separator = ";";
-            console.log("📊 Detected semicolon separator");
           } else {
-            console.log("📊 Using comma separator");
           }
 
           headers = firstLine
             .split(separator)
             .map((h) => h.trim().replace(/['"]/g, ""));
-          console.log("📊 CSV headers detected:", headers);
         }
 
         // Suggest mappings based on common column patterns
@@ -1625,7 +1433,6 @@ export const validateCSVHeaders = async (
           }
         });
 
-        console.log("🎯 Suggested mappings:", suggestedMappings);
 
         resolve({
           success: true,
@@ -1634,13 +1441,12 @@ export const validateCSVHeaders = async (
           suggestedMappings,
         });
       } catch (error) {
-        console.error("❌ Error parsing file:", error);
+        console.error("Error parsing file:", error);
         reject(new Error(`Error parsing file: ${error}`));
       }
     };
 
     reader.onerror = () => {
-      console.error("❌ Error reading file");
       reject(new Error("Error reading file"));
     };
 
@@ -1658,16 +1464,13 @@ export const getUploadProgress = async (
   uploadId: string
 ): Promise<UploadProgressResponse> => {
   try {
-    console.log(`📊 Getting upload progress for ID: ${uploadId}`);
 
     const response = await sixstepClient.post("/upload/progress", {
       uploadId,
     });
 
-    console.log("✅ Upload progress response:", response.data);
     return response.data;
   } catch (error) {
-    console.error("❌ Error getting upload progress:", error);
     throw error;
   }
 };
@@ -1675,12 +1478,9 @@ export const getUploadProgress = async (
 // Get active uploads
 export const getActiveUploads = async (): Promise<ActiveUploadsResponse> => {
   try {
-    console.log("🔄 Getting active uploads...");
     const response = await sixstepClient.post("/upload/active");
-    console.log("✅ Active uploads retrieved:", response.data);
     return response.data;
   } catch (error) {
-    console.error("❌ Error getting active uploads:", error);
     throw error;
   }
 };

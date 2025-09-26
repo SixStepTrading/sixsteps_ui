@@ -72,7 +72,6 @@ export let mockExcelProducts: Product[] = createHardcodedProducts();
 // Load the Excel file
 const loadExcelData = async (): Promise<void> => {
   try {
-    console.log('Attempting to load Excel data from Dotazione mock.xlsx...');
     const response = await fetch('/Dotazione mock.xlsx');
     const data = await response.arrayBuffer();
     
@@ -82,18 +81,14 @@ const loadExcelData = async (): Promise<void> => {
     
     // Convert to JSON
     const jsonData = utils.sheet_to_json(sheet);
-    console.log(`Excel data loaded: ${jsonData.length} rows`);
     
     if (jsonData.length === 0) {
-      console.warn('Excel file contains no data');
       return;
     }
     
     // Log first row for debugging
     if (jsonData.length > 0) {
       const firstRow = jsonData[0] as Record<string, any>;
-      console.log('First row keys:', Object.keys(firstRow));
-      console.log('First row data:', JSON.stringify(firstRow, null, 2));
     }
     
     // Define suppliers for pricing
@@ -180,16 +175,12 @@ const loadExcelData = async (): Promise<void> => {
       });
     }
     
-    console.log(`Created ${excelProducts.length} products from Excel data`);
     
     // Update our exported products
     if (excelProducts.length > 0) {
       mockExcelProducts = excelProducts;
-      console.log('Successfully updated product data from Excel');
     }
   } catch (error) {
-    console.error('Error loading Excel data:', error);
-    console.log('Using fallback hardcoded products instead');
   }
 };
 

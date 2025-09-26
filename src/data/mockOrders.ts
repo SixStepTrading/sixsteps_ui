@@ -804,7 +804,6 @@ export const mockOrders: OrderWithDetails[] = [
 // Functions for managing picking and preferences
 export const updateBuyerPreferences = (buyerId: string, preferences: BuyerPickingPreferences): boolean => {
   // In a real app, this would update the database
-  console.log(`Updated preferences for buyer ${buyerId}:`, preferences);
   return true;
 };
 

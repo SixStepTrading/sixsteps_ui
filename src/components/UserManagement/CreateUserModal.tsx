@@ -61,7 +61,6 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
       const entitiesData = await getAllEntities();
       setEntities(entitiesData);
     } catch (error) {
-      console.error('Error loading entities:', error);
       showToast('Failed to load entities', 'error');
     } finally {
       setLoadingEntities(false);
@@ -148,7 +147,6 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
       onUserCreated();
       handleClose();
     } catch (error: any) {
-      console.error('Error creating user:', error);
       showToast(
         error.response?.data?.message || 
         error.message || 

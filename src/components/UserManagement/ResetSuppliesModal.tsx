@@ -57,7 +57,6 @@ const ResetSuppliesModal: React.FC<ResetSuppliesModalProps> = ({
       onSuppliesReset();
       handleClose();
     } catch (error: any) {
-      console.error('Error resetting supplies:', error);
       showToast(error.message || 'Failed to reset supplies', 'error');
     } finally {
       setResetting(false);

@@ -37,7 +37,6 @@ const ActionBar: React.FC<ActionBarProps> = (props) => {
     // Use the context value safely
     sidebarWidth = sidebarContext?.isDrawerCollapsed ? 72 : 240;
   } catch (error) {
-    console.error("Error accessing SidebarContext:", error);
     // Fallback width
     sidebarWidth = 0;
   }

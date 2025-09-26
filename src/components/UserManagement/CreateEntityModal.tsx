@@ -72,7 +72,6 @@ const CreateEntityModal: React.FC<CreateEntityModalProps> = ({
       onEntityCreated();
       handleClose();
     } catch (error: any) {
-      console.error('Error creating entity:', error);
       showToast(
         error.response?.data?.message || 
         error.message || 

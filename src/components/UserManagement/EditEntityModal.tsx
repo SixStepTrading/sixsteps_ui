@@ -93,7 +93,6 @@ const EditEntityModal: React.FC<EditEntityModalProps> = ({
       onEntityUpdated();
       onClose();
     } catch (error: any) {
-      console.error('Error updating entity:', error);
       showToast(error.message || 'Failed to update entity', 'error');
     } finally {
       setSubmitting(false);

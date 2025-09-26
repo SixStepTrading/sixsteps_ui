@@ -27,7 +27,6 @@ export const getDraftOrders = (): DraftOrder[] => {
     if (!ordersJson) return [];
     return JSON.parse(ordersJson);
   } catch (error) {
-    console.error('Error retrieving draft orders:', error);
     return [];
   }
 };
@@ -44,7 +43,6 @@ export const saveDraftOrder = (draft: Omit<DraftOrder, 'id'>): DraftOrder => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify([newDraft, ...orders]));
     return newDraft;
   } catch (error) {
-    console.error('Error saving draft order:', error);
     throw new Error('Could not save draft order');
   }
 };
@@ -57,7 +55,6 @@ export const deleteDraftOrder = (id: string): boolean => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedOrders));
     return true;
   } catch (error) {
-    console.error('Error deleting draft order:', error);
     return false;
   }
 };
@@ -69,7 +66,6 @@ export const getDraftOrderById = (id: string): DraftOrder | null => {
     const order = orders.find(order => order.id === id);
     return order || null;
   } catch (error) {
-    console.error('Error retrieving draft order:', error);
     return null;
   }
 };

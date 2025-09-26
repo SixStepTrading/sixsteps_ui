@@ -239,7 +239,6 @@ const Dashboard: React.FC = () => {
     setError(null);
     
     try {
-      console.log('🚀 Loading products with integrated supplies...');
       
       // SINGLE API CALL: Load products with integrated supplies
       const filters = {
@@ -263,8 +262,6 @@ const Dashboard: React.FC = () => {
       
       // Generate categories based on MINSAN codes instead of using API categories
       const minsanCategories = getAvailableCategoriesFromProducts(productsWithQuantity);
-      console.log('🏷️ Generated MINSAN categories:', minsanCategories);
-      console.log('📋 Sample MINSAN codes:', productsWithQuantity.slice(0, 5).map(p => ({ name: p.name, minsan: p.minsan, category: getCategoryFromMinsan(p.minsan) })));
       setCategories(minsanCategories);
       
       setManufacturers(result.manufacturers || []);
@@ -276,19 +273,12 @@ const Dashboard: React.FC = () => {
       setUsingMockData(false);
       setLoading(false);
       
-      console.log('✅ Products loaded with integrated supplies', {
-        total: result.totalCount,
-        categories: result.categories?.length || 0,
-        manufacturers: result.manufacturers?.length || 0,
-        suppliers: result.suppliers?.length || 0
-      });
     } catch (err: any) {
       console.error('Failed to fetch products from API:', err);
       
       // Handle different types of errors
       if (err.response?.status === 401) {
         // Session expired - logout user to redirect to login page
-        console.log('🔒 Session expired, redirecting to login...');
         await logout();
         return; // Early return to prevent setting error state
       } else {
@@ -313,7 +303,6 @@ const Dashboard: React.FC = () => {
   
   // Apply client-side filters to products (ASYNC - NON-BLOCKING)
   const applyClientFilters = useCallback(async (productsList: ProductWithQuantity[]) => {
-    console.log('🔍 Starting client-side filtering...', { total: productsList.length });
     setFilteringLoading(true);
     
     return new Promise<void>((resolve) => {
@@ -336,25 +325,20 @@ const Dashboard: React.FC = () => {
           
           // Apply category filter - now based on MINSAN first digit
           if (filterValues.category && filterValues.category !== '') {
-            console.log('🔍 Applying category filter:', filterValues.category);
             const beforeCount = filtered.length;
             
             // Single category selection - compare first digit of MINSAN
             const expectedDigit = getDigitFromCategoryName(filterValues.category);
-            console.log(`🔍 Looking for products with MINSAN starting with digit: ${expectedDigit}`);
             
             filtered = filtered.filter(product => {
               const firstDigit = product.minsan.charAt(0);
               const matches = firstDigit === expectedDigit;
               if (!matches) {
-                console.log(`❌ Product ${product.name} (MINSAN: ${product.minsan}, first digit: ${firstDigit}) -> expected digit: ${expectedDigit} for category: ${filterValues.category}`);
               } else {
-                console.log(`✅ Product ${product.name} (MINSAN: ${product.minsan}, first digit: ${firstDigit}) -> matches expected digit: ${expectedDigit}`);
               }
               return matches;
             });
             
-            console.log(`📊 Category filter applied: ${beforeCount} → ${filtered.length} products`);
           }
           
           // Apply manufacturer filter - now supporting multi-selection
@@ -397,7 +381,6 @@ const Dashboard: React.FC = () => {
           
           // Apply stock filter - show only products with stock > 0 (if enabled)
           if (filterValues.onlyAvailableStock) {
-            console.log('🔍 Applying stock filter...');
             const beforeCount = filtered.length;
             
             filtered = filtered.filter(product => {
@@ -406,13 +389,11 @@ const Dashboard: React.FC = () => {
               
               // Debug logging for first few products
               if (beforeCount <= 5) {
-                console.log(`📦 Product "${product.name}" - Stock: ${totalStock}, Prices: ${product.bestPrices.length}, HasStock: ${hasStock}`);
               }
               
               return hasStock;
             });
             
-            console.log(`📊 Stock filter applied: ${beforeCount} → ${filtered.length} products`);
           }
           
           // Apply sorting if needed
@@ -422,11 +403,6 @@ const Dashboard: React.FC = () => {
           
           setFilteredProducts(filtered);
           setFilteringLoading(false);
-          
-          console.log('✅ Filtering completed', { 
-            filtered: filtered.length, 
-            total: productsList.length 
-          });
           
           resolve();
         } catch (error) {
@@ -495,7 +471,6 @@ const Dashboard: React.FC = () => {
 
   // Function to handle sorting (ASYNC - NON-BLOCKING)
   const applySortingAsync = useCallback(async (products: ProductWithQuantity[], column: string, direction: SortDirection) => {
-    console.log('🔄 Starting async sorting...', { column, direction, count: products.length });
     setSortingLoading(true);
     
     return new Promise<ProductWithQuantity[]>((resolve) => {
@@ -503,20 +478,18 @@ const Dashboard: React.FC = () => {
         try {
           const sorted = applySorting(products, column, direction);
           setSortingLoading(false);
-          console.log('✅ Sorting completed');
           resolve(sorted);
-        } catch (error) {
-          console.error('❌ Sorting error:', error);
-          setSortingLoading(false);
-          resolve(products); // Return original if error
-        }
+          } catch (error) {
+            console.error('❌ Sorting error:', error);
+            setSortingLoading(false);
+            resolve(products); // Return original if error
+          }
       }, 10); // Small delay to prevent UI blocking
     });
   }, []);
   
   // Handle sorting column click (ASYNC - NON-BLOCKING)
   const handleSort = async (column: string, direction: SortDirection) => {
-    console.log('🎯 User clicked sort:', { column, direction });
     setSortBy(column);
     setSortDirection(direction);
     
@@ -591,7 +564,6 @@ const Dashboard: React.FC = () => {
   // Re-filter when filters change (client-side only, no more API calls)
   useEffect(() => {
     if (products.length > 0) {
-      console.log('🔄 Filters changed, debouncing filter application...');
       // Use debounced version to prevent excessive filtering
       debouncedApplyFilters(products);
     }
@@ -746,7 +718,6 @@ const Dashboard: React.FC = () => {
       timestamp: new Date().toISOString()
     };
     
-    console.log('Submitting order:', order);
     showToast('Order submitted successfully', 'success');
     
     // Clear the selection and reset quantities (client-side only)
@@ -828,7 +799,6 @@ const Dashboard: React.FC = () => {
       // Show confirmation toast
       showToast('Prodotti aggiornati e filtri resettati', 'success');
     } catch (error) {
-      console.error('Error refreshing products:', error);
       showToast('Errore durante l\'aggiornamento dei prodotti', 'error');
     } finally {
       setLoading(false);
@@ -878,10 +848,10 @@ const Dashboard: React.FC = () => {
       
       setUploadSuccess(true);
       setTimeout(() => setUploadSuccess(false), 3000);
-    } catch (error) {
-      console.error('Error processing file:', error);
-      setUploadError(error instanceof Error ? error.message : 'Unknown error processing file');
-    } finally {
+      } catch (error) {
+        console.error('Error processing file:', error);
+        setUploadError(error instanceof Error ? error.message : 'Unknown error processing file');
+      } finally {
       setFileUploading(false);
       // Reset file input
       if (fileInputRef.current) {
@@ -915,16 +885,13 @@ const Dashboard: React.FC = () => {
           // Handle CSV file
           else if (file.name.endsWith('.csv')) {
             const csvData = data.toString();
-            console.log("Raw CSV data:", csvData);
             
             try {
               const workbook = XLSX.read(csvData, { type: 'string' });
               const firstSheetName = workbook.SheetNames[0];
               const worksheet = workbook.Sheets[firstSheetName];
               parsedData = XLSX.utils.sheet_to_json(worksheet);
-              console.log("Parsed CSV using XLSX:", parsedData);
             } catch(xlsxError) {
-              console.error("XLSX parsing failed:", xlsxError);
               
               // Fallback to manual CSV parsing
               try {
@@ -944,9 +911,7 @@ const Dashboard: React.FC = () => {
                   
                   parsedData.push(row);
                 }
-                console.log("Fallback CSV parsing result:", parsedData);
               } catch(fallbackError) {
-                console.error("Fallback CSV parsing failed:", fallbackError);
                 reject(new Error('Failed to parse CSV file'));
                 return;
               }
@@ -964,7 +929,6 @@ const Dashboard: React.FC = () => {
           
           resolve(parsedData);
         } catch (error) {
-          console.error("File parsing error:", error);
           reject(new Error('Error parsing file. Please check the file format.'));
         }
       };
@@ -988,22 +952,12 @@ const Dashboard: React.FC = () => {
     }
     
     // Debug all our static products for comparison
-    console.log("All available products:", products.map(p => ({
-      id: p.id,
-      name: p.name,
-      ean: p.ean,
-      minsan: p.minsan
-    })));
-    
-    // Log the uploaded data for debugging
-    console.log('Uploaded file data:', data);
     
     // The matching logic starts here
     const matchedProductIds = new Set<string>();
     
     // Try to match each row from the uploaded file
     data.forEach((row, index) => {
-      console.log(`Checking row ${index}:`, row);
       
       // Helper function to extract text safely from any field in the row
       const extractText = (row: any, possibleFieldNames: string[]): string | null => {
@@ -1031,21 +985,18 @@ const Dashboard: React.FC = () => {
       const quantity = extractText(row, ['Quantity', 'quantity', 'Quantità', 'quantità', 'Qta', 'qta', 'Q.tà', 'q.tà']);
       const targetPrice = extractText(row, ['Target Price', 'target price', 'Target', 'target', 'Price', 'price', 'Prezzo', 'prezzo']);
       
-      console.log(`Extracted from row: EAN=${ean}, MINSAN=${minsan}, Name=${name}, Qty=${quantity}, Price=${targetPrice}`);
       
       // First attempt exact code matches
       let matchedProduct: ProductWithQuantity | null = null;
       if (ean) {
         matchedProduct = products.find(p => p.ean.trim() === ean) || null;
         if (matchedProduct) {
-          console.log(`Found exact EAN match for ${ean}: ${matchedProduct.name}`);
         }
       }
       
       if (!matchedProduct && minsan) {
         matchedProduct = products.find(p => p.minsan.trim() === minsan) || null;
         if (matchedProduct) {
-          console.log(`Found exact MINSAN match for ${minsan}: ${matchedProduct.name}`);
         }
       }
       
@@ -1055,7 +1006,6 @@ const Dashboard: React.FC = () => {
           p.ean.includes(ean) || ean.includes(p.ean)
         ) || null;
         if (matchedProduct) {
-          console.log(`Found partial EAN match: ${ean} with ${matchedProduct.ean} for ${matchedProduct.name}`);
         }
       }
       
@@ -1064,7 +1014,6 @@ const Dashboard: React.FC = () => {
           p.minsan.includes(minsan) || minsan.includes(p.minsan)
         ) || null;
         if (matchedProduct) {
-          console.log(`Found partial MINSAN match: ${minsan} with ${matchedProduct.minsan} for ${matchedProduct.name}`);
         }
       }
       
@@ -1073,7 +1022,6 @@ const Dashboard: React.FC = () => {
         const normalizedName = name.toLowerCase();
         matchedProduct = products.find(p => p.name.toLowerCase() === normalizedName) || null;
         if (matchedProduct) {
-          console.log(`Found exact name match for "${name}": ${matchedProduct.name}`);
         }
       }
       
@@ -1084,14 +1032,12 @@ const Dashboard: React.FC = () => {
           p.name.toLowerCase().includes(normalizedName) || normalizedName.includes(p.name.toLowerCase())
         ) || null;
         if (matchedProduct) {
-          console.log(`Found partial name match: "${name}" with "${matchedProduct.name}"`);
         }
       }
       
       // Try word-by-word matching as last resort
       if (!matchedProduct && name && name.split(/\s+/).length > 1) {
         const words = name.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-        console.log(`Trying word-by-word match with words:`, words);
         
         // Find product with highest word match percentage
         let bestMatchPercentage = 0;
@@ -1118,7 +1064,6 @@ const Dashboard: React.FC = () => {
         if (bestMatchId) {
           const foundProduct = products.find(p => p.id === bestMatchId);
           if (foundProduct) {
-            console.log(`Found word match with ${bestMatchPercentage*100}% similarity: "${name}" with "${foundProduct.name}"`);
             matchedProduct = foundProduct;
           }
         }
@@ -1126,7 +1071,6 @@ const Dashboard: React.FC = () => {
       
       // If product is matched, update it
       if (matchedProduct) {
-        console.log(`Successfully matched product ${matchedProduct.name}`);
         matchedProductIds.add(matchedProduct.id);
         
         // Update quantity if provided
@@ -1170,7 +1114,6 @@ const Dashboard: React.FC = () => {
           products[productIndex] = updatedProduct;
         }
       } else {
-        console.log(`No match found for row ${index}`);
       }
     });
     
@@ -1194,7 +1137,6 @@ const Dashboard: React.FC = () => {
       
       showToast(`Found and updated ${matchedProductIds.size} products from your file`, 'success');
     } else {
-      console.error("No matching products found in uploaded file");
       throw new Error('No matching products found. Please check product codes or names. Our system has 4 products: ALVITA GINOCCHIERA, BIODERMA ATODERM, ZERODOL, and ENTEROGERMINA.');
     }
   };

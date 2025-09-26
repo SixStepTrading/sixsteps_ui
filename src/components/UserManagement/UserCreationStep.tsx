@@ -100,16 +100,12 @@ const UserCreationStep: React.FC<UserCreationStepProps> = ({
         entity: selectedEntity.id
       };
       
-      console.log('Selected Entity for user creation:', selectedEntity);
-      console.log('User data being sent to API:', userDataToSend);
       
       if (userData.role !== 'admin') {
         delete userDataToSend.secret;
-        console.log('Removed secret field, final payload:', userDataToSend);
       }
 
       const newUser = await createUser(userDataToSend);
-      console.log('User creation response:', newUser);
       setCreatedUser(newUser);
       onUserCreated(newUser);
       
@@ -119,7 +115,6 @@ const UserCreationStep: React.FC<UserCreationStepProps> = ({
       );
       
     } catch (error: any) {
-      console.error('Error creating user:', error);
       showToast(error.message || 'Failed to create user', 'error');
     } finally {
       setSubmitting(false);

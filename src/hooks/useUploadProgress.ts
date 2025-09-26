@@ -57,7 +57,6 @@ export const useUploadProgress = (options: UseUploadProgressOptions = {}): UseUp
     if (!isComponentMounted.current) return;
 
     try {
-      console.log(`🔄 Polling progress for upload ${uploadId}...`);
       const progressData = await getUploadProgress(uploadId);
       
       if (!isComponentMounted.current) return;
@@ -68,13 +67,11 @@ export const useUploadProgress = (options: UseUploadProgressOptions = {}): UseUp
 
       // Check if upload is complete or failed
       if (progressData.status === 'completed') {
-        console.log('✅ Upload completed successfully');
         stopPolling();
         if (onComplete) {
           onComplete(progressData);
         }
       } else if (progressData.status === 'failed') {
-        console.log('❌ Upload failed');
         stopPolling();
         const errorMsg = progressData.errors?.join(', ') || 'Upload failed';
         setError(errorMsg);
@@ -83,15 +80,12 @@ export const useUploadProgress = (options: UseUploadProgressOptions = {}): UseUp
         }
       }
     } catch (err) {
-      console.error('❌ Error polling progress:', err);
       
       if (!isComponentMounted.current) return;
 
       if (retryCount < maxRetries) {
-        console.log(`🔄 Retrying... (${retryCount + 1}/${maxRetries})`);
         setRetryCount(prev => prev + 1);
       } else {
-        console.log('❌ Max retries reached, stopping polling');
         stopPolling();
         const errorMsg = err instanceof Error ? err.message : 'Failed to get upload progress';
         setError(errorMsg);
@@ -103,7 +97,6 @@ export const useUploadProgress = (options: UseUploadProgressOptions = {}): UseUp
   }, [retryCount, maxRetries, stopPolling, onComplete, onError]);
 
   const startPolling = useCallback((uploadId: string) => {
-    console.log(`🚀 Starting progress polling for upload ${uploadId}`);
     
     // Stop any existing polling
     stopPolling();
@@ -125,7 +118,6 @@ export const useUploadProgress = (options: UseUploadProgressOptions = {}): UseUp
 
   const retry = useCallback(() => {
     if (currentUploadId) {
-      console.log('🔄 Retrying upload progress polling...');
       setRetryCount(0);
       setError(null);
       startPolling(currentUploadId);

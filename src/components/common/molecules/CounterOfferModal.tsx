@@ -28,7 +28,6 @@ const CounterOfferModal: React.FC<CounterOfferModalProps> = ({
       await onAccept(orderId);
       onClose();
     } catch (error) {
-      console.error('Error accepting counter offer:', error);
     } finally {
       setIsProcessing(false);
     }
@@ -40,7 +39,6 @@ const CounterOfferModal: React.FC<CounterOfferModalProps> = ({
       await onReject(orderId);
       onClose();
     } catch (error) {
-      console.error('Error rejecting counter offer:', error);
     } finally {
       setIsProcessing(false);
     }
