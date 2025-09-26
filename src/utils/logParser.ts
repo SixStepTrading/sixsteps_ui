@@ -78,7 +78,7 @@ export interface LogEntry {
 }
 
 // Function to parse logs and extract upload information
-export const parseUploadsFromLogs = (logData: LogEntry[]): ParsedUpload[] => {
+export const parseUploadsFromLogs = (logData: any[]): ParsedUpload[] => {
   const uploads: ParsedUpload[] = [];
 
   logData.forEach((entry) => {
@@ -86,7 +86,7 @@ export const parseUploadsFromLogs = (logData: LogEntry[]): ParsedUpload[] => {
     if (entry.action === 'SUPPLY_CREATE' && entry.details?.changes?.created?.uploadResult) {
       const result = entry.details.changes.created.uploadResult;
       const upload: ParsedUpload = {
-        id: entry._id.$oid,
+        id: entry.id || entry._id?.$oid || `upload-${Date.now()}`,
         userId: entry.user.id,
         userName: `${entry.user.name} ${entry.user.surname}`,
         userEmail: entry.user.email,
@@ -112,7 +112,7 @@ export const parseUploadsFromLogs = (logData: LogEntry[]): ParsedUpload[] => {
       // Handle PRODUCT_CSV_UPLOAD
       if (meta.customAction === 'PRODUCT_CSV_UPLOAD') {
         const upload: ParsedUpload = {
-          id: entry._id.$oid,
+          id: entry.id || entry._id?.$oid || `upload-${Date.now()}`,
           userId: entry.user.id,
           userName: `${entry.user.name} ${entry.user.surname}`,
           userEmail: entry.user.email,
@@ -135,7 +135,7 @@ export const parseUploadsFromLogs = (logData: LogEntry[]): ParsedUpload[] => {
       if (meta.customAction === 'SUPPLY_CSV_UPLOAD_ADMIN' && meta.uploadResult) {
         const result = meta.uploadResult;
         const upload: ParsedUpload = {
-          id: entry._id.$oid,
+          id: entry.id || entry._id?.$oid || `upload-${Date.now()}`,
           userId: entry.user.id,
           userName: `${entry.user.name} ${entry.user.surname}`,
           userEmail: entry.user.email,
@@ -163,25 +163,60 @@ export const parseUploadsFromLogs = (logData: LogEntry[]): ParsedUpload[] => {
     .slice(0, 20);
 };
 
-// Function to load and parse completed uploads from logs (for history)
+// Function to load and parse completed uploads from API logs (for history)
 export const loadCompletedUploadsFromLogs = async (): Promise<ParsedUpload[]> => {
   try {
-    // Load the logs from the public directory
-    const response = await fetch('/sixstep.logs.json');
-    if (!response.ok) {
-      throw new Error('Failed to load logs');
+    console.log('🔄 Loading completed uploads from API logs...');
+    
+    // Import the API function dynamically to avoid circular dependencies
+    const { getLogs } = await import('./api');
+    
+    // Get logs from API (getLogs takes page and limit parameters)
+    const response = await getLogs(1, 1000); // Get first page with 1000 logs
+    
+    console.log('📊 Loaded log data from API:', response.logs?.length || 0, 'entries');
+    
+    if (!response.logs || !Array.isArray(response.logs)) {
+      console.warn('⚠️ No logs returned from API');
+      return [];
     }
     
-    const logData: LogEntry[] = await response.json();
-    console.log('📊 Loaded log data:', logData.length, 'entries');
+    // Filter logs for upload-related actions before parsing
+    const uploadLogs = response.logs.filter(log => 
+      log.action === 'ADMIN_ACTION' || 
+      log.action === 'SUPPLY_CREATE' ||
+      (log.details?.metadata?.customAction === 'PRODUCT_CSV_UPLOAD') ||
+      (log.details?.metadata?.customAction === 'SUPPLY_CSV_UPLOAD_ADMIN')
+    );
     
-    const uploads = parseUploadsFromLogs(logData);
-    console.log('📤 Parsed completed uploads:', uploads.length, 'uploads');
+    console.log('📊 Filtered upload-related logs:', uploadLogs.length, 'entries');
+    
+    const uploads = parseUploadsFromLogs(uploadLogs);
+    console.log('📤 Parsed completed uploads from API:', uploads.length, 'uploads');
     
     return uploads;
   } catch (error) {
-    console.error('Error loading completed uploads from logs:', error);
-    throw error;
+    console.error('❌ Error loading completed uploads from API logs:', error);
+    
+    // Fallback to local logs if API fails
+    try {
+      console.log('🔄 Falling back to local logs...');
+      const response = await fetch('/sixstep.logs.json');
+      if (!response.ok) {
+        throw new Error('Failed to load local logs');
+      }
+      
+      const logData: LogEntry[] = await response.json();
+      console.log('📊 Loaded local log data:', logData.length, 'entries');
+      
+      const uploads = parseUploadsFromLogs(logData);
+      console.log('📤 Parsed completed uploads from local logs:', uploads.length, 'uploads');
+      
+      return uploads;
+    } catch (fallbackError) {
+      console.error('❌ Error loading local logs as fallback:', fallbackError);
+      return [];
+    }
   }
 };
 
