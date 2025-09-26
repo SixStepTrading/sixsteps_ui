@@ -152,12 +152,9 @@ const ActiveUploadsModal: React.FC<ActiveUploadsModalProps> = ({
     setError(null);
     
     try {
-      console.log('🔄 Fetching active uploads...');
       const uploadsData = await loadActiveUploads();
-      console.log('✅ Active uploads fetched:', uploadsData);
       setActiveUploads(uploadsData);
     } catch (err) {
-      console.error('❌ Error fetching active uploads:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       if (isRefresh) {
@@ -177,12 +174,9 @@ const ActiveUploadsModal: React.FC<ActiveUploadsModalProps> = ({
     setError(null);
     
     try {
-      console.log('🔄 Fetching completed uploads from logs...');
       const uploadsData = await loadCompletedUploadsFromLogs();
-      console.log('✅ Completed uploads fetched:', uploadsData);
       setCompletedUploads(uploadsData);
     } catch (err) {
-      console.error('❌ Error fetching completed uploads:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       if (isRefresh) {
@@ -434,18 +428,18 @@ const ActiveUploadsModal: React.FC<ActiveUploadsModalProps> = ({
         p: 3, 
         display: 'flex', 
         justifyContent: 'space-between', 
-        alignItems: 'center',
+        alignItems: 'center', 
         bgcolor: 'grey.50',
         borderBottom: '1px solid',
         borderColor: 'divider'
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="h5" component="div" sx={{ fontWeight: 600 }}>
+        <Typography variant="h5" component="div" sx={{ fontWeight: 600 }}>
             Upload Monitor
-          </Typography>
+        </Typography>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Button
+          <Button 
             onClick={() => {
               if (activeTab === 0) {
                 fetchActiveUploads(true);
@@ -464,8 +458,8 @@ const ActiveUploadsModal: React.FC<ActiveUploadsModalProps> = ({
           >
             Refresh
           </Button>
-          <Button
-            onClick={onClose}
+          <Button 
+            onClick={onClose} 
             variant="outlined"
             size="small"
             sx={{ 
@@ -551,7 +545,7 @@ const ActiveUploadsModal: React.FC<ActiveUploadsModalProps> = ({
             {(activeTab === 0 || !isAdmin) && (
               <Box>
                 {activeUploadsContent}
-              </Box>
+                          </Box>
             )}
 
             {/* Upload History Tab - Only for admins */}
@@ -574,9 +568,9 @@ const ActiveUploadsModal: React.FC<ActiveUploadsModalProps> = ({
                       <RefreshIcon sx={{ animation: 'spin 1s linear infinite', mb: 1 }} />
                       <Typography variant="body2" color="text.secondary">
                         Updating history...
-                      </Typography>
-                    </Box>
-                  </Box>
+                              </Typography>
+                            </Box>
+                          </Box>
                 )}
                 
                 {completedUploadsContent}
@@ -610,4 +604,4 @@ const ActiveUploadsModal: React.FC<ActiveUploadsModalProps> = ({
   );
 };
 
-export default ActiveUploadsModal;
+export default ActiveUploadsModal; 

@@ -166,7 +166,6 @@ export const parseUploadsFromLogs = (logData: any[]): ParsedUpload[] => {
 // Function to load and parse completed uploads from API logs (for history)
 export const loadCompletedUploadsFromLogs = async (): Promise<ParsedUpload[]> => {
   try {
-    console.log('🔄 Loading completed uploads from API logs...');
     
     // Import the API function dynamically to avoid circular dependencies
     const { getLogs } = await import('./api');
@@ -174,10 +173,8 @@ export const loadCompletedUploadsFromLogs = async (): Promise<ParsedUpload[]> =>
     // Get logs from API (getLogs takes page and limit parameters)
     const response = await getLogs(1, 1000); // Get first page with 1000 logs
     
-    console.log('📊 Loaded log data from API:', response.logs?.length || 0, 'entries');
     
     if (!response.logs || !Array.isArray(response.logs)) {
-      console.warn('⚠️ No logs returned from API');
       return [];
     }
     
@@ -189,32 +186,25 @@ export const loadCompletedUploadsFromLogs = async (): Promise<ParsedUpload[]> =>
       (log.details?.metadata?.customAction === 'SUPPLY_CSV_UPLOAD_ADMIN')
     );
     
-    console.log('📊 Filtered upload-related logs:', uploadLogs.length, 'entries');
     
     const uploads = parseUploadsFromLogs(uploadLogs);
-    console.log('📤 Parsed completed uploads from API:', uploads.length, 'uploads');
     
     return uploads;
   } catch (error) {
-    console.error('❌ Error loading completed uploads from API logs:', error);
     
     // Fallback to local logs if API fails
     try {
-      console.log('🔄 Falling back to local logs...');
       const response = await fetch('/sixstep.logs.json');
       if (!response.ok) {
         throw new Error('Failed to load local logs');
       }
       
       const logData: LogEntry[] = await response.json();
-      console.log('📊 Loaded local log data:', logData.length, 'entries');
       
       const uploads = parseUploadsFromLogs(logData);
-      console.log('📤 Parsed completed uploads from local logs:', uploads.length, 'uploads');
       
       return uploads;
     } catch (fallbackError) {
-      console.error('❌ Error loading local logs as fallback:', fallbackError);
       return [];
     }
   }
@@ -223,13 +213,11 @@ export const loadCompletedUploadsFromLogs = async (): Promise<ParsedUpload[]> =>
 // Function to load active uploads from API
 export const loadActiveUploads = async (): Promise<ParsedUpload[]> => {
   try {
-    console.log('🔄 Loading active uploads from API...');
     
     // Import the API function dynamically to avoid circular dependencies
     const { getActiveUploads } = await import('./api');
     const response = await getActiveUploads();
     
-    console.log('✅ Active uploads from API:', response);
     
     // Transform API response to ParsedUpload format
     if (response.uploads && Array.isArray(response.uploads)) {
@@ -256,7 +244,6 @@ export const loadActiveUploads = async (): Promise<ParsedUpload[]> => {
     
     return [];
   } catch (error) {
-    console.error('❌ Error loading active uploads from API:', error);
     // Fallback to empty array if API fails
     return [];
   }
