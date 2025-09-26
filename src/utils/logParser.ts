@@ -157,10 +157,10 @@ export const parseUploadsFromLogs = (logData: any[]): ParsedUpload[] => {
     }
   });
 
-  // Sort by timestamp (most recent first) and limit to 20
+  // Sort by timestamp (most recent first) and limit to 100
   return uploads
     .sort((a, b) => b.timestamp - a.timestamp)
-    .slice(0, 20);
+    .slice(0, 100);
 };
 
 // Function to load and parse completed uploads from API logs (for history)

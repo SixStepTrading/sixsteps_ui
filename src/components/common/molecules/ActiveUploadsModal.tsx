@@ -192,6 +192,12 @@ const ActiveUploadsModal: React.FC<ActiveUploadsModalProps> = ({
   // Fetch data when modal opens and set up auto-refresh
   useEffect(() => {
     if (open) {
+      // Reset all data when modal opens to prevent showing stale data
+      setActiveUploads([]);
+      setCompletedUploads([]);
+      setError(null);
+      setExpandedUploads(new Set());
+      
       // Load initial data for both tabs
       fetchActiveUploads(false);
       
@@ -209,6 +215,12 @@ const ActiveUploadsModal: React.FC<ActiveUploadsModalProps> = ({
       }, 5000);
       
       return () => clearInterval(interval);
+    } else {
+      // Reset data when modal closes
+      setActiveUploads([]);
+      setCompletedUploads([]);
+      setError(null);
+      setExpandedUploads(new Set());
     }
   }, [open, activeTab, isAdmin]);
 
