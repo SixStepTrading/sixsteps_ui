@@ -185,15 +185,44 @@ export const loadCompletedUploadsFromLogs = async (): Promise<ParsedUpload[]> =>
   }
 };
 
-// Function to load active uploads (placeholder for now - would come from API)
+// Function to load active uploads from API
 export const loadActiveUploads = async (): Promise<ParsedUpload[]> => {
   try {
-    // This would normally fetch from an API endpoint for active uploads
-    // For now, return empty array as we don't have active uploads in logs
-    console.log('🔄 Loading active uploads...');
+    console.log('🔄 Loading active uploads from API...');
+    
+    // Import the API function dynamically to avoid circular dependencies
+    const { getActiveUploads } = await import('./api');
+    const response = await getActiveUploads();
+    
+    console.log('✅ Active uploads from API:', response);
+    
+    // Transform API response to ParsedUpload format
+    if (response.uploads && Array.isArray(response.uploads)) {
+      return response.uploads.map((upload: any) => ({
+        id: upload.id || upload.uploadId || `active-${Date.now()}`,
+        userId: upload.userId || upload.user?.id || '',
+        userName: upload.userName || upload.user?.name || 'Unknown User',
+        userEmail: upload.userEmail || upload.user?.email || '',
+        timestamp: upload.timestamp || upload.createdAt || Date.now(),
+        action: upload.action || 'UPLOAD',
+        fileName: upload.fileName || upload.filename,
+        warehouse: upload.warehouse,
+        totalRows: upload.totalRows || upload.total || 0,
+        processedRows: upload.processedRows || upload.processed || 0,
+        created: upload.created || 0,
+        updated: upload.updated || 0,
+        skipped: upload.skipped || 0,
+        success: upload.success || upload.status === 'completed',
+        message: upload.message || upload.status || 'Processing...',
+        errors: upload.errors || [],
+        entityId: upload.entityId
+      }));
+    }
+    
     return [];
   } catch (error) {
-    console.error('Error loading active uploads:', error);
-    throw error;
+    console.error('❌ Error loading active uploads from API:', error);
+    // Fallback to empty array if API fails
+    return [];
   }
 };
