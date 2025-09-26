@@ -42,20 +42,15 @@ const EntitySelectionStep: React.FC<EntitySelectionStepProps> = ({
   const loadEntities = async () => {
     try {
       setLoading(true);
-      console.log('Loading entities...');
       const entitiesData = await getAllEntities();
-      console.log('Entities API response:', entitiesData);
       
       if (Array.isArray(entitiesData)) {
         setEntities(entitiesData);
-        console.log('Entities set successfully:', entitiesData.length, 'entities');
       } else {
-        console.warn('API returned non-array data:', entitiesData);
         setEntities([]);
         showToast('Invalid response format from server', 'warning');
       }
     } catch (error: any) {
-      console.error('Error loading entities:', error);
       setEntities([]); // Ensure entities is always an array
       showToast('Failed to load entities from server', 'error');
     } finally {
@@ -116,7 +111,6 @@ const EntitySelectionStep: React.FC<EntitySelectionStepProps> = ({
       onEntitySelected(createdEntity);
       showToast(`Entity "${createdEntity.entityName}" created successfully!`, 'success');
     } catch (error: any) {
-      console.error('Error creating entity:', error);
       showToast(error.message || 'Failed to create entity', 'error');
     } finally {
       setSubmitting(false);

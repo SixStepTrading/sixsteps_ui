@@ -128,22 +128,17 @@ const UserManagement: React.FC = () => {
 
   const loadUsers = async () => {
     try {
-      console.log('Loading users...');
       const usersData = await getAllUsers();
-      console.log('Users API response:', usersData);
       
       if (Array.isArray(usersData)) {
         setApiUsers(usersData);
         setApiError(null); // Reset error when API call succeeds
-        console.log('Users set successfully:', usersData.length, 'users');
       } else {
-        console.warn('API returned non-array data:', usersData);
         setApiUsers([]);
         setApiError('USERS_API_ERROR');
         showToast('Invalid response format from server', 'warning');
       }
     } catch (error: any) {
-      console.error('Error loading users:', error);
       setApiUsers([]);
       setApiError('USERS_API_ERROR');
       showToast('Failed to load users from server', 'error');
@@ -152,20 +147,15 @@ const UserManagement: React.FC = () => {
 
   const loadEntities = async () => {
     try {
-      console.log('Loading entities...');
       const entitiesData = await getAllEntities();
-      console.log('Entities API response:', entitiesData);
       
       if (Array.isArray(entitiesData)) {
         setEntities(entitiesData);
-        console.log('Entities set successfully:', entitiesData.length, 'entities');
       } else {
-        console.warn('API returned non-array data for entities:', entitiesData);
         setEntities([]);
         showToast('Failed to load entities from server', 'warning');
       }
     } catch (error: any) {
-      console.error('Error loading entities:', error);
       setEntities([]);
       showToast('Failed to load entities from server', 'error');
     }
@@ -206,7 +196,6 @@ const UserManagement: React.FC = () => {
       await Promise.all([loadUsers(), loadEntities()]);
       showToast('Data refreshed successfully!', 'success');
     } catch (error) {
-      console.error('Error refreshing data:', error);
       showToast('Failed to refresh data', 'error');
     } finally {
       setIsRefreshing(false);
@@ -291,9 +280,7 @@ const UserManagement: React.FC = () => {
       // Check if there are more pages
       setHasMoreActivities(currentPage < response.pagination.totalPages);
       
-      console.log('Activities loaded:', response.logs);
     } catch (error) {
-      console.error('Error loading activities:', error);
       showToast('Failed to load activities', 'error');
     } finally {
       setActivitiesLoading(false);
@@ -313,7 +300,6 @@ const UserManagement: React.FC = () => {
       await downloadLogs();
       showToast('Logs CSV downloaded successfully', 'success');
     } catch (error) {
-      console.error('Error downloading logs CSV:', error);
       showToast('Failed to download logs CSV', 'error');
     }
   };

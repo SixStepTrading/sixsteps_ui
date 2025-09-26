@@ -43,7 +43,6 @@ const DeleteEntityModal: React.FC<DeleteEntityModalProps> = ({
       onEntityDeleted();
       handleClose();
     } catch (error: any) {
-      console.error('Error deleting entity:', error);
       showToast(error.message || 'Failed to delete entity', 'error');
     } finally {
       setDeleting(false);

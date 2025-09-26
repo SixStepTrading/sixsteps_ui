@@ -23,7 +23,6 @@ export const exportSelectedProducts = (
 ): void => {
   try {
     if (products.length === 0) {
-      console.error('No products to export');
       return;
     }
 
@@ -94,7 +93,6 @@ export const exportSelectedProducts = (
     // Write and download the file
     XLSX.writeFile(wb, filename);
   } catch (error) {
-    console.error('Error exporting products:', error);
   }
 };
 
@@ -131,7 +129,6 @@ export const exportOrderSummary = (
 ): void => {
   try {
     if (products.length === 0) {
-      console.error('No products to export');
       return;
     }
 
@@ -237,6 +234,5 @@ export const exportOrderSummary = (
     // Write and download the file
     XLSX.writeFile(wb, filename);
   } catch (error) {
-    console.error('Error exporting order summary:', error);
   }
 }; 

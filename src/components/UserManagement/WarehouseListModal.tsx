@@ -52,7 +52,6 @@ const WarehouseListModal: React.FC<WarehouseListModalProps> = ({
             logs: logs[0] || null
           };
         } catch (err) {
-          console.error(`Error fetching data for warehouse ${warehouse}:`, err);
           return { 
             warehouse, 
             stats: {
@@ -81,7 +80,6 @@ const WarehouseListModal: React.FC<WarehouseListModalProps> = ({
       setWarehouseStats(statsMap);
       setWarehouseLogs(logsMap);
     } catch (err) {
-      console.error('Error fetching warehouse data:', err);
       setError('Failed to fetch warehouse data');
     } finally {
       setLoading(false);
@@ -113,7 +111,6 @@ const WarehouseListModal: React.FC<WarehouseListModalProps> = ({
       
       alert(`Warehouse "${warehouseName}" has been successfully deleted.`);
     } catch (error) {
-      console.error('Error deleting warehouse:', error);
       setError(`Failed to delete warehouse: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setDeletingWarehouse(null);
@@ -146,7 +143,6 @@ const WarehouseListModal: React.FC<WarehouseListModalProps> = ({
         status: entity.status || 'ACTIVE'
       });
       
-      console.log('✅ New warehouse created:', newWarehouseName);
       
       // Update entity locally with new warehouse
       if (entity) {
@@ -175,7 +171,6 @@ const WarehouseListModal: React.FC<WarehouseListModalProps> = ({
       setNewWarehouseName('');
       alert(`Warehouse "${newWarehouseName}" has been successfully created.`);
     } catch (error) {
-      console.error('❌ Error creating warehouse:', error);
       setError(error instanceof Error ? error.message : 'Failed to create warehouse');
     } finally {
       setCreatingWarehouse(false);

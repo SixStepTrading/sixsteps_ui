@@ -72,13 +72,10 @@ const SupplierStockUploadModal: React.FC<SupplierStockUploadModalProps> = ({
     setFileError(null);
     
     try {
-      console.log('🔍 Fetching current user entity...');
       const currentUserEntity = await getCurrentUserEntity();
       
       setUserEntity(currentUserEntity);
-      console.log('✅ User entity found:', currentUserEntity);
     } catch (error) {
-      console.error('❌ Error fetching user entity:', error);
       setFileError('Failed to load entity information. Please try again.');
     } finally {
       setLoadingEntity(false);
@@ -117,13 +114,11 @@ const SupplierStockUploadModal: React.FC<SupplierStockUploadModalProps> = ({
         warehouses: updatedWarehouses
       });
       
-      console.log('✅ New warehouse created:', newWarehouseName);
       await fetchUserEntity();
       setSelectedWarehouse(newWarehouseName.trim());
       setShowCreateWarehouseDialog(false);
       setNewWarehouseName('');
     } catch (error) {
-      console.error('❌ Error creating warehouse:', error);
       setFileError(error instanceof Error ? error.message : 'Failed to create warehouse');
     } finally {
       setCreatingWarehouse(false);
@@ -133,7 +128,6 @@ const SupplierStockUploadModal: React.FC<SupplierStockUploadModalProps> = ({
   // Upload progress tracking
   const uploadProgress = useUploadProgress({
     onComplete: (result: any) => {
-      console.log('📊 Stock upload completed via progress tracking:', result);
       setIsProcessing(false);
       if (result) {
         // Show result modal
@@ -142,7 +136,6 @@ const SupplierStockUploadModal: React.FC<SupplierStockUploadModalProps> = ({
       }
     },
     onError: (error: Error) => {
-      console.error('❌ Stock upload error via progress tracking:', error);
       setIsProcessing(false);
       setFileError(error.message);
     }
@@ -248,7 +241,6 @@ const SupplierStockUploadModal: React.FC<SupplierStockUploadModalProps> = ({
         }
       });
       
-      console.log('🔍 Auto-mapping result:', newMapping);
       
       setMappedFields(newMapping);
       
@@ -258,7 +250,6 @@ const SupplierStockUploadModal: React.FC<SupplierStockUploadModalProps> = ({
       }
       
     } catch (error) {
-      console.error('Error reading file:', error);
       setFileError('Error reading file. Please check the file format.');
     }
   };
@@ -324,39 +315,28 @@ const SupplierStockUploadModal: React.FC<SupplierStockUploadModalProps> = ({
     if (!filePreview) return;
     
     const newMapping: Record<string, string> = {};
-    console.log('🔍 Available headers for auto-mapping:', filePreview.headers);
     
     filePreview.headers.forEach(header => {
       const lowerHeader = header.toLowerCase().trim();
-      console.log(`🔍 Checking header: "${header}" (lowercase: "${lowerHeader}")`);
       
       if (lowerHeader === 'sku' || lowerHeader.includes('minsan') || lowerHeader.includes('ean') || lowerHeader.includes('code') || lowerHeader.includes('barcode')) {
         newMapping[header] = 'sku';
-        console.log(`✅ Mapped "${header}" → sku`);
       } else if (lowerHeader.includes('price') || lowerHeader.includes('eti') || lowerHeader.includes('prezzo') || lowerHeader.includes('pubblico')) {
         newMapping[header] = 'price';
-        console.log(`✅ Mapped "${header}" → price`);
       } else if (lowerHeader.includes('vat') || lowerHeader.includes('iva') || lowerHeader.includes('aliquota') || lowerHeader.includes('imposta')) {
         newMapping[header] = 'vat';
-        console.log(`✅ Mapped "${header}" → vat`);
       } else if (lowerHeader.includes('currency') || lowerHeader.includes('valuta') || lowerHeader.includes('euro') || lowerHeader.includes('eur')) {
         newMapping[header] = 'currency';
-        console.log(`✅ Mapped "${header}" → currency`);
       } else if (lowerHeader.includes('quantity') || lowerHeader.includes('stock') || lowerHeader.includes('qty') || lowerHeader.includes('quantita') || lowerHeader.includes('scorte')) {
         newMapping[header] = 'quantity';
-        console.log(`✅ Mapped "${header}" → quantity`);
       } else if (lowerHeader.includes('unit') || lowerHeader.includes('unita') || lowerHeader.includes('measure') || lowerHeader.includes('misura') || lowerHeader.includes('pezzi')) {
         newMapping[header] = 'unit';
-        console.log(`✅ Mapped "${header}" → unit`);
       } else if (lowerHeader.includes('notes') || lowerHeader.includes('note') || lowerHeader.includes('comment') || lowerHeader.includes('note') || lowerHeader.includes('osservazioni')) {
         newMapping[header] = 'notes';
-        console.log(`✅ Mapped "${header}" → notes`);
       } else {
-        console.log(`❌ No mapping found for "${header}"`);
       }
     });
     
-    console.log('🔍 Final auto-mapping result:', newMapping);
     setMappedFields(newMapping);
   };
 
@@ -424,7 +404,6 @@ const SupplierStockUploadModal: React.FC<SupplierStockUploadModalProps> = ({
         setFileError(response.message || 'Upload failed');
       }
     } catch (error) {
-      console.error('Upload error:', error);
       setFileError(error instanceof Error ? error.message : 'Upload failed');
     } finally {
       setIsProcessing(false);
@@ -460,12 +439,8 @@ const SupplierStockUploadModal: React.FC<SupplierStockUploadModalProps> = ({
       const fileData = await readFilePreview(file);
       
       // No validation - proceed with whatever fields are mapped
-      console.log('📋 Proceeding with mapped fields:', Object.values(columnMapping).filter(field => field && field.trim() !== ''));
       
       // Transform data
-      console.log('🔍 File data headers:', fileData.headers);
-      console.log('🔍 Column mapping:', columnMapping);
-      console.log('🔍 First few rows of original data:', fileData.rows.slice(0, 3));
       
       const newRows = fileData.rows.map((originalRow, rowIndex) => {
         const newRow: Record<string, any> = {};
@@ -476,38 +451,29 @@ const SupplierStockUploadModal: React.FC<SupplierStockUploadModalProps> = ({
           const headerIndex = fileData.headers.findIndex(h => h.trim() === originalHeader.trim());
           if (headerIndex !== -1 && originalRow[headerIndex] !== undefined) {
             newRow[targetField] = originalRow[headerIndex];
-            console.log(`🔍 Mapped "${originalHeader}" -> "${targetField}": ${originalRow[headerIndex]}`);
           } else {
-            console.log(`⚠️ Could not find header "${originalHeader}" in headers:`, fileData.headers);
           }
         });
         
         // Add warehouse column automatically with selected warehouse value
         if (selectedWarehouse) {
           newRow.warehouse = selectedWarehouse;
-          console.log(`🏢 Added warehouse "${selectedWarehouse}" to row ${rowIndex + 1}`);
         }
         
         // Log first few rows for debugging
         if (rowIndex < 3) {
-          console.log(`🔍 Row ${rowIndex + 1} original:`, originalRow);
-          console.log(`🔍 Row ${rowIndex + 1} transformed:`, newRow);
         }
         
         return newRow;
       });
       
-      console.log('🔍 First few transformed rows:', newRows.slice(0, 3));
       
       // Convert to CSV format
       const csvContent = convertToCSV(newRows);
-      console.log('🔍 Generated CSV content (first 500 chars):', csvContent.substring(0, 500));
-      console.log('🔍 CSV headers:', csvContent.split('\n')[0]);
       
       const csvBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       return new File([csvBlob], file.name.replace(/\.[^/.]+$/, '.csv'), { type: 'text/csv' });
     } catch (error) {
-      console.error('❌ File transformation failed:', error);
       throw error;
     }
   };

@@ -27,7 +27,6 @@ ENTEROGERMINA 2 MILIARDI/5ML 10FL,5`;
     link.click();
     document.body.removeChild(link);
   } catch (error) {
-    console.error('Error downloading template:', error);
   }
 };
 
@@ -80,7 +79,6 @@ export const generateExcelTemplate = (): void => {
     link.click();
     document.body.removeChild(link);
   } catch (error) {
-    console.error('Error generating template:', error);
   }
 };
 

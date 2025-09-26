@@ -78,7 +78,7 @@ export interface LogEntry {
 }
 
 // Function to parse logs and extract upload information
-export const parseUploadsFromLogs = (logData: LogEntry[]): ParsedUpload[] => {
+export const parseUploadsFromLogs = (logData: any[]): ParsedUpload[] => {
   const uploads: ParsedUpload[] = [];
 
   logData.forEach((entry) => {
@@ -86,7 +86,7 @@ export const parseUploadsFromLogs = (logData: LogEntry[]): ParsedUpload[] => {
     if (entry.action === 'SUPPLY_CREATE' && entry.details?.changes?.created?.uploadResult) {
       const result = entry.details.changes.created.uploadResult;
       const upload: ParsedUpload = {
-        id: entry._id.$oid,
+        id: entry.id || entry._id?.$oid || `upload-${Date.now()}`,
         userId: entry.user.id,
         userName: `${entry.user.name} ${entry.user.surname}`,
         userEmail: entry.user.email,
@@ -112,7 +112,7 @@ export const parseUploadsFromLogs = (logData: LogEntry[]): ParsedUpload[] => {
       // Handle PRODUCT_CSV_UPLOAD
       if (meta.customAction === 'PRODUCT_CSV_UPLOAD') {
         const upload: ParsedUpload = {
-          id: entry._id.$oid,
+          id: entry.id || entry._id?.$oid || `upload-${Date.now()}`,
           userId: entry.user.id,
           userName: `${entry.user.name} ${entry.user.surname}`,
           userEmail: entry.user.email,
@@ -135,7 +135,7 @@ export const parseUploadsFromLogs = (logData: LogEntry[]): ParsedUpload[] => {
       if (meta.customAction === 'SUPPLY_CSV_UPLOAD_ADMIN' && meta.uploadResult) {
         const result = meta.uploadResult;
         const upload: ParsedUpload = {
-          id: entry._id.$oid,
+          id: entry.id || entry._id?.$oid || `upload-${Date.now()}`,
           userId: entry.user.id,
           userName: `${entry.user.name} ${entry.user.surname}`,
           userEmail: entry.user.email,
@@ -157,43 +157,94 @@ export const parseUploadsFromLogs = (logData: LogEntry[]): ParsedUpload[] => {
     }
   });
 
-  // Sort by timestamp (most recent first) and limit to 20
+  // Sort by timestamp (most recent first) and limit to 100
   return uploads
     .sort((a, b) => b.timestamp - a.timestamp)
-    .slice(0, 20);
+    .slice(0, 100);
 };
 
-// Function to load and parse completed uploads from logs (for history)
+// Function to load and parse completed uploads from API logs (for history)
 export const loadCompletedUploadsFromLogs = async (): Promise<ParsedUpload[]> => {
   try {
-    // Load the logs from the public directory
-    const response = await fetch('/sixstep.logs.json');
-    if (!response.ok) {
-      throw new Error('Failed to load logs');
+    
+    // Import the API function dynamically to avoid circular dependencies
+    const { getLogs } = await import('./api');
+    
+    // Get logs from API (getLogs takes page and limit parameters)
+    const response = await getLogs(1, 1000); // Get first page with 1000 logs
+    
+    
+    if (!response.logs || !Array.isArray(response.logs)) {
+      return [];
     }
     
-    const logData: LogEntry[] = await response.json();
-    console.log('📊 Loaded log data:', logData.length, 'entries');
+    // Filter logs for upload-related actions before parsing
+    const uploadLogs = response.logs.filter(log => 
+      log.action === 'ADMIN_ACTION' || 
+      log.action === 'SUPPLY_CREATE' ||
+      (log.details?.metadata?.customAction === 'PRODUCT_CSV_UPLOAD') ||
+      (log.details?.metadata?.customAction === 'SUPPLY_CSV_UPLOAD_ADMIN')
+    );
     
-    const uploads = parseUploadsFromLogs(logData);
-    console.log('📤 Parsed completed uploads:', uploads.length, 'uploads');
+    
+    const uploads = parseUploadsFromLogs(uploadLogs);
     
     return uploads;
   } catch (error) {
-    console.error('Error loading completed uploads from logs:', error);
-    throw error;
+    
+    // Fallback to local logs if API fails
+    try {
+      const response = await fetch('/sixstep.logs.json');
+      if (!response.ok) {
+        throw new Error('Failed to load local logs');
+      }
+      
+      const logData: LogEntry[] = await response.json();
+      
+      const uploads = parseUploadsFromLogs(logData);
+      
+      return uploads;
+    } catch (fallbackError) {
+      return [];
+    }
   }
 };
 
-// Function to load active uploads (placeholder for now - would come from API)
+// Function to load active uploads from API
 export const loadActiveUploads = async (): Promise<ParsedUpload[]> => {
   try {
-    // This would normally fetch from an API endpoint for active uploads
-    // For now, return empty array as we don't have active uploads in logs
-    console.log('🔄 Loading active uploads...');
+    
+    // Import the API function dynamically to avoid circular dependencies
+    const { getActiveUploads } = await import('./api');
+    const response = await getActiveUploads();
+    
+    
+    // Transform API response to ParsedUpload format
+    if (response.uploads && Array.isArray(response.uploads)) {
+      return response.uploads.map((upload: any) => ({
+        id: upload.id || upload.uploadId || `active-${Date.now()}`,
+        userId: upload.userId || upload.user?.id || '',
+        userName: upload.userName || upload.user?.name || 'Unknown User',
+        userEmail: upload.userEmail || upload.user?.email || '',
+        timestamp: upload.timestamp || upload.createdAt || Date.now(),
+        action: upload.action || 'UPLOAD',
+        fileName: upload.fileName || upload.filename,
+        warehouse: upload.warehouse,
+        totalRows: upload.totalRows || upload.total || 0,
+        processedRows: upload.processedRows || upload.processed || 0,
+        created: upload.created || 0,
+        updated: upload.updated || 0,
+        skipped: upload.skipped || 0,
+        success: upload.success || upload.status === 'completed',
+        message: upload.message || upload.status || 'Processing...',
+        errors: upload.errors || [],
+        entityId: upload.entityId
+      }));
+    }
+    
     return [];
   } catch (error) {
-    console.error('Error loading active uploads:', error);
-    throw error;
+    // Fallback to empty array if API fails
+    return [];
   }
 };

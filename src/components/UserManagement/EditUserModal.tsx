@@ -78,7 +78,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         setEntities(entitiesData);
       }
     } catch (error: any) {
-      console.error('Error loading entities:', error);
       showToast('Failed to load entities', 'error');
     } finally {
       setLoadingEntities(false);
@@ -149,7 +148,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       onUserUpdated();
       onClose();
     } catch (error: any) {
-      console.error('Error updating user:', error);
       showToast(error.message || 'Failed to update user', 'error');
     } finally {
       setSubmitting(false);

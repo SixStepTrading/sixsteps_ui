@@ -52,22 +52,17 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ openCreateModal = f
   const loadEntities = async () => {
     try {
       setLoading(true);
-      console.log('Loading entities...');
       const entitiesData = await getAllEntities();
-      console.log('Entities API response:', entitiesData);
       
       if (Array.isArray(entitiesData)) {
         setEntities(entitiesData);
         setApiError(null);
-        console.log('Entities set successfully:', entitiesData.length, 'entities');
       } else {
-        console.warn('API returned non-array data:', entitiesData);
         setEntities([]);
         setApiError('ENTITIES_API_ERROR');
         showToast('Invalid response format from server', 'warning');
       }
     } catch (error: any) {
-      console.error('Error loading entities:', error);
       setEntities([]);
       setApiError('ENTITIES_API_ERROR');
       showToast('Failed to load entities from server', 'error');
@@ -125,7 +120,6 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ openCreateModal = f
       await loadEntities();
       showToast('Data refreshed successfully!', 'success');
     } catch (error) {
-      console.error('Error refreshing data:', error);
       showToast('Failed to refresh data', 'error');
     } finally {
       setIsRefreshing(false);

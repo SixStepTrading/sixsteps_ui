@@ -102,7 +102,6 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
           }
         }
       } catch (error) {
-        console.error('Error initializing auth:', error);
         // Clear invalid data
         localStorage.removeItem('sixstep_token');
         localStorage.removeItem('sixstep_user');
@@ -128,7 +127,6 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         throw new Error(response.message || 'Login failed');
       }
     } catch (error) {
-      console.error('Login error in context:', error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -142,7 +140,6 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     try {
       await apiLogout();
     } catch (error) {
-      console.error('Logout error:', error);
     } finally {
       setUser(null);
       setCurrentProfile(null);
@@ -152,12 +149,10 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
 
   // Toggle between roles - REMOVED: Role should be determined by backend only
   const toggleUserRole = () => {
-    console.warn('Role switching is disabled. Roles are determined by user authentication.');
   };
 
   // Explicitly set a role - REMOVED: Role should be determined by backend only
   const handleSetUserRole = (role: UserRole) => {
-    console.warn('Manual role setting is disabled. Roles are determined by user authentication.');
   };
 
   // Update the full user profile

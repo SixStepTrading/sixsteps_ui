@@ -123,7 +123,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   // Upload progress tracking for bulk import (optional)
   const uploadProgress = useUploadProgress({
     onComplete: (result) => {
-      console.log('📊 Bulk import completed via progress tracking:', result);
       setIsProcessing(false);
       
       // Show result modal
@@ -131,7 +130,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       setShowResultModal(true);
     },
     onError: (error) => {
-      console.error('📊 Bulk import progress error:', error);
       setIsProcessing(false);
       setFileError(error.message);
     }
@@ -228,7 +226,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       }
       
     } catch (error) {
-      console.error('Error reading file:', error);
       setFileError('Error reading file. Please check the file format.');
     }
   };
@@ -286,7 +283,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                 );
               }
             } catch(xlsxError) {
-              console.error("XLSX parsing failed:", xlsxError);
               
               // Fallback to manual CSV parsing
               try {
@@ -313,7 +309,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                   parsedData.push(row);
                 }
               } catch(fallbackError) {
-                console.error("Fallback CSV parsing failed:", fallbackError);
                 reject(new Error('Failed to parse CSV file'));
                 return;
               }
@@ -335,7 +330,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
             rawData: parsedData
           });
         } catch (error) {
-          console.error("File parsing error:", error);
           reject(new Error('Error parsing file'));
         }
       };
@@ -432,7 +426,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
           
           resolve({ headers, rows, rawData: parsedData });
         } catch (error) {
-          console.error("File parsing error:", error);
           reject(new Error('Error parsing file'));
         }
       };
@@ -452,7 +445,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   // Transform file with API-compliant column names
   const transformFileWithCorrectColumns = async (file: File, columnMapping: ColumnMapping): Promise<File> => {
     try {
-      console.log('🔄 Starting file transformation...', { fileName: file.name, mapping: columnMapping });
       
       // Read the original file data
       const fileData = await readFileData(file);
@@ -486,21 +478,11 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         return newRow;
       });
       
-      console.log('📊 Transformation complete:', {
-        originalHeaders: fileData.headers,
-        newHeaders: newHeaders,
-        rowCount: newRows.length,
-        sampleRow: newRows[0]
-      });
-      
       // Validate that we have the required API fields
       const requiredFields = ['sku', 'name', 'ean', 'vat', 'price'];
       const missingFields = requiredFields.filter(field => !newHeaders.includes(field));
       
       if (missingFields.length > 0) {
-        console.warn('⚠️ Missing required API fields:', missingFields);
-        console.log('💡 Available headers:', newHeaders);
-        console.log('🔍 Original mapping:', columnMapping);
       }
       
       // Create new CSV content with semicolon separator (European format)
@@ -531,10 +513,8 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       ].join('\n');
       
       // Log CSV preview for debugging
-      console.log('📝 Generated CSV preview (first 3 lines):');
       const csvLines = csvContent.split('\n');
       csvLines.slice(0, 3).forEach((line, idx) => {
-        console.log(`Line ${idx}: ${line}`);
       });
       
       // Create new file with API-compliant structure with proper UTF-8 BOM
@@ -546,16 +526,8 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         type: 'text/csv;charset=utf-8'
       });
       
-      console.log('✅ File transformation successful:', {
-        originalSize: file.size,
-        newSize: transformedFile.size,
-        newFileName: transformedFile.name,
-        columnMapping: columnMapping
-      });
-      
       return transformedFile;
     } catch (error) {
-      console.error('❌ File transformation failed:', error);
       throw error;
     }
   };
@@ -626,7 +598,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     try {
       // Try new API-based upload with progress tracking (for single CSV or Excel files)
       if (selectedFile && selectedFile.name.match(/\.(csv|xlsx?|xls)$/i)) {
-        console.log('🚀 Attempting API-based upload with progress tracking...');
         
         try {
           // Create column mapping from our mapped fields
@@ -637,50 +608,22 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
             }
           });
           
-          console.log('📋 Column mapping:', columnMapping);
           
           // Transform file with correct column names that API expects
           const transformedFile = await transformFileWithCorrectColumns(selectedFile, columnMapping);
-          console.log('🔄 File transformed with API-compliant column names');
           
           // Debug: Log transformed file details
-          console.log('🔍 Transformed file ready for upload:');
-          console.log('📏 File size:', transformedFile.size, 'bytes');
-          console.log('📝 File type:', transformedFile.type);
-          console.log('📁 File name:', transformedFile.name);
           
           // Use the properly transformed file directly
           const fileToUpload = transformedFile;
           
-          console.log('📤 Uploading transformed file:', {
-            name: fileToUpload.name,
-            size: fileToUpload.size,
-            type: fileToUpload.type
-          });
-          
           // File is already transformed with correct API headers: sku;name;ean;vat;price
           // No column mapping needed since headers match API expectations
-          console.log('📋 File already has API-compliant headers - no mapping needed');
           
           const result = await uploadProductsCSV(fileToUpload, {});
           
-          console.log('🔍 API Response received:', {
-            result: result,
-            hasUploadId: !!result.uploadId,
-            uploadId: result.uploadId,
-            success: result.success,
-            error: result.error,
-            message: result.message
-          });
-          
           // Check if API returned an error (even with 200 status)
           if (result.error || result.success === false) {
-            console.error('❌ API returned error:', {
-              error: result.error,
-              success: result.success,
-              message: result.message,
-              reason: result.reason
-            });
             throw new Error(result.message || result.reason || 'API upload failed');
           }
           
@@ -688,42 +631,24 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
           const uploadId = result.uploadId || result.upload_id || result.id;
           
           if (uploadId) {
-            console.log('📊 Upload ID received, starting progress tracking:', uploadId);
             uploadProgress.startPolling(uploadId);
             return; // Exit early, progress tracking will handle completion
           } else if (result.success && result.processedRows) {
             // API processed file immediately (synchronous processing)
-            console.log('✅ File processed immediately by API:', {
-              success: result.success,
-              processedRows: result.processedRows,
-              message: result.message
-            });
             
             // Handle immediate processing completion
             setIsProcessing(false);
             handleCancel(); // Reset form and close
             return; // Exit early, processing complete
           } else {
-            console.log('⏭️ No upload ID found, falling back to client-side processing. Reason:', {
-              hasUploadId: !!result.uploadId,
-              uploadId: result.uploadId,
-              upload_id: result.upload_id,
-              id: result.id,
-              success: result.success,
-              processedRows: result.processedRows,
-              resultKeys: Object.keys(result),
-              fullResult: result
-            });
             // Continue to fallback logic below
           }
         } catch (apiError) {
-          console.warn('⚠️ API upload failed, falling back to client-side processing:', apiError);
           // Continue to fallback logic below
         }
       }
       
       // Fallback: Original client-side processing
-      console.log('🔄 Using client-side file processing...');
       let allProducts: ProductFormData[] = [];
       
       // Process each file sequentially
@@ -748,7 +673,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
             setProcessedProducts(prev => [...prev, ...products]);
           }
         } catch (error) {
-          console.error(`Error processing file ${file.name}:`, error);
         }
       }
       
@@ -770,7 +694,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       // Reset and close
       handleCancel();
     } catch (error) {
-      console.error('Error processing files:', error);
       setFileError('Error processing products. Please check file formats and field mappings.');
     } finally {
       setIsProcessing(false);
