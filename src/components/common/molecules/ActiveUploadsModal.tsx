@@ -33,6 +33,7 @@ import {
   HourglassEmpty as HourglassEmptyIcon
 } from '@mui/icons-material';
 import { loadCompletedUploadsFromLogs, loadActiveUploads, ParsedUpload } from '../../../utils/logParser';
+import { useUser } from '../../../contexts/UserContext';
 
 interface ActiveUploadsModalProps {
   open: boolean;
@@ -43,6 +44,8 @@ const ActiveUploadsModal: React.FC<ActiveUploadsModalProps> = ({
   open,
   onClose
 }) => {
+  const { user } = useUser();
+  const isAdmin = user?.role === 'admin';
   // Add CSS animation for spinning refresh icon
   React.useEffect(() => {
     const style = document.createElement('style');
@@ -191,7 +194,11 @@ const ActiveUploadsModal: React.FC<ActiveUploadsModalProps> = ({
     if (open) {
       // Load initial data for both tabs
       fetchActiveUploads(false);
-      fetchCompletedUploads(false);
+      
+      // Only fetch completed uploads if user is admin
+      if (isAdmin) {
+        fetchCompletedUploads(false);
+      }
       
       // Set up auto-refresh for active uploads only (every 5 seconds)
       const interval = setInterval(() => {
@@ -203,7 +210,7 @@ const ActiveUploadsModal: React.FC<ActiveUploadsModalProps> = ({
       
       return () => clearInterval(interval);
     }
-  }, [open, activeTab]);
+  }, [open, activeTab, isAdmin]);
 
 
   return (
@@ -240,7 +247,7 @@ const ActiveUploadsModal: React.FC<ActiveUploadsModalProps> = ({
             onClick={() => {
               if (activeTab === 0) {
                 fetchActiveUploads(true);
-              } else {
+              } else if (isAdmin) {
                 fetchCompletedUploads(true);
               }
             }} 
@@ -279,11 +286,13 @@ const ActiveUploadsModal: React.FC<ActiveUploadsModalProps> = ({
               id="tab-0"
               aria-controls="tabpanel-0"
             />
-            <Tab 
-              label={`Upload History ${completedUploads.length > 0 ? `(${completedUploads.length})` : ''}`} 
-              id="tab-1"
-              aria-controls="tabpanel-1"
-            />
+            {isAdmin && (
+              <Tab 
+                label={`Upload History ${completedUploads.length > 0 ? `(${completedUploads.length})` : ''}`} 
+                id="tab-1"
+                aria-controls="tabpanel-1"
+              />
+            )}
           </Tabs>
         </Box>
 
@@ -326,7 +335,7 @@ const ActiveUploadsModal: React.FC<ActiveUploadsModalProps> = ({
             )}
             
             {/* Active Uploads Tab */}
-            {activeTab === 0 && (
+            {(activeTab === 0 || !isAdmin) && (
               <Box>
                 {activeUploads.length > 0 ? (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -412,8 +421,8 @@ const ActiveUploadsModal: React.FC<ActiveUploadsModalProps> = ({
               </Box>
             )}
 
-            {/* Upload History Tab */}
-            {activeTab === 1 && (
+            {/* Upload History Tab - Only for admins */}
+            {activeTab === 1 && isAdmin && (
               <Box sx={{ position: 'relative' }}>
                 {refreshing && activeTab === 1 && (
                   <Box sx={{ 
