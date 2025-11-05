@@ -139,17 +139,25 @@ export const exportAsExcel = async (
     const sortedPrices = [...product.bestPrices].sort((a, b) => a.price - b.price);
     sortedPrices.forEach((pricePoint) => {
       const grossDiscount = product.publicPrice - pricePoint.price;
-      const grossDiscountPercent = (grossDiscount / product.publicPrice) * 100;
+      const grossDiscountPercent = product.publicPrice > 0 
+        ? (grossDiscount / product.publicPrice) * 100 
+        : 0;
       const netDiscount = netPublicPrice - pricePoint.price;
-      const netDiscountPercent = (netDiscount / netPublicPrice) * 100;
+      const netDiscountPercent = netPublicPrice > 0 
+        ? (netDiscount / netPublicPrice) * 100 
+        : 0;
+
+      // Ensure values are valid numbers
+      const safeGrossDiscountPercent = (isFinite(grossDiscountPercent) ? grossDiscountPercent : 0) / 100;
+      const safeNetDiscountPercent = (isFinite(netDiscountPercent) ? netDiscountPercent : 0) / 100;
 
       row.push(
         pricePoint.price,
         pricePoint.stock,
         grossDiscount,
-        grossDiscountPercent / 100, // ExcelJS usa 0.5 per 50%
+        safeGrossDiscountPercent, // ExcelJS usa 0.5 per 50%
         netDiscount,
-        netDiscountPercent / 100
+        safeNetDiscountPercent
       );
 
       if (isAdmin) {
@@ -307,18 +315,26 @@ export const exportOrderSummaryExcel = async (
     if (product.publicPrice && product.vat) {
       const netPublicPrice = product.publicPrice / (1 + product.vat / 100);
       const grossDiscount = product.publicPrice - product.unitPrice;
-      const grossDiscountPercent = (grossDiscount / product.publicPrice) * 100;
+      const grossDiscountPercent = product.publicPrice > 0 
+        ? (grossDiscount / product.publicPrice) * 100 
+        : 0;
       const netDiscount = netPublicPrice - product.unitPrice;
-      const netDiscountPercent = (netDiscount / netPublicPrice) * 100;
+      const netDiscountPercent = netPublicPrice > 0 
+        ? (netDiscount / netPublicPrice) * 100 
+        : 0;
+
+      // Ensure values are valid numbers
+      const safeGrossDiscountPercent = (isFinite(grossDiscountPercent) ? grossDiscountPercent : 0) / 100;
+      const safeNetDiscountPercent = (isFinite(netDiscountPercent) ? netDiscountPercent : 0) / 100;
 
       row.push(
         product.publicPrice,
         netPublicPrice,
         product.vat,
         grossDiscount,
-        grossDiscountPercent / 100,
+        safeGrossDiscountPercent,
         netDiscount,
-        netDiscountPercent / 100
+        safeNetDiscountPercent
       );
     }
 

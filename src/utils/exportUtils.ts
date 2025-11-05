@@ -33,15 +33,25 @@ export const DEFAULT_EXPORT_CONFIG: ExportConfig = {
   chunkSize: 1000,
 };
 
-// Format number according to config - WITHOUT rounding, keeps all decimals
+// Format number according to config
 const formatNumber = (num: number, config: ExportConfig, decimals?: number): string => {
-  // Convert to string without rounding - keeps all original decimals
+  // Convert to string preserving precision
   let numStr = num.toString();
   
   // Split into integer and decimal parts
-  const parts = numStr.split('.');
-  const integerPart = parts[0];
-  const decimalPart = parts[1] || '';
+  let parts = numStr.split('.');
+  let integerPart = parts[0];
+  let decimalPart = parts[1] || '';
+  
+  // Limit decimal places if specified
+  if (decimals !== undefined && decimalPart.length > decimals) {
+    // Round to specified decimals
+    const roundedNum = Number(num.toFixed(decimals));
+    numStr = roundedNum.toString();
+    const roundedParts = numStr.split('.');
+    integerPart = roundedParts[0]; // FIX: Update integerPart from rounded number
+    decimalPart = roundedParts[1] || '';
+  }
   
   // Apply thousands separator to integer part
   let formattedInteger = integerPart;
