@@ -26,6 +26,7 @@ type ProductTableProps = {
   products: ProductWithQuantity[];
   selected: string[];
   onSelect: (id: string) => void;
+  onSelectAll?: (ids: string[], checked: boolean) => void;
   onQuantityChange: (id: string, qty: number) => void;
   onTargetPriceChange: (id: string, price: string) => void;
   isSelected: (id: string) => boolean;
@@ -193,6 +194,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
   products,
   selected,
   onSelect,
+  onSelectAll,
   onQuantityChange,
   onTargetPriceChange,
   isSelected,
@@ -213,6 +215,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
   filterValues,
   onFilterChange,
 }) => {
+  const selectAllRef = React.useRef<HTMLInputElement>(null);
   const [modalProduct, setModalProduct] = useState<ProductWithQuantity | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showSelectedOnly, setShowSelectedOnly] = useState(false);
@@ -257,6 +260,19 @@ const ProductTable: React.FC<ProductTableProps> = ({
   
   // Get only the products for current page (or all if "show all" is selected)
   const filteredProducts = baseFilteredProducts.slice(startIndex, endIndex);
+
+  // Visible IDs on current page
+  const visibleIds = filteredProducts.map(p => p.id);
+  const selectedOnPage = visibleIds.filter(id => selected.includes(id)).length;
+  const allSelectedOnPage = visibleIds.length > 0 && selectedOnPage === visibleIds.length;
+  const indeterminateOnPage = selectedOnPage > 0 && !allSelectedOnPage;
+
+  // Update indeterminate state for select-all checkbox
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = indeterminateOnPage;
+    }
+  }, [indeterminateOnPage, allSelectedOnPage, selectedOnPage, visibleIds.length]);
 
   // Determina se ci sono prodotti selezionati con problemi
   const selectionWithProblems = selected.some(id => {
@@ -583,7 +599,19 @@ const ProductTable: React.FC<ProductTableProps> = ({
         >
           {/* Header columns - sortable */}
           <div className="flex items-center gap-2 px-4 py-3 text-xs uppercase text-slate-500 dark:text-dark-text-muted font-semibold tracking-wider bg-gray-50 dark:bg-dark-bg-tertiary rounded-t-lg rounded-xl my-1.5 border-b border-gray-200 dark:border-dark-border-primary">
-            <div className={`${isDrawerCollapsed ? 'w-[6%]' : 'w-[6.5%]'} text-center px-1`}>#</div>
+            <div className={`${isDrawerCollapsed ? 'w-[6%]' : 'w-[6.5%]'} flex items-center justify-center px-1`}>
+              <span className="mr-2 select-none">#</span>
+              <input
+                ref={selectAllRef}
+                type="checkbox"
+                checked={allSelectedOnPage}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  onSelectAll && onSelectAll(visibleIds, e.target.checked);
+                }}
+                className="w-4 h-4 text-blue-600 dark:text-blue-400 bg-gray-100 dark:bg-dark-bg-tertiary border-gray-300 dark:border-dark-border-primary rounded focus:ring-blue-500 dark:focus:ring-blue-400 focus:ring-2"
+              />
+            </div>
             <div className={`${isDrawerCollapsed ? 'w-[10%]' : 'w-[11%]'} cursor-pointer select-none flex items-center px-2`} onClick={() => {
               if (sortBy === 'codes') setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
               else { setSortBy('codes'); setSortDirection('asc'); }

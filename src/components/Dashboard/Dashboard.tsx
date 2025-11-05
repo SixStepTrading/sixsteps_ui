@@ -1381,6 +1381,16 @@ const Dashboard: React.FC = () => {
           products={filteredProducts}
           selected={selected}
           onSelect={(id) => handleSelectClick({} as any, id)}
+          onSelectAll={(ids, checked) => {
+            if (checked) {
+              // Add all visible ids
+              const merged = Array.from(new Set([...selected, ...ids]));
+              setSelected(merged);
+            } else {
+              // Remove all visible ids
+              setSelected(prev => prev.filter(id => !ids.includes(id)));
+            }
+          }}
           onQuantityChange={handleQuantityChange}
           onTargetPriceChange={handleTargetPriceChange}
           isSelected={isSelected}
