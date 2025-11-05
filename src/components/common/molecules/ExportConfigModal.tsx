@@ -287,10 +287,10 @@ const ExportConfigModal: React.FC<ExportConfigModalProps> = ({
           </Box>
         </Box>
 
-        <Divider sx={{ my: 2 }} />
+        <Divider sx={{ my: 1.5 }} />
 
         {/* File format */}
-        <Box sx={{ mb: 3 }}>
+        <Box sx={{ mb: 2 }}>
           <FormControl component="fieldset">
             <FormLabel component="legend" className="dark:text-dark-text-primary">File Format</FormLabel>
             <RadioGroup
@@ -306,83 +306,77 @@ const ExportConfigModal: React.FC<ExportConfigModalProps> = ({
 
         {/* CSV Separators (only for CSV) */}
         {config.format === 'csv' && (
-          <>
-            <Box sx={{ mb: 3 }}>
-              <FormControl fullWidth size="small">
-                <FormLabel className="dark:text-dark-text-primary">Field Separator (CSV)</FormLabel>
-                <Select
-                  value={config.fieldSeparator}
-                  onChange={(e) => setConfig({ ...config, fieldSeparator: e.target.value as any })}
-                >
-                  <MenuItem value=",">Comma (,) - USA/UK standard</MenuItem>
-                  <MenuItem value=";">Semicolon (;) - Europe standard</MenuItem>
-                  <MenuItem value="\t">Tab (\t)</MenuItem>
-                  <MenuItem value="|">Pipe (|)</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
+          <Box sx={{ mb: 2, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+            <FormControl size="small">
+              <FormLabel className="dark:text-dark-text-primary">Field Separator (CSV)</FormLabel>
+              <Select
+                value={config.fieldSeparator}
+                onChange={(e) => setConfig({ ...config, fieldSeparator: e.target.value as any })}
+              >
+                <MenuItem value=",">Comma (,)</MenuItem>
+                <MenuItem value=";">Semicolon (;)</MenuItem>
+                <MenuItem value="\t">Tab</MenuItem>
+                <MenuItem value="|">Pipe (|)</MenuItem>
+              </Select>
+            </FormControl>
 
-            <Box sx={{ mb: 3 }}>
-              <FormControl fullWidth size="small">
-                <FormLabel className="dark:text-dark-text-primary">File Encoding</FormLabel>
-                <Select
-                  value={config.encoding}
-                  onChange={(e) => setConfig({ ...config, encoding: e.target.value as any })}
-                >
-                  <MenuItem value="utf-8">UTF-8 (Modern, recommended)</MenuItem>
-                  <MenuItem value="utf-8-bom">UTF-8 with BOM (Excel Italy)</MenuItem>
-                  <MenuItem value="windows-1252">Windows-1252 (Old Excel)</MenuItem>
-                  <MenuItem value="iso-8859-1">ISO-8859-1 (Latin-1)</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
-          </>
+            <FormControl size="small">
+              <FormLabel className="dark:text-dark-text-primary">File Encoding</FormLabel>
+              <Select
+                value={config.encoding}
+                onChange={(e) => setConfig({ ...config, encoding: e.target.value as any })}
+              >
+                <MenuItem value="utf-8">UTF-8</MenuItem>
+                <MenuItem value="utf-8-bom">UTF-8 with BOM</MenuItem>
+                <MenuItem value="windows-1252">Windows-1252</MenuItem>
+                <MenuItem value="iso-8859-1">ISO-8859-1</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
         )}
 
-        <Divider sx={{ my: 2 }} />
+        <Divider sx={{ my: 1.5 }} />
 
         {/* Number formatting */}
         <Typography variant="subtitle2" gutterBottom className="dark:text-dark-text-primary">
           Number Formatting
         </Typography>
         
-        <Box sx={{ mb: 2 }}>
-          <FormControl fullWidth size="small">
+        <Box sx={{ mb: 2, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+          <FormControl size="small">
             <FormLabel className="dark:text-dark-text-primary">Decimal Separator</FormLabel>
             <Select
               value={config.decimalSeparator}
               onChange={(e) => setConfig({ ...config, decimalSeparator: e.target.value as '.' | ',' })}
             >
-              <MenuItem value=".">Period (.) - USA/UK: 1234.56</MenuItem>
               <MenuItem value=",">Comma (,) - Europe: 1234,56</MenuItem>
+              <MenuItem value=".">Period (.) - USA/UK: 1234.56</MenuItem>
             </Select>
           </FormControl>
-        </Box>
 
-        <Box sx={{ mb: 3 }}>
-          <FormControl fullWidth size="small">
+          <FormControl size="small">
             <FormLabel className="dark:text-dark-text-primary">Thousands Separator</FormLabel>
             <Select
               value={config.thousandsSeparator}
               onChange={(e) => setConfig({ ...config, thousandsSeparator: e.target.value as any })}
             >
-              <MenuItem value="none">None: 1234.56</MenuItem>
-              <MenuItem value=",">Comma (,) - USA: 1,234.56</MenuItem>
               <MenuItem value=".">Period (.) - Italy: 1.234,56</MenuItem>
+              <MenuItem value=",">Comma (,) - USA: 1,234.56</MenuItem>
               <MenuItem value=" ">Space ( ) - France: 1 234,56</MenuItem>
+              <MenuItem value="none">None: 1234.56</MenuItem>
             </Select>
           </FormControl>
         </Box>
 
-        <Divider sx={{ my: 2 }} />
+        <Divider sx={{ my: 1.5 }} />
 
         {/* Currency */}
         <Typography variant="subtitle2" gutterBottom className="dark:text-dark-text-primary">
           Currency Format
         </Typography>
         
-        <Box sx={{ mb: 2 }}>
-          <FormControl fullWidth size="small">
+        <Box sx={{ mb: 2, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+          <FormControl size="small">
             <FormLabel className="dark:text-dark-text-primary">Currency Symbol</FormLabel>
             <Select
               value={config.currencySymbol}
@@ -391,45 +385,43 @@ const ExportConfigModal: React.FC<ExportConfigModalProps> = ({
               <MenuItem value="€">Euro (€)</MenuItem>
               <MenuItem value="$">Dollar ($)</MenuItem>
               <MenuItem value="£">Pound (£)</MenuItem>
-              <MenuItem value="none">None (numeric only)</MenuItem>
+              <MenuItem value="none">None</MenuItem>
             </Select>
           </FormControl>
-        </Box>
 
-        {config.currencySymbol !== 'none' && (
-          <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
-            <FormControl size="small" sx={{ flex: 1 }}>
+          {config.currencySymbol !== 'none' && (
+            <FormControl size="small">
               <FormLabel className="dark:text-dark-text-primary">Position</FormLabel>
               <Select
                 value={config.currencyPosition}
                 onChange={(e) => setConfig({ ...config, currencyPosition: e.target.value as any })}
               >
-                <MenuItem value="before">Before (e.g., $100)</MenuItem>
                 <MenuItem value="after">After (e.g., 100€)</MenuItem>
+                <MenuItem value="before">Before (e.g., $100)</MenuItem>
               </Select>
             </FormControl>
-            
-            <FormControl size="small" sx={{ flex: 1 }}>
-              <FormLabel className="dark:text-dark-text-primary">Space</FormLabel>
-              <Box sx={{ pt: 1 }}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={config.currencySpace}
-                      onChange={(e) => setConfig({ ...config, currencySpace: e.target.checked })}
-                    />
-                  }
-                  label={config.currencySpace ? 'With space' : 'No space'}
+          )}
+        </Box>
+
+        {config.currencySymbol !== 'none' && (
+          <Box sx={{ mb: 2 }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={config.currencySpace}
+                  onChange={(e) => setConfig({ ...config, currencySpace: e.target.checked })}
+                  size="small"
                 />
-              </Box>
-            </FormControl>
+              }
+              label="With space"
+            />
           </Box>
         )}
 
-        <Divider sx={{ my: 2 }} />
+        <Divider sx={{ my: 1.5 }} />
 
         {/* Date format */}
-        <Box sx={{ mb: 3 }}>
+        <Box sx={{ mb: 2 }}>
           <FormControl fullWidth size="small">
             <FormLabel className="dark:text-dark-text-primary">Date Format</FormLabel>
             <Select
@@ -444,40 +436,40 @@ const ExportConfigModal: React.FC<ExportConfigModalProps> = ({
           </FormControl>
         </Box>
 
-        <Divider sx={{ my: 2 }} />
+        <Divider sx={{ my: 1.5 }} />
 
         {/* Options */}
         <Typography variant="subtitle2" gutterBottom className="dark:text-dark-text-primary">
           Export Options
         </Typography>
         
-        <Box sx={{ mb: 2 }}>
+        <Box sx={{ mb: 2, display: 'flex', gap: 3, flexWrap: 'wrap' }}>
           <FormControlLabel
             control={
               <Switch
                 checked={config.includeHeader}
                 onChange={(e) => setConfig({ ...config, includeHeader: e.target.checked })}
+                size="small"
               />
             }
             label="Include column headers"
           />
-        </Box>
 
-        {isAdmin && (
-          <Box sx={{ mb: 2 }}>
+          {isAdmin && (
             <FormControlLabel
               control={
                 <Switch
                   checked={config.includeSupplierNames}
                   onChange={(e) => setConfig({ ...config, includeSupplierNames: e.target.checked })}
+                  size="small"
                 />
               }
               label="Include supplier names (Admin only)"
             />
-          </Box>
-        )}
+          )}
+        </Box>
 
-        <Divider sx={{ my: 2 }} />
+        <Divider sx={{ my: 1.5 }} />
 
         {/* Preview */}
         <Box sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1 }} className="dark:bg-dark-bg-tertiary">

@@ -10,6 +10,7 @@ declare module 'xlsx' {
   export const utils: {
     sheet_to_json<T>(worksheet: WorkSheet, options?: any): T[];
     json_to_sheet<T>(data: T[], options?: any): WorkSheet;
+    sheet_to_csv(worksheet: WorkSheet, options?: any): string;
     book_new(): WorkBook;
     book_append_sheet(workbook: WorkBook, worksheet: WorkSheet, name: string): void;
   };
