@@ -368,28 +368,75 @@ const ProductTable: React.FC<ProductTableProps> = ({
     }
   }, [resetFilters]);
 
+  // Auto-disable showSelectedOnly when no products are selected
+  useEffect(() => {
+    if (showSelectedOnly && selected.length === 0) {
+      setShowSelectedOnly(false);
+    }
+  }, [selected.length, showSelectedOnly]);
+
   return (
     <div className="w-full flex flex-col gap-1 mb-8">
       {/* Filters section - Migliorato layout e allineamento con reset button */}
       <div className="flex items-center justify-between mb-4 p-3 bg-white dark:bg-dark-bg-secondary rounded-lg border dark:border-dark-border-primary">
-        <div className="flex items-center gap-4">
-          {/* Show selected only filter */}
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="showSelectedOnly"
-              checked={showSelectedOnly}
-              onChange={(e) => setShowSelectedOnly(e.target.checked)}
-              className="w-4 h-4 text-blue-600 dark:text-blue-400 bg-gray-100 dark:bg-dark-bg-tertiary border-gray-300 dark:border-dark-border-primary rounded focus:ring-blue-500 dark:focus:ring-blue-400 focus:ring-2"
-              disabled={!hasSelectedProducts}
-            />
-            <label
-              htmlFor="showSelectedOnly"
-              className={`ml-2 text-xs font-medium ${
-                hasSelectedProducts ? 'text-slate-700 dark:text-dark-text-secondary cursor-pointer' : 'text-slate-400 dark:text-dark-text-disabled cursor-not-allowed'
-              }`}
-            >
-              Show selected only ({selected.length})
+        <div className="flex items-center gap-6">
+          {/* In Stock Only Toggle */}
+          {filterValues && onFilterChange && (
+            <div className="flex items-center gap-3">
+              <label className="flex items-center cursor-pointer">
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    checked={filterValues.onlyAvailableStock}
+                    onChange={(e) => onFilterChange({
+                      ...filterValues,
+                      onlyAvailableStock: e.target.checked
+                    })}
+                    className="sr-only"
+                  />
+                  <div className={`block w-12 h-6 rounded-full transition-colors duration-200 ${
+                    filterValues.onlyAvailableStock 
+                      ? 'bg-blue-500' 
+                      : 'bg-gray-300 dark:bg-gray-600'
+                  }`}>
+                    <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-200 ${
+                      filterValues.onlyAvailableStock ? 'transform translate-x-6' : ''
+                    }`}></div>
+                  </div>
+                </div>
+                <span className="ml-3 text-sm font-medium text-gray-700 dark:text-dark-text-primary">
+                  In Stock Only
+                </span>
+              </label>
+            </div>
+          )}
+          
+          {/* Selected Only Toggle */}
+          <div className="flex items-center gap-3">
+            <label className="flex items-center cursor-pointer">
+              <div className="relative">
+                <input
+                  type="checkbox"
+                  checked={showSelectedOnly}
+                  onChange={(e) => setShowSelectedOnly(e.target.checked)}
+                  className="sr-only"
+                  disabled={!hasSelectedProducts}
+                />
+                <div className={`block w-12 h-6 rounded-full transition-colors duration-200 ${
+                  showSelectedOnly 
+                    ? 'bg-green-500' 
+                    : 'bg-gray-300 dark:bg-gray-600'
+                } ${!hasSelectedProducts ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                  <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-200 ${
+                    showSelectedOnly ? 'transform translate-x-6' : ''
+                  }`}></div>
+                </div>
+              </div>
+              <span className={`ml-3 text-sm font-medium ${
+                hasSelectedProducts ? 'text-gray-700 dark:text-dark-text-primary' : 'text-gray-400 dark:text-dark-text-disabled'
+              }`}>
+                Selected Only ({selected.length})
+              </span>
             </label>
           </div>
         </div>

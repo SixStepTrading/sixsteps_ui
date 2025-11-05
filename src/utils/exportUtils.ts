@@ -1,13 +1,100 @@
 import * as XLSX from 'xlsx';
 
+// Export configuration interface
+export interface ExportConfig {
+  format: 'csv' | 'xlsx';
+  fieldSeparator: ',' | ';' | '\t' | '|';
+  decimalSeparator: '.' | ',';
+  thousandsSeparator: ',' | '.' | ' ' | 'none';
+  encoding: 'utf-8' | 'utf-8-bom' | 'windows-1252' | 'iso-8859-1';
+  dateFormat: 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD' | 'DD-MM-YYYY';
+  currencySymbol: '€' | '$' | '£' | 'none';
+  currencyPosition: 'before' | 'after';
+  currencySpace: boolean;
+  includeHeader: boolean;
+  includeSupplierNames: boolean;
+  chunkSize: number;
+}
+
+// Default Italian config
+export const DEFAULT_EXPORT_CONFIG: ExportConfig = {
+  format: 'xlsx',
+  fieldSeparator: ';',
+  decimalSeparator: ',',
+  thousandsSeparator: '.',
+  encoding: 'utf-8-bom',
+  dateFormat: 'DD/MM/YYYY',
+  currencySymbol: '€',
+  currencyPosition: 'after',
+  currencySpace: true,
+  includeHeader: true,
+  includeSupplierNames: true,
+  chunkSize: 1000,
+};
+
+// Format number according to config
+const formatNumber = (num: number, config: ExportConfig, decimals: number = 2): string => {
+  let formatted = num.toFixed(decimals);
+  
+  // Replace decimal separator
+  formatted = formatted.replace('.', config.decimalSeparator);
+  
+  // Add thousands separator
+  if (config.thousandsSeparator !== 'none') {
+    const parts = formatted.split(config.decimalSeparator);
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, config.thousandsSeparator);
+    formatted = parts.join(config.decimalSeparator);
+  }
+  
+  return formatted;
+};
+
+// Format currency according to config
+const formatCurrency = (num: number, config: ExportConfig): string => {
+  const formatted = formatNumber(num, config);
+  
+  if (config.currencySymbol === 'none') {
+    return formatted;
+  }
+  
+  const space = config.currencySpace ? ' ' : '';
+  return config.currencyPosition === 'before'
+    ? `${config.currencySymbol}${space}${formatted}`
+    : `${formatted}${space}${config.currencySymbol}`;
+};
+
+// Format date according to config
+const formatDate = (date: Date, config: ExportConfig): string => {
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = String(date.getFullYear());
+  
+  return config.dateFormat
+    .replace('DD', day)
+    .replace('MM', month)
+    .replace('YYYY', year);
+};
+
+// Escape CSV field if needed
+const escapeCSVField = (value: string, separator: string): string => {
+  if (value.includes(separator) || value.includes('"') || value.includes('\n')) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+};
+
+// Progress callback type
+export type ExportProgressCallback = (progress: number, message: string) => void;
+
 /**
- * Exports selected products to a CSV or Excel file
+ * Exports selected products to a CSV or Excel file with chunking and custom config
  * 
  * @param products - Array of products to export
- * @param format - Export format ('csv' or 'xlsx')
+ * @param config - Export configuration
  * @param userRole - User role to determine supplier visibility ('Admin' or 'Buyer')
+ * @param onProgress - Optional progress callback
  */
-export const exportSelectedProducts = (
+export const exportSelectedProducts = async (
   products: Array<{
     id: string;
     ean: string;
@@ -18,82 +105,228 @@ export const exportSelectedProducts = (
     bestPrices: Array<{ price: number; stock: number; supplier?: string }>;
     vat: number;
   }>,
-  format: 'csv' | 'xlsx' = 'xlsx',
-  userRole: string = 'Buyer'
-): void => {
+  config: ExportConfig = DEFAULT_EXPORT_CONFIG,
+  userRole: string = 'Buyer',
+  onProgress?: ExportProgressCallback
+): Promise<void> => {
   try {
     if (products.length === 0) {
       return;
     }
 
-    const isAdmin = userRole === 'Admin';
+    const isAdmin = userRole === 'Admin' && config.includeSupplierNames;
+    const chunkSize = config.chunkSize || Math.max(500, Math.floor(products.length / 10));
 
-    // Create the data to export
-    const exportData = products.map(product => {
-      // Calculate VAT values
-      const netPublicPrice = product.publicPrice / (1 + product.vat / 100);
+    onProgress?.(0, 'Preparing export...');
 
-      // Base product data
-      const baseData: Record<string, any> = {
-        'EAN': product.ean || '',
-        'MINSAN': product.minsan || '',
-        'Product Name': product.name,
-        'Manufacturer': product.manufacturer,
-        'Public Price (VAT incl.)': product.publicPrice.toFixed(2),
-        'Public Price (VAT excl.)': netPublicPrice.toFixed(2),
-        'VAT %': product.vat,
-      };
-      
-      // Sort prices from lowest to highest
-      const sortedPrices = [...product.bestPrices].sort((a, b) => a.price - b.price);
-      
-      // Add each price point and its corresponding data
-      sortedPrices.forEach((pricePoint, index) => {
-        const priceNumber = index + 1;
-        
-        // Calculate discounts
-        const grossDiscount = product.publicPrice - pricePoint.price;
-        const grossDiscountPercent = (grossDiscount / product.publicPrice) * 100;
-        
-        const netDiscount = netPublicPrice - pricePoint.price;
-        const netDiscountPercent = (netDiscount / netPublicPrice) * 100;
-        
-        // Price and stock
-        baseData[`Price ${priceNumber}`] = pricePoint.price.toFixed(2);
-        baseData[`Stock ${priceNumber}`] = pricePoint.stock;
-        
-        // Discounts
-        baseData[`Gross Discount ${priceNumber} (€)`] = grossDiscount.toFixed(2);
-        baseData[`Gross Discount ${priceNumber} (%)`] = grossDiscountPercent.toFixed(1);
-        baseData[`Net Discount ${priceNumber} (€)`] = netDiscount.toFixed(2);
-        baseData[`Net Discount ${priceNumber} (%)`] = netDiscountPercent.toFixed(1);
-        
-        // Supplier name - conditional on user role
-        if (isAdmin && pricePoint.supplier) {
-          baseData[`Supplier ${priceNumber}`] = pricePoint.supplier;
-        } else {
-          baseData[`Supplier ${priceNumber}`] = `Supplier ${priceNumber}`;
-        }
-      });
-      
-      return baseData;
-    });
+    if (config.format === 'csv') {
+      // CSV Export with chunking
+      await exportAsCSVChunked(products, config, isAdmin, onProgress);
+    } else {
+      // Excel Export
+      await exportAsExcel(products, config, isAdmin, onProgress);
+    }
 
-    // Create worksheet
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    
-    // Create workbook
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Selected Products');
-    
-    // Generate filename with date
-    const date = new Date().toISOString().split('T')[0];
-    const filename = `selected_products_${date}.${format}`;
-    
-    // Write and download the file
-    XLSX.writeFile(wb, filename);
+    onProgress?.(100, 'Export complete!');
   } catch (error) {
+    console.error('Export error:', error);
+    throw error;
   }
+};
+
+// CSV Export with chunking (memory efficient)
+const exportAsCSVChunked = async (
+  products: any[],
+  config: ExportConfig,
+  isAdmin: boolean,
+  onProgress?: ExportProgressCallback
+): Promise<void> => {
+  const separator = config.fieldSeparator;
+  let csvContent = '';
+
+  // Build header
+  if (config.includeHeader) {
+    const headers = [
+      'EAN',
+      'MINSAN',
+      'Product Name',
+      'Manufacturer',
+      'Public Price (VAT incl.)',
+      'Public Price (VAT excl.)',
+      'VAT %',
+    ];
+    
+    // Add dynamic headers for prices
+    const maxPrices = Math.max(...products.map(p => p.bestPrices.length));
+    for (let i = 1; i <= maxPrices; i++) {
+      headers.push(`Price ${i}`);
+      headers.push(`Stock ${i}`);
+      headers.push(`Gross Discount ${i} (€)`);
+      headers.push(`Gross Discount ${i} (%)`);
+      headers.push(`Net Discount ${i} (€)`);
+      headers.push(`Net Discount ${i} (%)`);
+      if (isAdmin) {
+        headers.push(`Supplier ${i}`);
+      }
+    }
+    
+    csvContent += headers.map(h => escapeCSVField(h, separator)).join(separator) + '\n';
+  }
+
+  // Process products in chunks
+  const chunkSize = config.chunkSize || 1000;
+  const totalChunks = Math.ceil(products.length / chunkSize);
+
+  for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+    const start = chunkIndex * chunkSize;
+    const end = Math.min(start + chunkSize, products.length);
+    const chunk = products.slice(start, end);
+
+    // Process chunk
+    for (const product of chunk) {
+      const row = buildProductRow(product, config, isAdmin);
+      csvContent += row.join(separator) + '\n';
+    }
+
+    // Update progress
+    const progress = Math.round(((chunkIndex + 1) / totalChunks) * 90);
+    onProgress?.(progress, `Processing ${end}/${products.length} products...`);
+
+    // Yield to browser to prevent UI freeze
+    await new Promise(resolve => setTimeout(resolve, 0));
+  }
+
+  // Download file
+  onProgress?.(95, 'Creating file...');
+  downloadCSV(csvContent, config);
+};
+
+// Excel Export (uses XLSX library)
+const exportAsExcel = async (
+  products: any[],
+  config: ExportConfig,
+  isAdmin: boolean,
+  onProgress?: ExportProgressCallback
+): Promise<void> => {
+  onProgress?.(10, 'Building Excel data...');
+
+  const exportData = products.map((product, index) => {
+    if (index % 500 === 0) {
+      const progress = Math.round((index / products.length) * 80) + 10;
+      onProgress?.(progress, `Processing ${index}/${products.length} products...`);
+    }
+    
+    const netPublicPrice = product.publicPrice / (1 + product.vat / 100);
+    const baseData: Record<string, any> = {
+      'EAN': product.ean || '',
+      'MINSAN': product.minsan || '',
+      'Product Name': product.name,
+      'Manufacturer': product.manufacturer,
+      'Public Price (VAT incl.)': formatCurrency(product.publicPrice, config),
+      'Public Price (VAT excl.)': formatCurrency(netPublicPrice, config),
+      'VAT %': product.vat,
+    };
+    
+    const sortedPrices = [...product.bestPrices].sort((a, b) => a.price - b.price);
+    
+    sortedPrices.forEach((pricePoint, index) => {
+      const priceNumber = index + 1;
+      const grossDiscount = product.publicPrice - pricePoint.price;
+      const grossDiscountPercent = (grossDiscount / product.publicPrice) * 100;
+      const netDiscount = netPublicPrice - pricePoint.price;
+      const netDiscountPercent = (netDiscount / netPublicPrice) * 100;
+      
+      baseData[`Price ${priceNumber}`] = formatCurrency(pricePoint.price, config);
+      baseData[`Stock ${priceNumber}`] = pricePoint.stock;
+      baseData[`Gross Discount ${priceNumber} (€)`] = formatCurrency(grossDiscount, config);
+      baseData[`Gross Discount ${priceNumber} (%)`] = formatNumber(grossDiscountPercent, config, 1);
+      baseData[`Net Discount ${priceNumber} (€)`] = formatCurrency(netDiscount, config);
+      baseData[`Net Discount ${priceNumber} (%)`] = formatNumber(netDiscountPercent, config, 1);
+      
+      if (isAdmin && pricePoint.supplier) {
+        baseData[`Supplier ${priceNumber}`] = pricePoint.supplier;
+      }
+    });
+    
+    return baseData;
+  });
+
+  onProgress?.(90, 'Creating Excel file...');
+  
+  const ws = XLSX.utils.json_to_sheet(exportData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Selected Products');
+  
+  const date = new Date().toISOString().split('T')[0];
+  const filename = `selected_products_${date}.xlsx`;
+  
+  XLSX.writeFile(wb, filename);
+};
+
+// Build a single product row for CSV
+const buildProductRow = (product: any, config: ExportConfig, isAdmin: boolean): string[] => {
+  const netPublicPrice = product.publicPrice / (1 + product.vat / 100);
+  
+  const row: string[] = [
+    product.ean || '',
+    product.minsan || '',
+    product.name,
+    product.manufacturer,
+    formatCurrency(product.publicPrice, config),
+    formatCurrency(netPublicPrice, config),
+    product.vat.toString(),
+  ];
+  
+  const sortedPrices = [...product.bestPrices].sort((a, b) => a.price - b.price);
+  
+  sortedPrices.forEach((pricePoint) => {
+    const grossDiscount = product.publicPrice - pricePoint.price;
+    const grossDiscountPercent = (grossDiscount / product.publicPrice) * 100;
+    const netDiscount = netPublicPrice - pricePoint.price;
+    const netDiscountPercent = (netDiscount / netPublicPrice) * 100;
+    
+    row.push(
+      formatCurrency(pricePoint.price, config),
+      pricePoint.stock.toString(),
+      formatCurrency(grossDiscount, config),
+      formatNumber(grossDiscountPercent, config, 1),
+      formatCurrency(netDiscount, config),
+      formatNumber(netDiscountPercent, config, 1)
+    );
+    
+    if (isAdmin) {
+      row.push(pricePoint.supplier || `Supplier`);
+    }
+  });
+  
+  return row.map(field => escapeCSVField(String(field), config.fieldSeparator));
+};
+
+// Download CSV with proper encoding
+const downloadCSV = (content: string, config: ExportConfig): void => {
+  let blob: Blob;
+  const date = new Date().toISOString().split('T')[0];
+  const filename = `selected_products_${date}.csv`;
+  
+  // Add BOM for UTF-8 if needed (helps Excel recognize UTF-8)
+  if (config.encoding === 'utf-8-bom') {
+    const BOM = '\uFEFF';
+    blob = new Blob([BOM + content], { type: 'text/csv;charset=utf-8' });
+  } else if (config.encoding === 'windows-1252') {
+    // Note: Modern browsers use UTF-8, so this is best-effort
+    blob = new Blob([content], { type: 'text/csv;charset=windows-1252' });
+  } else {
+    blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
+  }
+  
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 };
 
 /**
@@ -101,8 +334,9 @@ export const exportSelectedProducts = (
  * 
  * @param orderName - Name of the order
  * @param products - Array of products in the order with price breakdowns
- * @param format - Export format ('csv' or 'xlsx')
+ * @param config - Export configuration
  * @param userRole - User role to determine supplier visibility ('Admin' or 'Buyer')
+ * @param onProgress - Optional progress callback
  */
 export interface OrderExportProduct {
   id: string;
@@ -121,42 +355,45 @@ export interface OrderExportProduct {
   vat?: number;
 }
 
-export const exportOrderSummary = (
+export const exportOrderSummary = async (
   orderName: string,
   products: OrderExportProduct[],
-  format: 'csv' | 'xlsx' = 'xlsx',
-  userRole: string = 'Buyer'
-): void => {
+  config: ExportConfig = DEFAULT_EXPORT_CONFIG,
+  userRole: string = 'Buyer',
+  onProgress?: ExportProgressCallback
+): Promise<void> => {
   try {
     if (products.length === 0) {
       return;
     }
 
-    const isAdmin = userRole === 'Admin';
+    const isAdmin = userRole === 'Admin' && config.includeSupplierNames;
+    onProgress?.(10, 'Preparing order export...');
 
-    // Create the data to export
-    const exportData = products.map(product => {
+    const exportData = products.map((product, index) => {
+      if (index % 100 === 0) {
+        const progress = Math.round((index / products.length) * 70) + 10;
+        onProgress?.(progress, `Processing ${index}/${products.length} items...`);
+      }
+      
       const totalPrice = product.quantity * product.unitPrice;
       
-      // Base product data
       const baseData: Record<string, any> = {
         'Product Code': product.code,
         'Product Name': product.name,
         'Total Quantity': product.quantity,
-        'Selected Unit Price': product.unitPrice.toFixed(2),
-        'Total Price': totalPrice.toFixed(2),
+        'Selected Unit Price': formatCurrency(product.unitPrice, config),
+        'Total Price': formatCurrency(totalPrice, config),
       };
 
-      // Add average price if available
       if (product.averagePrice) {
-        baseData['Average Price'] = product.averagePrice.toFixed(2);
-        baseData['Total at Avg Price'] = (product.averagePrice * product.quantity).toFixed(2);
+        baseData['Average Price'] = formatCurrency(product.averagePrice, config);
+        baseData['Total at Avg Price'] = formatCurrency(product.averagePrice * product.quantity, config);
         
         const savings = totalPrice - (product.averagePrice * product.quantity);
-        baseData['Savings vs Avg'] = savings.toFixed(2);
+        baseData['Savings vs Avg'] = formatCurrency(savings, config);
       }
 
-      // Add VAT information if available
       if (product.publicPrice && product.vat) {
         const netPublicPrice = product.publicPrice / (1 + product.vat / 100);
         const grossDiscount = product.publicPrice - product.unitPrice;
@@ -164,28 +401,24 @@ export const exportOrderSummary = (
         const netDiscount = netPublicPrice - product.unitPrice;
         const netDiscountPercent = (netDiscount / netPublicPrice) * 100;
 
-        baseData['Public Price (VAT incl.)'] = product.publicPrice.toFixed(2);
-        baseData['Public Price (VAT excl.)'] = netPublicPrice.toFixed(2);
+        baseData['Public Price (VAT incl.)'] = formatCurrency(product.publicPrice, config);
+        baseData['Public Price (VAT excl.)'] = formatCurrency(netPublicPrice, config);
         baseData['VAT %'] = product.vat;
-        baseData['Gross Discount (€)'] = grossDiscount.toFixed(2);
-        baseData['Gross Discount (%)'] = grossDiscountPercent.toFixed(1);
-        baseData['Net Discount (€)'] = netDiscount.toFixed(2);
-        baseData['Net Discount (%)'] = netDiscountPercent.toFixed(1);
+        baseData['Gross Discount (€)'] = formatCurrency(grossDiscount, config);
+        baseData['Gross Discount (%)'] = formatNumber(grossDiscountPercent, config, 1);
+        baseData['Net Discount (€)'] = formatCurrency(netDiscount, config);
+        baseData['Net Discount (%)'] = formatNumber(netDiscountPercent, config, 1);
       }
 
-      // Add price breakdown details if available
       if (product.priceBreakdowns && product.priceBreakdowns.length > 0) {
         product.priceBreakdowns.forEach((breakdown, index) => {
           const tierNumber = index + 1;
           baseData[`Tier ${tierNumber} Qty`] = breakdown.quantity;
-          baseData[`Tier ${tierNumber} Price`] = breakdown.unitPrice.toFixed(2);
+          baseData[`Tier ${tierNumber} Price`] = formatCurrency(breakdown.unitPrice, config);
           baseData[`Tier ${tierNumber} Stock`] = breakdown.stock;
           
-          // Supplier name - conditional on user role
           if (isAdmin) {
             baseData[`Tier ${tierNumber} Supplier`] = breakdown.supplier;
-          } else {
-            baseData[`Tier ${tierNumber} Supplier`] = `Supplier ${tierNumber}`;
           }
         });
       }
@@ -193,46 +426,50 @@ export const exportOrderSummary = (
       return baseData;
     });
 
-    // Add summary totals
     const totalOrderValue = products.reduce((sum, product) => sum + (product.quantity * product.unitPrice), 0);
     const totalQuantity = products.reduce((sum, product) => sum + product.quantity, 0);
     const uniqueSuppliers = new Set(products.flatMap(p => p.priceBreakdowns?.map(pb => pb.supplier) || [])).size;
 
-    // Add summary row
     const summaryRow: Record<string, any> = {
       'Product Code': 'SUMMARY',
       'Product Name': `${orderName} - Order Summary`,
       'Total Quantity': totalQuantity,
       'Selected Unit Price': '--',
-      'Total Price': totalOrderValue.toFixed(2),
+      'Total Price': formatCurrency(totalOrderValue, config),
     };
 
     if (products.some(p => p.averagePrice)) {
       const totalAvgPrice = products.reduce((sum, product) => 
         sum + (product.averagePrice ? product.averagePrice * product.quantity : 0), 0);
       summaryRow['Average Price'] = '--';
-      summaryRow['Total at Avg Price'] = totalAvgPrice.toFixed(2);
-      summaryRow['Savings vs Avg'] = (totalOrderValue - totalAvgPrice).toFixed(2);
+      summaryRow['Total at Avg Price'] = formatCurrency(totalAvgPrice, config);
+      summaryRow['Savings vs Avg'] = formatCurrency(totalOrderValue - totalAvgPrice, config);
     }
 
     summaryRow['Unique Suppliers'] = uniqueSuppliers;
-    
     exportData.push(summaryRow);
 
-    // Create worksheet
-    const ws = XLSX.utils.json_to_sheet(exportData);
+    onProgress?.(85, 'Creating file...');
     
-    // Create workbook
+    const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Order Summary');
     
-    // Generate filename with date
     const date = new Date().toISOString().split('T')[0];
     const sanitizedOrderName = orderName.replace(/[^a-zA-Z0-9]/g, '_');
-    const filename = `order_${sanitizedOrderName}_${date}.${format}`;
+    const filename = `order_${sanitizedOrderName}_${date}.${config.format === 'csv' ? 'csv' : 'xlsx'}`;
     
-    // Write and download the file
-    XLSX.writeFile(wb, filename);
+    if (config.format === 'csv') {
+      // Export as CSV for orders
+      const csvContent = XLSX.utils.sheet_to_csv(ws, { FS: config.fieldSeparator });
+      downloadCSV(csvContent, config);
+    } else {
+      XLSX.writeFile(wb, filename);
+    }
+    
+    onProgress?.(100, 'Export complete!');
   } catch (error) {
+    console.error('Order export error:', error);
+    throw error;
   }
 }; 
