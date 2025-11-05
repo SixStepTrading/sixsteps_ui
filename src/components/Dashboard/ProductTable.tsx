@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, startTransition } from "react";
+import React, { useState, useEffect, useContext, useTransition } from "react";
 import { isStockExceeded } from '../common/utils/priceCalculations';
 import { Product } from '../../data/mockProducts';
 import { SidebarContext } from '../../contexts/SidebarContext';
@@ -219,7 +219,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
   const [modalProduct, setModalProduct] = useState<ProductWithQuantity | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showSelectedOnly, setShowSelectedOnly] = useState(false);
-  const [isSelectingAll, setIsSelectingAll] = useState(false);
+  const [isSelectingAll, startSelectTransition] = useTransition();
   const { isDrawerCollapsed } = useContext(SidebarContext);
   
   // Sorting state
@@ -690,19 +690,11 @@ const ProductTable: React.FC<ProductTableProps> = ({
                   e.stopPropagation();
                   const checked = e.target.checked;
                   
-                  // Set loading state synchronously - cursor will change to wait
-                  setIsSelectingAll(true);
-                  
-                  // Use startTransition for non-urgent updates to keep UI responsive
-                  startTransition(() => {
+                  // Use useTransition to track when the selection operation completes
+                  // isPending (isSelectingAll) will automatically be true during the transition
+                  startSelectTransition(() => {
                     // Perform the selection/deselection
                     onSelectAll && onSelectAll(allFilteredIds, checked);
-                    
-                    // Remove loading state after the transition
-                    // Use setTimeout to ensure the operation has completed
-                    setTimeout(() => {
-                      setIsSelectingAll(false);
-                    }, 0);
                   });
                 }}
                 className="w-4 h-4 text-blue-600 dark:text-blue-400 bg-gray-100 dark:bg-dark-bg-tertiary border-gray-300 dark:border-dark-border-primary rounded focus:ring-blue-500 dark:focus:ring-blue-400 focus:ring-2 disabled:opacity-50"

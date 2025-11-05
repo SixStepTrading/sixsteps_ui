@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx';
+import { exportAsExcel, exportOrderSummaryExcel } from './exportUtilsExcel';
 
 // Export configuration interface
 export interface ExportConfig {
@@ -192,16 +193,18 @@ const exportAsCSVChunked = async (
       headers.push(`Net Discount ${i} (%)`);
       if (isAdmin) {
         headers.push(`Supplier ${i}`);
+        headers.push(`Warehouse ${i}`);
       }
     }
     
-    csvContent += headers.map(h => escapeCSVField(h, separator)).join(separator) + '\n';
+    // Convert headers to uppercase
+    csvContent += headers.map(h => escapeCSVField(h.toUpperCase(), separator)).join(separator) + '\n';
   }
 
   // Check if any product has quantity or targetPrice
   const hasQuantity = products.some(p => p.quantity !== undefined);
   const hasTargetPrice = products.some(p => p.targetPrice !== undefined && p.targetPrice !== null);
-  
+
   // Process products in chunks
   const chunkSize = config.chunkSize || 1000;
   const totalChunks = Math.ceil(products.length / chunkSize);
@@ -230,150 +233,7 @@ const exportAsCSVChunked = async (
   downloadCSV(csvContent, config);
 };
 
-// Get Excel number format string based on config
-const getExcelCurrencyFormat = (config: ExportConfig): string => {
-  const decimalSep = config.decimalSeparator;
-  const thousandsSep = config.thousandsSeparator === 'none' ? '' : config.thousandsSeparator;
-  
-  // Build number format: #,##0.00 or #.##0,00 etc
-  let numFormat = thousandsSep ? `#${thousandsSep}##0` : '#,##0';
-  numFormat += `${decimalSep}00`;
-  
-  // Add currency symbol
-  if (config.currencySymbol !== 'none') {
-    const space = config.currencySpace ? ' ' : '';
-    if (config.currencyPosition === 'before') {
-      numFormat = `${config.currencySymbol}${space}${numFormat}`;
-    } else {
-      numFormat = `${numFormat}${space}${config.currencySymbol}`;
-    }
-  }
-  
-  return numFormat;
-};
-
-// Excel Export (uses XLSX library)
-const exportAsExcel = async (
-  products: any[],
-  config: ExportConfig,
-  isAdmin: boolean,
-  onProgress?: ExportProgressCallback
-): Promise<void> => {
-  onProgress?.(10, 'Building Excel data...');
-
-  // Check if any product has quantity or targetPrice
-  const hasQuantity = products.some(p => p.quantity !== undefined);
-  const hasTargetPrice = products.some(p => p.targetPrice !== undefined && p.targetPrice !== null);
-
-  const exportData = products.map((product, index) => {
-    if (index % 500 === 0) {
-      const progress = Math.round((index / products.length) * 80) + 10;
-      onProgress?.(progress, `Processing ${index}/${products.length} products...`);
-    }
-    
-    const netPublicPrice = product.publicPrice / (1 + product.vat / 100);
-    const baseData: Record<string, any> = {
-      'EAN': product.ean || '',
-      'MINSAN': product.minsan || '',
-      'Product Name': product.name,
-      'Manufacturer': product.manufacturer,
-    };
-    
-    // Add quantity and target price if present in data
-    if (hasQuantity) {
-      baseData['Quantity'] = product.quantity !== undefined ? product.quantity : '';
-    }
-    if (hasTargetPrice) {
-      // Use raw number for Excel, will be formatted as currency
-      baseData['Target Price'] = product.targetPrice !== undefined && product.targetPrice !== null 
-        ? product.targetPrice 
-        : '';
-    }
-    
-    // Use raw numbers for Excel instead of formatted strings
-    baseData['Public Price (VAT incl.)'] = product.publicPrice;
-    baseData['Public Price (VAT excl.)'] = netPublicPrice;
-    baseData['VAT %'] = product.vat;
-    
-    const sortedPrices = [...product.bestPrices].sort((a, b) => a.price - b.price);
-    
-    sortedPrices.forEach((pricePoint, index) => {
-      const priceNumber = index + 1;
-      const grossDiscount = product.publicPrice - pricePoint.price;
-      const grossDiscountPercent = (grossDiscount / product.publicPrice) * 100;
-      const netDiscount = netPublicPrice - pricePoint.price;
-      const netDiscountPercent = (netDiscount / netPublicPrice) * 100;
-      
-      // Use raw numbers for prices and discounts
-      baseData[`Price ${priceNumber}`] = pricePoint.price;
-      baseData[`Stock ${priceNumber}`] = pricePoint.stock;
-      baseData[`Gross Discount ${priceNumber} (€)`] = grossDiscount;
-      baseData[`Gross Discount ${priceNumber} (%)`] = grossDiscountPercent;
-      baseData[`Net Discount ${priceNumber} (€)`] = netDiscount;
-      baseData[`Net Discount ${priceNumber} (%)`] = netDiscountPercent;
-      
-      if (isAdmin && pricePoint.supplier) {
-        baseData[`Supplier ${priceNumber}`] = pricePoint.supplier;
-      }
-    });
-    
-    return baseData;
-  });
-
-  onProgress?.(90, 'Creating Excel file...');
-  
-  const ws = XLSX.utils.json_to_sheet(exportData);
-  
-  // Apply Excel number formats to currency and percentage columns
-  const currencyFormat = getExcelCurrencyFormat(config);
-  const percentFormat = '0.00%';
-  
-  // Get the range of the worksheet
-  const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
-  
-  // Iterate through all cells and apply formats
-  for (let R = range.s.r; R <= range.e.r; ++R) {
-    for (let C = range.s.c; C <= range.e.c; ++C) {
-      const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-      const cell = ws[cellAddress];
-      
-      if (!cell) continue;
-      
-      // Get header name from first row
-      const headerCell = ws[XLSX.utils.encode_cell({ r: 0, c: C })];
-      if (!headerCell) continue;
-      
-      const headerName = String(headerCell.v || '');
-      
-      // Apply currency format to price columns
-      if (headerName.includes('Price') || headerName.includes('Discount') && headerName.includes('(€)')) {
-        if (typeof cell.v === 'number') {
-          cell.t = 'n'; // number type
-          cell.z = currencyFormat;
-        }
-      }
-      // Apply percentage format to percentage columns
-      else if (headerName.includes('(%)') || headerName.includes('VAT %')) {
-        if (typeof cell.v === 'number') {
-          cell.t = 'n';
-          cell.z = percentFormat;
-          // Convert to decimal for Excel percentage format
-          if (headerName.includes('(%)') && !headerName.includes('VAT')) {
-            cell.v = cell.v / 100;
-          }
-        }
-      }
-    }
-  }
-  
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Selected Products');
-  
-  const date = new Date().toISOString().split('T')[0];
-  const filename = `selected_products_${date}.xlsx`;
-  
-  XLSX.writeFile(wb, filename);
-};
+// Removed old exportAsExcel - now using ExcelJS version from exportUtilsExcel.ts
 
 // Build a single product row for CSV
 const buildProductRow = (
@@ -394,12 +254,12 @@ const buildProductRow = (
   
   // Add quantity and target price if present
   if (hasQuantity) {
-    row.push(product.quantity !== undefined ? product.quantity.toString() : '');
+    row.push(product.quantity !== undefined ? product.quantity.toString() : '0');
   }
   if (hasTargetPrice) {
     row.push(product.targetPrice !== undefined && product.targetPrice !== null 
       ? formatCurrency(product.targetPrice, config) 
-      : '');
+      : formatCurrency(0, config));
   }
   
   row.push(
@@ -427,6 +287,7 @@ const buildProductRow = (
     
     if (isAdmin) {
       row.push(pricePoint.supplier || `Supplier`);
+      row.push(pricePoint.warehouse || '');
     }
   });
   
@@ -481,6 +342,7 @@ export interface OrderExportProduct {
     unitPrice: number;
     supplier: string;
     stock: number;
+    warehouse?: string;
   }>;
   publicPrice?: number;
   vat?: number;
@@ -499,149 +361,77 @@ export const exportOrderSummary = async (
     }
 
     const isAdmin = userRole === 'Admin' && config.includeSupplierNames;
-    onProgress?.(10, 'Preparing order export...');
 
-    const exportData = products.map((product, index) => {
-      if (index % 100 === 0) {
-        const progress = Math.round((index / products.length) * 70) + 10;
-        onProgress?.(progress, `Processing ${index}/${products.length} items...`);
-      }
+    if (config.format === 'xlsx') {
+      // Use ExcelJS for Excel export
+      await exportOrderSummaryExcel(orderName, products, config, isAdmin, onProgress);
+    } else {
+      // CSV export - use XLSX for simple conversion
+      onProgress?.(10, 'Preparing CSV export...');
       
-      const totalPrice = product.quantity * product.unitPrice;
-      
-      const baseData: Record<string, any> = {
-        'Product Code': product.code,
-        'Product Name': product.name,
-        'Total Quantity': product.quantity,
-        'Selected Unit Price': product.unitPrice,
-        'Total Price': totalPrice,
-      };
-
-      if (product.averagePrice) {
-        baseData['Average Price'] = product.averagePrice;
-        baseData['Total at Avg Price'] = product.averagePrice * product.quantity;
-        
-        const savings = totalPrice - (product.averagePrice * product.quantity);
-        baseData['Savings vs Avg'] = savings;
-      }
-
-      if (product.publicPrice && product.vat) {
-        const netPublicPrice = product.publicPrice / (1 + product.vat / 100);
-        const grossDiscount = product.publicPrice - product.unitPrice;
-        const grossDiscountPercent = (grossDiscount / product.publicPrice) * 100;
-        const netDiscount = netPublicPrice - product.unitPrice;
-        const netDiscountPercent = (netDiscount / netPublicPrice) * 100;
-
-        baseData['Public Price (VAT incl.)'] = product.publicPrice;
-        baseData['Public Price (VAT excl.)'] = netPublicPrice;
-        baseData['VAT %'] = product.vat;
-        baseData['Gross Discount (€)'] = grossDiscount;
-        baseData['Gross Discount (%)'] = grossDiscountPercent;
-        baseData['Net Discount (€)'] = netDiscount;
-        baseData['Net Discount (%)'] = netDiscountPercent;
-      }
-
-      if (product.priceBreakdowns && product.priceBreakdowns.length > 0) {
-        product.priceBreakdowns.forEach((breakdown, index) => {
-          const tierNumber = index + 1;
-          baseData[`Tier ${tierNumber} Qty`] = breakdown.quantity;
-          baseData[`Tier ${tierNumber} Price`] = breakdown.unitPrice;
-          baseData[`Tier ${tierNumber} Stock`] = breakdown.stock;
-          
-          if (isAdmin) {
-            baseData[`Tier ${tierNumber} Supplier`] = breakdown.supplier;
-          }
-        });
-      }
-      
-      return baseData;
-    });
-
-    const totalOrderValue = products.reduce((sum, product) => sum + (product.quantity * product.unitPrice), 0);
-    const totalQuantity = products.reduce((sum, product) => sum + product.quantity, 0);
-    const uniqueSuppliers = new Set(products.flatMap(p => p.priceBreakdowns?.map(pb => pb.supplier) || [])).size;
-
-    const summaryRow: Record<string, any> = {
-      'Product Code': 'SUMMARY',
-      'Product Name': `${orderName} - Order Summary`,
-      'Total Quantity': totalQuantity,
-      'Selected Unit Price': '--',
-      'Total Price': totalOrderValue,
-    };
-
-    if (products.some(p => p.averagePrice)) {
-      const totalAvgPrice = products.reduce((sum, product) => 
-        sum + (product.averagePrice ? product.averagePrice * product.quantity : 0), 0);
-      summaryRow['Average Price'] = '--';
-      summaryRow['Total at Avg Price'] = totalAvgPrice;
-      summaryRow['Savings vs Avg'] = totalOrderValue - totalAvgPrice;
-    }
-
-    summaryRow['Unique Suppliers'] = uniqueSuppliers;
-    exportData.push(summaryRow);
-
-    onProgress?.(85, 'Creating file...');
-    
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    
-    // Apply Excel number formats to currency and percentage columns
-    const currencyFormat = getExcelCurrencyFormat(config);
-    const percentFormat = '0.00%';
-    
-    // Get the range of the worksheet
-    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
-    
-    // Iterate through all cells and apply formats
-    for (let R = range.s.r; R <= range.e.r; ++R) {
-      for (let C = range.s.c; C <= range.e.c; ++C) {
-        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-        const cell = ws[cellAddress];
-        
-        if (!cell) continue;
-        
-        // Get header name from first row
-        const headerCell = ws[XLSX.utils.encode_cell({ r: 0, c: C })];
-        if (!headerCell) continue;
-        
-        const headerName = String(headerCell.v || '');
-        
-        // Apply currency format to price columns
-        if (headerName.includes('Price') || headerName.includes('Discount') && headerName.includes('(€)') || headerName.includes('Savings')) {
-          if (typeof cell.v === 'number') {
-            cell.t = 'n'; // number type
-            cell.z = currencyFormat;
-          }
+      const exportData = products.map((product, index) => {
+        if (index % 100 === 0) {
+          const progress = Math.round((index / products.length) * 70) + 10;
+          onProgress?.(progress, `Processing ${index}/${products.length} items...`);
         }
-        // Apply percentage format to percentage columns
-        else if (headerName.includes('(%)') || headerName.includes('VAT %')) {
-          if (typeof cell.v === 'number') {
-            cell.t = 'n';
-            cell.z = percentFormat;
-            // Convert to decimal for Excel percentage format
-            if (headerName.includes('(%)') && !headerName.includes('VAT')) {
-              cell.v = cell.v / 100;
+        
+        const totalPrice = product.quantity * product.unitPrice;
+        const baseData: Record<string, any> = {
+          'PRODUCT CODE': product.code,
+          'PRODUCT NAME': product.name,
+          'TOTAL QUANTITY': product.quantity,
+          'SELECTED UNIT PRICE': formatCurrency(product.unitPrice, config),
+          'TOTAL PRICE': formatCurrency(totalPrice, config),
+        };
+
+        if (product.averagePrice) {
+          baseData['AVERAGE PRICE'] = formatCurrency(product.averagePrice, config);
+          baseData['TOTAL AT AVG PRICE'] = formatCurrency(product.averagePrice * product.quantity, config);
+          const savings = totalPrice - (product.averagePrice * product.quantity);
+          baseData['SAVINGS VS AVG'] = formatCurrency(savings, config);
+        }
+
+        if (product.publicPrice && product.vat) {
+          const netPublicPrice = product.publicPrice / (1 + product.vat / 100);
+          const grossDiscount = product.publicPrice - product.unitPrice;
+          const grossDiscountPercent = (grossDiscount / product.publicPrice) * 100;
+          const netDiscount = netPublicPrice - product.unitPrice;
+          const netDiscountPercent = (netDiscount / netPublicPrice) * 100;
+
+          baseData['PUBLIC PRICE (VAT INCL.)'] = formatCurrency(product.publicPrice, config);
+          baseData['PUBLIC PRICE (VAT EXCL.)'] = formatCurrency(netPublicPrice, config);
+          baseData['VAT %'] = product.vat;
+          baseData['GROSS DISCOUNT (€)'] = formatCurrency(grossDiscount, config);
+          baseData['GROSS DISCOUNT (%)'] = formatNumber(grossDiscountPercent, config, 1);
+          baseData['NET DISCOUNT (€)'] = formatCurrency(netDiscount, config);
+          baseData['NET DISCOUNT (%)'] = formatNumber(netDiscountPercent, config, 1);
+        }
+
+        if (product.priceBreakdowns && product.priceBreakdowns.length > 0) {
+          product.priceBreakdowns.forEach((breakdown, index) => {
+            const tierNumber = index + 1;
+            baseData[`TIER ${tierNumber} QTY`] = breakdown.quantity;
+            baseData[`TIER ${tierNumber} PRICE`] = formatCurrency(breakdown.unitPrice, config);
+            baseData[`TIER ${tierNumber} STOCK`] = breakdown.stock;
+            
+            if (isAdmin) {
+              baseData[`TIER ${tierNumber} SUPPLIER`] = breakdown.supplier;
+              baseData[`TIER ${tierNumber} WAREHOUSE`] = breakdown.warehouse || '';
             }
-          }
+          });
         }
-      }
-    }
-    
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Order Summary');
-    
-    const date = new Date().toISOString().split('T')[0];
-    const sanitizedOrderName = orderName.replace(/[^a-zA-Z0-9]/g, '_');
-    const filename = `order_${sanitizedOrderName}_${date}.${config.format === 'csv' ? 'csv' : 'xlsx'}`;
-    
-    if (config.format === 'csv') {
-      // Export as CSV for orders
+        
+        return baseData;
+      });
+
+      onProgress?.(85, 'Creating CSV file...');
+
+      const ws = XLSX.utils.json_to_sheet(exportData);
       const csvContent = XLSX.utils.sheet_to_csv(ws, { FS: config.fieldSeparator });
       downloadCSV(csvContent, config);
-    } else {
-      XLSX.writeFile(wb, filename);
+      
+      onProgress?.(100, 'Export complete!');
     }
-    
-    onProgress?.(100, 'Export complete!');
   } catch (error) {
     console.error('Order export error:', error);
     throw error;
