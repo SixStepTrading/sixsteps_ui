@@ -35,7 +35,7 @@
 ✅ POST /entities/create      // Create new entity
 ✅ POST /entities/update      // Update entity
 ✅ DELETE /entities/delete/{id} // Delete entity
-```
+``` 
 
 ### **📦 Product Management Endpoints**
 ```typescript
