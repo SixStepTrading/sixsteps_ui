@@ -1,6 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { exportSelectedProducts } from '../../../utils/exportUtils';
+import { exportSelectedProducts, ExportConfig, DEFAULT_EXPORT_CONFIG, ExportProgressCallback } from '../../../utils/exportUtils';
 import { Tooltip } from '../../Dashboard/ProductTable';
+import ExportConfigModal from './ExportConfigModal';
+import { LinearProgress, Box, Typography } from '@mui/material';
 
 interface ExportButtonProps {
   selectedProducts: Array<{
@@ -12,82 +14,118 @@ interface ExportButtonProps {
     publicPrice: number;
     bestPrices: Array<{ price: number; stock: number; supplier?: string }>;
     vat: number;
+    quantity?: number;
+    targetPrice?: number | null;
   }>;
   isVisible: boolean;
   userRole?: string;
 }
 
 const ExportButton: React.FC<ExportButtonProps> = ({ selectedProducts, isVisible, userRole = 'Buyer' }) => {
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState({ percent: 0, message: '' });
   const hasSelectedProducts = selectedProducts.length > 0;
 
-  const handleClickOutside = (event: MouseEvent) => {
-    if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-      setIsDropdownOpen(false);
+  const handleOpenConfig = () => {
+    if (hasSelectedProducts) {
+      setIsConfigModalOpen(true);
     }
   };
 
-  React.useEffect(() => {
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
+  const handleExport = async (config: ExportConfig) => {
+    setIsConfigModalOpen(false);
+    setIsExporting(true);
+    setExportProgress({ percent: 0, message: 'Starting export...' });
 
-  const handleExport = (format: 'csv' | 'xlsx') => {
-    exportSelectedProducts(selectedProducts, format, userRole);
-    setIsDropdownOpen(false);
+    const progressCallback: ExportProgressCallback = (percent, message) => {
+      setExportProgress({ percent, message });
+    };
+
+    try {
+      await exportSelectedProducts(selectedProducts, config, userRole, progressCallback);
+      
+      // Wait a bit to show 100% before closing
+      setTimeout(() => {
+        setIsExporting(false);
+        setExportProgress({ percent: 0, message: '' });
+      }, 1000);
+    } catch (error) {
+      console.error('Export error:', error);
+      setExportProgress({ percent: 0, message: 'Export failed!' });
+      setTimeout(() => {
+        setIsExporting(false);
+      }, 2000);
+    }
   };
 
   if (!isVisible) return null;
 
   return (
-    <div className="relative" ref={dropdownRef}>
-      <Tooltip text="Select at least one product to be able to export a .csv or .xlsx file" position="top">
-        <button
-          className={`flex items-center gap-1 text-sm py-1.5 px-3 rounded transition-colors ${
-            hasSelectedProducts 
-            ? 'bg-blue-600 dark:bg-blue-700 text-white hover:bg-blue-700 dark:hover:bg-blue-800' 
-            : 'bg-gray-300 dark:bg-dark-bg-hover text-gray-500 dark:text-dark-text-disabled cursor-not-allowed'
-          }`}
-          onClick={() => hasSelectedProducts && setIsDropdownOpen(!isDropdownOpen)}
-          disabled={!hasSelectedProducts}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-          </svg>
-          Export
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3">
-            <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-          </svg>
-        </button>
-      </Tooltip>
-      
-      {isDropdownOpen && hasSelectedProducts && (
-        <div className="absolute z-10 right-0 mt-1 w-48 bg-white dark:bg-dark-bg-card rounded-md shadow-lg dark:shadow-dark-lg py-1 text-sm border dark:border-dark-border-primary">
+    <>
+      <div className="relative">
+        <Tooltip text="Configure and export selected products to CSV or Excel" position="top">
           <button
-            className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-dark-bg-hover w-full text-left text-gray-900 dark:text-dark-text-primary"
-            onClick={() => handleExport('xlsx')}
+            className={`flex items-center gap-1 text-sm py-1.5 px-3 rounded transition-colors ${
+              hasSelectedProducts 
+              ? 'bg-blue-600 dark:bg-blue-700 text-white hover:bg-blue-700 dark:hover:bg-blue-800' 
+              : 'bg-gray-300 dark:bg-dark-bg-hover text-gray-500 dark:text-dark-text-disabled cursor-not-allowed'
+            }`}
+            onClick={handleOpenConfig}
+            disabled={!hasSelectedProducts || isExporting}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 text-green-600 dark:text-green-400">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 0 1-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125m-9.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m-17.25 0h7.5m-7.5 0c-.621 0-1.125.504-1.125 1.125m0 0v1.5c0 .621.504 1.125 1.125 1.125M12 10.875v-1.5m0 1.5c0 .621-.504 1.125-1.125 1.125M12 10.875c0 .621.504 1.125 1.125 1.125m-2.25 0c.621 0 1.125.504 1.125 1.125m0 0 1.5-1.5m-1.5 1.5L9.75 12m0 0 1.5 1.5m-1.5-1.5h-1.5m1.5 1.5h1.5m-7.5-6h6" />
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
             </svg>
-            Excel (.xlsx)
+            {isExporting ? 'Exporting...' : `Export (${selectedProducts.length})`}
           </button>
-          <button
-            className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-dark-bg-hover w-full text-left text-gray-900 dark:text-dark-text-primary"
-            onClick={() => handleExport('csv')}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 text-blue-600 dark:text-blue-400">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-            </svg>
-            CSV (.csv)
-          </button>
+        </Tooltip>
+      </div>
+
+      {/* Export Configuration Modal */}
+      <ExportConfigModal
+        open={isConfigModalOpen}
+        onClose={() => setIsConfigModalOpen(false)}
+        onConfirm={handleExport}
+        productCount={selectedProducts.length}
+        userRole={userRole}
+        defaultConfig={{
+          ...DEFAULT_EXPORT_CONFIG,
+          includeSupplierNames: userRole === 'Admin',
+        }}
+      />
+
+      {/* Export Progress Overlay */}
+      {isExporting && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
+          <div className="bg-white dark:bg-dark-bg-card rounded-lg p-6 min-w-[400px] shadow-2xl">
+            <Box>
+              <Typography variant="h6" className="dark:text-dark-text-primary mb-2">
+                Exporting {selectedProducts.length} products...
+              </Typography>
+              <Typography variant="body2" className="dark:text-dark-text-secondary mb-4">
+                {exportProgress.message}
+              </Typography>
+              <LinearProgress 
+                variant="determinate" 
+                value={exportProgress.percent} 
+                sx={{ 
+                  height: 8, 
+                  borderRadius: 4,
+                  '& .MuiLinearProgress-bar': {
+                    borderRadius: 4,
+                  }
+                }}
+              />
+              <Typography variant="caption" className="dark:text-dark-text-muted mt-2 block text-right">
+                {exportProgress.percent}% complete
+              </Typography>
+            </Box>
+          </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 
-export default ExportButton; 
+export default ExportButton;

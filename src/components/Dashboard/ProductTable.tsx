@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useTransition } from "react";
 import { isStockExceeded } from '../common/utils/priceCalculations';
 import { Product } from '../../data/mockProducts';
 import { SidebarContext } from '../../contexts/SidebarContext';
@@ -26,6 +26,7 @@ type ProductTableProps = {
   products: ProductWithQuantity[];
   selected: string[];
   onSelect: (id: string) => void;
+  onSelectAll?: (ids: string[], checked: boolean) => void;
   onQuantityChange: (id: string, qty: number) => void;
   onTargetPriceChange: (id: string, price: string) => void;
   isSelected: (id: string) => boolean;
@@ -193,6 +194,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
   products,
   selected,
   onSelect,
+  onSelectAll,
   onQuantityChange,
   onTargetPriceChange,
   isSelected,
@@ -213,9 +215,11 @@ const ProductTable: React.FC<ProductTableProps> = ({
   filterValues,
   onFilterChange,
 }) => {
+  const selectAllRef = React.useRef<HTMLInputElement>(null);
   const [modalProduct, setModalProduct] = useState<ProductWithQuantity | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showSelectedOnly, setShowSelectedOnly] = useState(false);
+  const [isSelectingAll, startSelectTransition] = useTransition();
   const { isDrawerCollapsed } = useContext(SidebarContext);
   
   // Sorting state
@@ -257,6 +261,47 @@ const ProductTable: React.FC<ProductTableProps> = ({
   
   // Get only the products for current page (or all if "show all" is selected)
   const filteredProducts = baseFilteredProducts.slice(startIndex, endIndex);
+
+  // All filtered IDs (not just visible on current page)
+  const allFilteredIds = baseFilteredProducts.map(p => p.id);
+  const selectedFiltered = allFilteredIds.filter(id => selected.includes(id)).length;
+  const allSelectedFiltered = allFilteredIds.length > 0 && selectedFiltered === allFilteredIds.length;
+  const indeterminateFiltered = selectedFiltered > 0 && !allSelectedFiltered;
+
+  // Update indeterminate state for select-all checkbox
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = indeterminateFiltered;
+    }
+  }, [indeterminateFiltered, allSelectedFiltered, selectedFiltered, allFilteredIds.length]);
+
+  // Change cursor to loading when selecting all
+  useEffect(() => {
+    if (isSelectingAll) {
+      document.body.style.cursor = 'wait';
+      // Also apply to all elements
+      const style = document.createElement('style');
+      style.id = 'selecting-all-cursor';
+      style.innerHTML = '* { cursor: wait !important; }';
+      document.head.appendChild(style);
+    } else {
+      document.body.style.cursor = '';
+      // Remove the style tag
+      const style = document.getElementById('selecting-all-cursor');
+      if (style) {
+        style.remove();
+      }
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      document.body.style.cursor = '';
+      const style = document.getElementById('selecting-all-cursor');
+      if (style) {
+        style.remove();
+      }
+    };
+  }, [isSelectingAll]);
 
   // Determina se ci sono prodotti selezionati con problemi
   const selectionWithProblems = selected.some(id => {
@@ -352,28 +397,79 @@ const ProductTable: React.FC<ProductTableProps> = ({
     }
   }, [resetFilters]);
 
+  // Auto-disable showSelectedOnly when no products are selected
+  useEffect(() => {
+    if (showSelectedOnly && selected.length === 0) {
+      setShowSelectedOnly(false);
+    }
+  }, [selected.length, showSelectedOnly]);
+
   return (
     <div className="w-full flex flex-col gap-1 mb-8">
       {/* Filters section - Migliorato layout e allineamento con reset button */}
-      <div className="flex items-center justify-between mb-4 p-3 bg-white dark:bg-dark-bg-secondary rounded-lg border dark:border-dark-border-primary">
-        <div className="flex items-center gap-4">
-          {/* Show selected only filter */}
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="showSelectedOnly"
-              checked={showSelectedOnly}
-              onChange={(e) => setShowSelectedOnly(e.target.checked)}
-              className="w-4 h-4 text-blue-600 dark:text-blue-400 bg-gray-100 dark:bg-dark-bg-tertiary border-gray-300 dark:border-dark-border-primary rounded focus:ring-blue-500 dark:focus:ring-blue-400 focus:ring-2"
-              disabled={!hasSelectedProducts}
-            />
-            <label
-              htmlFor="showSelectedOnly"
-              className={`ml-2 text-xs font-medium ${
-                hasSelectedProducts ? 'text-slate-700 dark:text-dark-text-secondary cursor-pointer' : 'text-slate-400 dark:text-dark-text-disabled cursor-not-allowed'
-              }`}
-            >
-              Show selected only ({selected.length})
+      <div className="sticky top-4 z-40 flex items-center justify-between mb-4 p-3 bg-white dark:bg-dark-bg-secondary rounded-lg border dark:border-dark-border-primary transition-shadow duration-300"
+        style={{
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+        }}
+      >
+        <div className="flex items-center gap-6">
+          {/* In Stock Only Toggle */}
+          {filterValues && onFilterChange && (
+            <div className="flex items-center gap-3">
+              <label className="flex items-center cursor-pointer">
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    checked={filterValues.onlyAvailableStock}
+                    onChange={(e) => onFilterChange({
+                      ...filterValues,
+                      onlyAvailableStock: e.target.checked
+                    })}
+                    className="sr-only"
+                  />
+                  <div className={`block w-12 h-6 rounded-full transition-colors duration-200 ${
+                    filterValues.onlyAvailableStock 
+                      ? 'bg-blue-500' 
+                      : 'bg-gray-300 dark:bg-gray-600'
+                  }`}>
+                    <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-200 ${
+                      filterValues.onlyAvailableStock ? 'transform translate-x-6' : ''
+                    }`}></div>
+                  </div>
+                </div>
+                <span className="ml-3 text-sm font-medium text-gray-700 dark:text-dark-text-primary">
+                  In Stock Only
+                </span>
+              </label>
+            </div>
+          )}
+          
+          {/* Selected Only Toggle */}
+          <div className="flex items-center gap-3">
+            <label className="flex items-center cursor-pointer">
+              <div className="relative">
+                <input
+                  type="checkbox"
+                  checked={showSelectedOnly}
+                  onChange={(e) => setShowSelectedOnly(e.target.checked)}
+                  className="sr-only"
+                  disabled={!hasSelectedProducts}
+                />
+                <div className={`block w-12 h-6 rounded-full transition-colors duration-200 ${
+                  showSelectedOnly 
+                    ? 'bg-green-500' 
+                    : 'bg-gray-300 dark:bg-gray-600'
+                } ${!hasSelectedProducts ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                  <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-200 ${
+                    showSelectedOnly ? 'transform translate-x-6' : ''
+                  }`}></div>
+                </div>
+              </div>
+              <span className={`ml-3 text-sm font-medium ${
+                hasSelectedProducts ? 'text-gray-700 dark:text-dark-text-primary' : 'text-gray-400 dark:text-dark-text-disabled'
+              }`}>
+                Selected Only ({selected.length})
+              </span>
             </label>
           </div>
         </div>
@@ -574,7 +670,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
       </div>
       
       {/* Table container with horizontal scroll only, no extra spacing */}
-      <div className="overflow-x-auto overflow-y-hidden w-full overscroll-x-contain">
+      <div className="overflow-x-auto overflow-y-hidden w-full overscroll-x-contain relative">
         <div 
           className={`${isDrawerCollapsed ? 'min-w-[1000px]' : 'min-w-[1200px]'}`}
           style={{ 
@@ -583,7 +679,28 @@ const ProductTable: React.FC<ProductTableProps> = ({
         >
           {/* Header columns - sortable */}
           <div className="flex items-center gap-2 px-4 py-3 text-xs uppercase text-slate-500 dark:text-dark-text-muted font-semibold tracking-wider bg-gray-50 dark:bg-dark-bg-tertiary rounded-t-lg rounded-xl my-1.5 border-b border-gray-200 dark:border-dark-border-primary">
-            <div className={`${isDrawerCollapsed ? 'w-[6%]' : 'w-[6.5%]'} text-center px-1`}>#</div>
+            <div className={`${isDrawerCollapsed ? 'w-[6%]' : 'w-[6.5%]'} flex items-center justify-center px-1`}>
+              <span className="mr-2 select-none">#</span>
+              <input
+                ref={selectAllRef}
+                type="checkbox"
+                checked={allSelectedFiltered}
+                disabled={isSelectingAll}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  const checked = e.target.checked;
+                  
+                  // Use useTransition to track when the selection operation completes
+                  // isPending (isSelectingAll) will automatically be true during the transition
+                  startSelectTransition(() => {
+                    // Perform the selection/deselection
+                    onSelectAll && onSelectAll(allFilteredIds, checked);
+                  });
+                }}
+                className="w-4 h-4 text-blue-600 dark:text-blue-400 bg-gray-100 dark:bg-dark-bg-tertiary border-gray-300 dark:border-dark-border-primary rounded focus:ring-blue-500 dark:focus:ring-blue-400 focus:ring-2 disabled:opacity-50"
+                title={`Select all ${allFilteredIds.length} filtered products`}
+              />
+            </div>
             <div className={`${isDrawerCollapsed ? 'w-[10%]' : 'w-[11%]'} cursor-pointer select-none flex items-center px-2`} onClick={() => {
               if (sortBy === 'codes') setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
               else { setSortBy('codes'); setSortDirection('asc'); }
