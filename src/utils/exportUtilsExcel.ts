@@ -3,20 +3,38 @@ import { ExportConfig, ExportProgressCallback } from './exportUtils';
 
 // Get Excel number format string based on config
 export const getExcelCurrencyFormat = (config: ExportConfig): string => {
-  const decimalSep = config.decimalSeparator;
-  const thousandsSep = config.thousandsSeparator === 'none' ? '' : config.thousandsSeparator;
+  // Build base number format based on separators
+  let numFormat: string;
   
-  // Build number format: #,##0.00 or #.##0,00 etc
-  let numFormat = thousandsSep ? `#${thousandsSep}##0` : '#,##0';
-  numFormat += `${decimalSep}00`;
+  if (config.decimalSeparator === ',' && config.thousandsSeparator === '.') {
+    // European format: 1.234,56
+    numFormat = '#.##0,00';
+  } else if (config.decimalSeparator === '.' && config.thousandsSeparator === ',') {
+    // US format: 1,234.56
+    numFormat = '#,##0.00';
+  } else if (config.decimalSeparator === '.' && config.thousandsSeparator === ' ') {
+    // Space separator: 1 234.56
+    numFormat = '# ##0.00';
+  } else if (config.decimalSeparator === ',' && config.thousandsSeparator === ' ') {
+    // Space separator: 1 234,56
+    numFormat = '# ##0,00';
+  } else if (config.thousandsSeparator === 'none') {
+    // No thousands separator
+    numFormat = config.decimalSeparator === ',' ? '##0,00' : '##0.00';
+  } else {
+    // Default to US format
+    numFormat = '#,##0.00';
+  }
   
   // Add currency symbol
-  if (config.currencySymbol !== 'none') {
+  if (config.currencySymbol && config.currencySymbol !== 'none') {
     const space = config.currencySpace ? ' ' : '';
+    const symbol = `"${config.currencySymbol}"`;
+    
     if (config.currencyPosition === 'before') {
-      numFormat = `"${config.currencySymbol}"${space}${numFormat}`;
+      numFormat = `${symbol}${space}${numFormat}`;
     } else {
-      numFormat = `${numFormat}${space}"${config.currencySymbol}"`;
+      numFormat = `${numFormat}${space}${symbol}`;
     }
   }
   
@@ -154,12 +172,12 @@ export const exportAsExcel = async (
     headers.forEach((header, colIndex) => {
       const cell = row.getCell(colIndex + 1);
       
-      if (header.includes('PRICE') || header.includes('DISCOUNT') && header.includes('(€)')) {
-        if (typeof cell.value === 'number') {
+      if (header.includes('PRICE') || (header.includes('DISCOUNT') && header.includes('(€)'))) {
+        if (typeof cell.value === 'number' && !isNaN(cell.value)) {
           cell.numFmt = currencyFormat;
         }
       } else if (header.includes('(%)')) {
-        if (typeof cell.value === 'number') {
+        if (typeof cell.value === 'number' && !isNaN(cell.value)) {
           cell.numFmt = percentFormat;
         }
       }
@@ -334,12 +352,12 @@ export const exportOrderSummaryExcel = async (
     headers.forEach((header, colIndex) => {
       const cell = row.getCell(colIndex + 1);
       
-      if (header.includes('PRICE') || header.includes('DISCOUNT') && header.includes('(€)') || header.includes('SAVINGS')) {
-        if (typeof cell.value === 'number') {
+      if (header.includes('PRICE') || (header.includes('DISCOUNT') && header.includes('(€)')) || header.includes('SAVINGS')) {
+        if (typeof cell.value === 'number' && !isNaN(cell.value)) {
           cell.numFmt = currencyFormat;
         }
       } else if (header.includes('(%)')) {
-        if (typeof cell.value === 'number') {
+        if (typeof cell.value === 'number' && !isNaN(cell.value)) {
           cell.numFmt = percentFormat;
         }
       }
