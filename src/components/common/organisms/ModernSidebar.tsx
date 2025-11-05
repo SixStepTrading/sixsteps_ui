@@ -38,7 +38,7 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({
   onLogout
 }) => {
   const location = useLocation();
-  const { userRole, userName } = useUser();
+  const { userRole } = useUser();
   const isMobile = window.innerWidth < 640;
   
   // State for notification panel
@@ -79,7 +79,7 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({
         </svg>
       ), 
       path: '/purchase-orders',
-      disabled: true // Disabled - not clickable
+      disabled: false // Disabled - not clickable
     },
     // Show User Management only to Admin users
     ...(userRole === 'Admin' ? [
@@ -114,6 +114,7 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
         </svg>
       ), 
+      onClick: onLogout
     }
   ];
   

@@ -56,23 +56,23 @@ const SummaryBar: React.FC<SummaryBarProps> = ({
       }}
     >
       <div 
-        className="bg-white dark:bg-dark-bg-card border border-gray-200 dark:border-dark-border-primary rounded-t-lg px-6 py-4 max-w-5xl mx-auto"
+        className="bg-white dark:bg-dark-bg-card border border-gray-200 dark:border-dark-border-primary rounded-t-lg px-8 py-5 max-w-full mx-auto"
         style={{
           boxShadow: '0 0 30px 10px rgba(0, 0, 0, 0.15), 0 15px 25px -5px rgba(0, 0, 0, 0.2)'
         }}
       >
-        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-6">
           {/* Selection summary */}
-          <div className="flex items-center mb-3 sm:mb-0">
-            <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-dark-text-primary">
+          <div className="flex items-center">
+            <div className="min-w-[180px]">
+              <p className="text-sm font-medium text-gray-900 dark:text-dark-text-primary mb-1">
                 Selected products: <span className="font-bold">{selectedCount}</span>
               </p>
               <p className="text-xs text-gray-500 dark:text-dark-text-muted">
                 {totalItems} items in total
               </p>
               {hasProductsWithoutQty && (
-                <p className="text-xs text-red-500 dark:text-red-400 font-semibold mt-1">
+                <p className="text-xs text-red-500 dark:text-red-400 font-semibold mt-1.5">
                   Set the QTY to continue!
                 </p>
               )}
@@ -80,32 +80,32 @@ const SummaryBar: React.FC<SummaryBarProps> = ({
           </div>
 
           {/* Product Statistics */}
-          <div className="flex items-center gap-3 mb-3 sm:mb-0">
+          <div className="flex items-center flex-wrap gap-3">
             <Tooltip text="Products with price below your target price - good deals!">
-              <div className="flex items-center bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 text-xs rounded-full px-2 py-1">
-                <span className="w-2 h-2 bg-green-500 dark:bg-green-400 rounded-full mr-1"></span>
+              <div className="flex items-center bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 text-xs rounded-full px-3 py-1.5">
+                <span className="w-2 h-2 bg-green-500 dark:bg-green-400 rounded-full mr-2"></span>
                 <span>Below target: <span className="font-bold">{belowTargetCount}</span></span>
               </div>
             </Tooltip>
             
             <Tooltip text="Products with price above your target price - consider alternatives">
-              <div className="flex items-center bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-xs rounded-full px-2 py-1">
-                <span className="w-2 h-2 bg-red-500 dark:bg-red-400 rounded-full mr-1"></span>
+              <div className="flex items-center bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-xs rounded-full px-3 py-1.5">
+                <span className="w-2 h-2 bg-red-500 dark:bg-red-400 rounded-full mr-2"></span>
                 <span>Above target: <span className="font-bold">{aboveTargetCount}</span></span>
               </div>
             </Tooltip>
             
             <Tooltip text="Products with insufficient stock that need attention">
-              <div className="flex items-center bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 text-xs rounded-full px-2 py-1">
-                <span className="w-2 h-2 bg-amber-500 dark:bg-amber-400 rounded-full mr-1"></span>
+              <div className="flex items-center bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 text-xs rounded-full px-3 py-1.5">
+                <span className="w-2 h-2 bg-amber-500 dark:bg-amber-400 rounded-full mr-2"></span>
                 <span>Stock issues: <span className="font-bold">{stockIssuesCount}</span></span>
               </div>
             </Tooltip>
             
             {hasProductsWithoutQty && (
               <Tooltip text="Products with no quantity specified - set a quantity to proceed">
-                <div className="flex items-center bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-xs rounded-full px-2 py-1">
-                  <span className="w-2 h-2 bg-red-500 dark:bg-red-400 rounded-full mr-1"></span>
+                <div className="flex items-center bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-xs rounded-full px-3 py-1.5">
+                  <span className="w-2 h-2 bg-red-500 dark:bg-red-400 rounded-full mr-2"></span>
                   <span>Missing QTY: <span className="font-bold">{productsWithoutQtyCount}</span></span>
                 </div>
               </Tooltip>
@@ -113,13 +113,12 @@ const SummaryBar: React.FC<SummaryBarProps> = ({
           </div>
 
           {/* Total price */}
-          <div className="flex items-center justify-between sm:justify-center mb-3 sm:mb-0 sm:mx-4">
-            <span className="text-lg font-bold text-blue-600 dark:text-blue-400">€{totalAmount.toFixed(2)}</span>
-            <span className="text-xs text-gray-500 dark:text-dark-text-muted sm:hidden ml-2">Total</span>
+          <div className="flex items-center justify-center min-w-[100px]">
+            <span className="text-xl font-bold text-blue-600 dark:text-blue-400">€{totalAmount.toFixed(2)}</span>
           </div>
 
           {/* Action buttons */}
-          <div className="flex justify-between sm:justify-end gap-3">
+          <div className="flex justify-end gap-3">
             <button
               className={`px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 flex items-center
                 ${hasProductsWithoutQty || hasSelectionProblems 

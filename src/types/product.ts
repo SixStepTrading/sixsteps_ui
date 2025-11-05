@@ -3,6 +3,7 @@ export interface PriceBreakdown {
   unitPrice: number;
   supplier: string;
   stock: number;
+  warehouse?: string;
 }
 
 export interface ProductItem {

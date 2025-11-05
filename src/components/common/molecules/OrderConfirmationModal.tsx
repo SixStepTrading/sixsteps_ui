@@ -41,7 +41,8 @@ import {
   Save as SaveIcon,
   Send as SendIcon
 } from '@mui/icons-material';
-import { exportOrderSummary, OrderExportProduct } from '../../../utils/exportUtils';
+import { exportOrderSummary, OrderExportProduct, ExportConfig, DEFAULT_EXPORT_CONFIG } from '../../../utils/exportUtils';
+import ExportConfigModal from './ExportConfigModal';
 
 export interface PriceBreakdown {
   quantity: number;
@@ -152,8 +153,19 @@ const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
     return sum;
   }, 0) / products.filter(p => p.publicPrice).length;
 
+  // Export configuration state
+  const [isExportConfigOpen, setIsExportConfigOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  
   // Handle export
-  const handleExport = (format: 'csv' | 'xlsx') => {
+  const handleExportClick = () => {
+    setIsExportConfigOpen(true);
+  };
+  
+  const handleExport = async (config: ExportConfig) => {
+    setIsExportConfigOpen(false);
+    setIsExporting(true);
+    
     const orderName = orderData.orderName || 'Untitled Order';
     
     const exportProducts: OrderExportProduct[] = products.map(product => ({
@@ -168,7 +180,13 @@ const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
       vat: product.vat
     }));
 
-    exportOrderSummary(orderName, exportProducts, format, userRole);
+    try {
+      await exportOrderSummary(orderName, exportProducts, config, userRole);
+      setTimeout(() => setIsExporting(false), 1000);
+    } catch (error) {
+      console.error('Export error:', error);
+      setIsExporting(false);
+    }
   };
 
   const ProductRow = ({ product }: { product: ProductItem }) => {
@@ -969,37 +987,21 @@ const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
             spacing={1.5} 
             justifyContent="flex-end"
           >
-            {/* Export Button with Dropdown */}
-            <Stack direction="row" spacing={0.5}>
-              <Button 
-                variant="outlined"
-                onClick={() => handleExport('xlsx')}
-                startIcon={<DownloadIcon />}
-                size="medium"
-                sx={{ 
-                  borderRadius: '4px 0 0 4px',
-                  textTransform: 'none',
-                  minWidth: '100px',
-                  borderRight: 'none'
-                }}
-              >
-                Export Excel
-              </Button>
-              
-              <Button 
-                variant="outlined"
-                onClick={() => handleExport('csv')}
-                size="medium"
-                sx={{ 
-                  borderRadius: '0 4px 4px 0',
-                  textTransform: 'none',
-                  minWidth: '80px',
-                  borderLeft: 'none'
-                }}
-              >
-                CSV
-              </Button>
-            </Stack>
+            {/* Export Button */}
+            <Button 
+              variant="outlined"
+              onClick={handleExportClick}
+              startIcon={<DownloadIcon />}
+              disabled={isExporting}
+              size="medium"
+              sx={{ 
+                borderRadius: '4px',
+                textTransform: 'none',
+                minWidth: '110px'
+              }}
+            >
+              {isExporting ? 'Exporting...' : 'Export'}
+            </Button>
 
             <Button 
               variant="outlined" 
@@ -1038,6 +1040,19 @@ const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
           </Stack>
         </DialogContent>
       </Dialog>
+
+      {/* Export Configuration Modal */}
+      <ExportConfigModal
+        open={isExportConfigOpen}
+        onClose={() => setIsExportConfigOpen(false)}
+        onConfirm={handleExport}
+        productCount={products.length}
+        userRole={userRole}
+        defaultConfig={{
+          ...DEFAULT_EXPORT_CONFIG,
+          includeSupplierNames: userRole === 'Admin',
+        }}
+      />
     </>
   );
 };

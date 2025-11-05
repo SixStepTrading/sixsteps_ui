@@ -347,10 +347,7 @@ const AdminStockManagementModal: React.FC<AdminStockManagementModalProps> = ({
           let workbook: XLSX.WorkBook;
           
           if (file.name.endsWith('.csv')) {
-            const csvData = XLSX.utils.sheet_to_json(data as string, { header: 1 });
-            workbook = XLSX.utils.book_new();
-            const ws = XLSX.utils.json_to_sheet(csvData);
-            XLSX.utils.book_append_sheet(workbook, ws, 'Sheet1');
+            workbook = XLSX.read(data as string, { type: 'string' });
           } else {
             workbook = XLSX.read(data as string, { type: 'binary' });
           }
