@@ -21,6 +21,30 @@ import {
   Switch,
 } from '@mui/material';
 
+// Common MenuProps for all Select components with proper z-index for dark theme
+// Using disablePortal to render menu inside Dialog instead of in a separate portal
+const DARK_MENU_PROPS = {
+  disablePortal: true,
+  PaperProps: {
+    sx: {
+      bgcolor: '#1e1e1e',
+      color: '#ffffff',
+      '& .MuiMenuItem-root': {
+        color: '#ffffff',
+        '&:hover': {
+          bgcolor: '#2a2a2a'
+        },
+        '&.Mui-selected': {
+          bgcolor: '#2a2a2a',
+          '&:hover': {
+            bgcolor: '#333333'
+          }
+        }
+      }
+    }
+  }
+};
+
 export interface ExportConfig {
   // Format
   format: 'csv' | 'xlsx';
@@ -212,13 +236,16 @@ const ExportConfigModal: React.FC<ExportConfigModalProps> = ({
       onClose={onClose}
       maxWidth="md"
       fullWidth
+      sx={{
+        zIndex: 10500
+      }}
       PaperProps={{
         className: 'dark:bg-dark-bg-card'
       }}
     >
-      <DialogTitle className="dark:text-dark-text-primary">
+      <DialogTitle className="dark:bg-dark-bg-card dark:text-dark-text-primary">
         <Box display="flex" alignItems="center" justifyContent="space-between">
-          <Typography variant="h6">Export Configuration</Typography>
+          <Typography variant="h6" className="dark:text-dark-text-primary">Export Configuration</Typography>
           <Chip 
             label={`${productCount.toLocaleString()} products`} 
             size="small" 
@@ -230,7 +257,11 @@ const ExportConfigModal: React.FC<ExportConfigModalProps> = ({
       <DialogContent dividers className="dark:bg-dark-bg-card dark:border-dark-border-primary">
         {/* Performance warning */}
         {showPerformanceWarning && (
-          <Alert severity="info" sx={{ mb: 2 }}>
+          <Alert 
+            severity="info" 
+            sx={{ mb: 2 }}
+            className="dark:bg-blue-900/20 dark:text-blue-200 dark:border-blue-800"
+          >
             <strong>Large export detected</strong>
             <br />
             Exporting {productCount.toLocaleString()} products. Estimated time: <strong>{estimatedTime}</strong>
@@ -241,7 +272,11 @@ const ExportConfigModal: React.FC<ExportConfigModalProps> = ({
 
         {/* Incompatible settings warning */}
         {hasIncompatibleSettings && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert 
+            severity="error" 
+            sx={{ mb: 2 }}
+            className="dark:bg-red-900/20 dark:text-red-200 dark:border-red-800"
+          >
             <strong>⚠️ Incompatible settings</strong>
             <br />
             CSV field separator and decimal separator cannot both be comma (,).
@@ -260,6 +295,7 @@ const ExportConfigModal: React.FC<ExportConfigModalProps> = ({
               variant={selectedPreset === 'it' ? 'contained' : 'outlined'}
               size="small"
               onClick={() => applyPreset('it')}
+              className="dark:border-dark-border-primary dark:text-dark-text-primary"
             >
               🇮🇹 Italy
             </Button>
@@ -267,6 +303,7 @@ const ExportConfigModal: React.FC<ExportConfigModalProps> = ({
               variant={selectedPreset === 'us' ? 'contained' : 'outlined'}
               size="small"
               onClick={() => applyPreset('us')}
+              className="dark:border-dark-border-primary dark:text-dark-text-primary"
             >
               🇺🇸 USA
             </Button>
@@ -274,6 +311,7 @@ const ExportConfigModal: React.FC<ExportConfigModalProps> = ({
               variant={selectedPreset === 'uk' ? 'contained' : 'outlined'}
               size="small"
               onClick={() => applyPreset('uk')}
+              className="dark:border-dark-border-primary dark:text-dark-text-primary"
             >
               🇬🇧 UK
             </Button>
@@ -281,13 +319,14 @@ const ExportConfigModal: React.FC<ExportConfigModalProps> = ({
               variant={selectedPreset === 'fr' ? 'contained' : 'outlined'}
               size="small"
               onClick={() => applyPreset('fr')}
+              className="dark:border-dark-border-primary dark:text-dark-text-primary"
             >
               🇫🇷 France
             </Button>
           </Box>
         </Box>
 
-        <Divider sx={{ my: 1.5 }} />
+        <Divider sx={{ my: 1.5 }} className="dark:border-dark-border-primary" />
 
         {/* File format */}
         <Box sx={{ mb: 2 }}>
@@ -298,8 +337,8 @@ const ExportConfigModal: React.FC<ExportConfigModalProps> = ({
               value={config.format}
               onChange={(e) => setConfig({ ...config, format: e.target.value as 'csv' | 'xlsx' })}
             >
-              <FormControlLabel value="xlsx" control={<Radio />} label="Excel (.xlsx)" />
-              <FormControlLabel value="csv" control={<Radio />} label="CSV (.csv)" />
+              <FormControlLabel value="xlsx" control={<Radio />} label="Excel (.xlsx)" className="dark:text-dark-text-primary" />
+              <FormControlLabel value="csv" control={<Radio />} label="CSV (.csv)" className="dark:text-dark-text-primary" />
             </RadioGroup>
           </FormControl>
         </Box>
@@ -308,34 +347,40 @@ const ExportConfigModal: React.FC<ExportConfigModalProps> = ({
         {config.format === 'csv' && (
           <Box sx={{ mb: 2, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
             <FormControl size="small">
-              <FormLabel className="dark:text-dark-text-primary">Field Separator (CSV)</FormLabel>
-              <Select
-                value={config.fieldSeparator}
-                onChange={(e) => setConfig({ ...config, fieldSeparator: e.target.value as any })}
+                <FormLabel className="dark:text-dark-text-primary">Field Separator (CSV)</FormLabel>
+                <Select
+                  value={config.fieldSeparator}
+                  onChange={(e) => setConfig({ ...config, fieldSeparator: e.target.value as any })}
+                className="dark:bg-dark-bg-tertiary dark:text-dark-text-primary"
+                sx={{ '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.23)' } }}
+                MenuProps={DARK_MENU_PROPS}
               >
                 <MenuItem value=",">Comma (,)</MenuItem>
                 <MenuItem value=";">Semicolon (;)</MenuItem>
                 <MenuItem value="\t">Tab</MenuItem>
-                <MenuItem value="|">Pipe (|)</MenuItem>
-              </Select>
-            </FormControl>
+                  <MenuItem value="|">Pipe (|)</MenuItem>
+                </Select>
+              </FormControl>
 
             <FormControl size="small">
-              <FormLabel className="dark:text-dark-text-primary">File Encoding</FormLabel>
-              <Select
-                value={config.encoding}
-                onChange={(e) => setConfig({ ...config, encoding: e.target.value as any })}
+                <FormLabel className="dark:text-dark-text-primary">File Encoding</FormLabel>
+                <Select
+                  value={config.encoding}
+                  onChange={(e) => setConfig({ ...config, encoding: e.target.value as any })}
+                className="dark:bg-dark-bg-tertiary dark:text-dark-text-primary"
+                sx={{ '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.23)' } }}
+                MenuProps={DARK_MENU_PROPS}
               >
                 <MenuItem value="utf-8">UTF-8</MenuItem>
                 <MenuItem value="utf-8-bom">UTF-8 with BOM</MenuItem>
                 <MenuItem value="windows-1252">Windows-1252</MenuItem>
                 <MenuItem value="iso-8859-1">ISO-8859-1</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
+                </Select>
+              </FormControl>
+            </Box>
         )}
 
-        <Divider sx={{ my: 1.5 }} />
+        <Divider sx={{ my: 1.5 }} className="dark:border-dark-border-primary" />
 
         {/* Number formatting */}
         <Typography variant="subtitle2" gutterBottom className="dark:text-dark-text-primary">
@@ -348,6 +393,9 @@ const ExportConfigModal: React.FC<ExportConfigModalProps> = ({
             <Select
               value={config.decimalSeparator}
               onChange={(e) => setConfig({ ...config, decimalSeparator: e.target.value as '.' | ',' })}
+              className="dark:bg-dark-bg-tertiary dark:text-dark-text-primary"
+              sx={{ '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.23)' } }}
+              MenuProps={DARK_MENU_PROPS}
             >
               <MenuItem value=",">Comma (,) - Europe: 1234,56</MenuItem>
               <MenuItem value=".">Period (.) - USA/UK: 1234.56</MenuItem>
@@ -359,6 +407,9 @@ const ExportConfigModal: React.FC<ExportConfigModalProps> = ({
             <Select
               value={config.thousandsSeparator}
               onChange={(e) => setConfig({ ...config, thousandsSeparator: e.target.value as any })}
+              className="dark:bg-dark-bg-tertiary dark:text-dark-text-primary"
+              sx={{ '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.23)' } }}
+              MenuProps={DARK_MENU_PROPS}
             >
               <MenuItem value=".">Period (.) - Italy: 1.234,56</MenuItem>
               <MenuItem value=",">Comma (,) - USA: 1,234.56</MenuItem>
@@ -368,7 +419,7 @@ const ExportConfigModal: React.FC<ExportConfigModalProps> = ({
           </FormControl>
         </Box>
 
-        <Divider sx={{ my: 1.5 }} />
+        <Divider sx={{ my: 1.5 }} className="dark:border-dark-border-primary" />
 
         {/* Currency */}
         <Typography variant="subtitle2" gutterBottom className="dark:text-dark-text-primary">
@@ -381,6 +432,9 @@ const ExportConfigModal: React.FC<ExportConfigModalProps> = ({
             <Select
               value={config.currencySymbol}
               onChange={(e) => setConfig({ ...config, currencySymbol: e.target.value as any })}
+              className="dark:bg-dark-bg-tertiary dark:text-dark-text-primary"
+              sx={{ '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.23)' } }}
+              MenuProps={DARK_MENU_PROPS}
             >
               <MenuItem value="€">Euro (€)</MenuItem>
               <MenuItem value="$">Dollar ($)</MenuItem>
@@ -389,12 +443,15 @@ const ExportConfigModal: React.FC<ExportConfigModalProps> = ({
             </Select>
           </FormControl>
 
-          {config.currencySymbol !== 'none' && (
+        {config.currencySymbol !== 'none' && (
             <FormControl size="small">
               <FormLabel className="dark:text-dark-text-primary">Position</FormLabel>
               <Select
                 value={config.currencyPosition}
                 onChange={(e) => setConfig({ ...config, currencyPosition: e.target.value as any })}
+                className="dark:bg-dark-bg-tertiary dark:text-dark-text-primary"
+                sx={{ '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.23)' } }}
+                MenuProps={DARK_MENU_PROPS}
               >
                 <MenuItem value="after">After (e.g., 100€)</MenuItem>
                 <MenuItem value="before">Before (e.g., $100)</MenuItem>
@@ -402,23 +459,24 @@ const ExportConfigModal: React.FC<ExportConfigModalProps> = ({
             </FormControl>
           )}
         </Box>
-
+            
         {config.currencySymbol !== 'none' && (
           <Box sx={{ mb: 2 }}>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={config.currencySpace}
-                  onChange={(e) => setConfig({ ...config, currencySpace: e.target.checked })}
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={config.currencySpace}
+                      onChange={(e) => setConfig({ ...config, currencySpace: e.target.checked })}
                   size="small"
-                />
-              }
+                    />
+                  }
               label="With space"
-            />
+              className="dark:text-dark-text-primary"
+                />
           </Box>
         )}
 
-        <Divider sx={{ my: 1.5 }} />
+        <Divider sx={{ my: 1.5 }} className="dark:border-dark-border-primary" />
 
         {/* Date format */}
         <Box sx={{ mb: 2 }}>
@@ -427,6 +485,9 @@ const ExportConfigModal: React.FC<ExportConfigModalProps> = ({
             <Select
               value={config.dateFormat}
               onChange={(e) => setConfig({ ...config, dateFormat: e.target.value as any })}
+              className="dark:bg-dark-bg-tertiary dark:text-dark-text-primary"
+              sx={{ '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.23)' } }}
+              MenuProps={DARK_MENU_PROPS}
             >
               <MenuItem value="DD/MM/YYYY">DD/MM/YYYY - Europe (15/03/2025)</MenuItem>
               <MenuItem value="MM/DD/YYYY">MM/DD/YYYY - USA (03/15/2025)</MenuItem>
@@ -453,9 +514,10 @@ const ExportConfigModal: React.FC<ExportConfigModalProps> = ({
               />
             }
             label="Include column headers"
+            className="dark:text-dark-text-primary"
           />
 
-          {isAdmin && (
+        {isAdmin && (
             <FormControlLabel
               control={
                 <Switch
@@ -465,22 +527,30 @@ const ExportConfigModal: React.FC<ExportConfigModalProps> = ({
                 />
               }
               label="Include supplier names (Admin only)"
+              className="dark:text-dark-text-primary"
             />
           )}
-        </Box>
+          </Box>
 
-        <Divider sx={{ my: 1.5 }} />
+        <Divider sx={{ my: 1.5 }} className="dark:border-dark-border-primary" />
 
         {/* Preview */}
-        <Box sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1 }} className="dark:bg-dark-bg-tertiary">
-          <Typography variant="subtitle2" gutterBottom className="dark:text-dark-text-primary">
+        <Box 
+          sx={{ p: 2, borderRadius: 1 }} 
+          className="bg-gray-100 dark:bg-dark-bg-tertiary"
+        >
+          <Typography variant="subtitle2" gutterBottom className="dark:text-dark-text-primary text-gray-900">
             Format Preview
           </Typography>
           <Box sx={{ fontFamily: 'monospace', fontSize: '0.9rem' }}>
-            <Box className="dark:text-dark-text-primary">Number: <strong>{getPreviewNumber()}</strong></Box>
-            <Box className="dark:text-dark-text-primary">Date: <strong>{getPreviewDate()}</strong></Box>
+            <Box className="text-gray-900 dark:text-dark-text-primary">
+              Number: <strong>{getPreviewNumber()}</strong>
+            </Box>
+            <Box className="text-gray-900 dark:text-dark-text-primary">
+              Date: <strong>{getPreviewDate()}</strong>
+            </Box>
             {config.format === 'csv' && (
-              <Box className="dark:text-dark-text-primary">
+              <Box className="text-gray-900 dark:text-dark-text-primary">
                 CSV Row: <strong>Product Name{config.fieldSeparator}123{config.fieldSeparator}{getPreviewNumber()}</strong>
               </Box>
             )}

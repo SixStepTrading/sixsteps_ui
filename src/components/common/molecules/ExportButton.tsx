@@ -14,6 +14,8 @@ interface ExportButtonProps {
     publicPrice: number;
     bestPrices: Array<{ price: number; stock: number; supplier?: string }>;
     vat: number;
+    quantity?: number;
+    targetPrice?: number | null;
   }>;
   isVisible: boolean;
   userRole?: string;
