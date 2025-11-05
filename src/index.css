@@ -10,6 +10,10 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Zoom out 10% by default */
+  zoom: 90%;
+  -moz-transform: scale(0.9);
+  -moz-transform-origin: 0 0;
 }
 
 code {

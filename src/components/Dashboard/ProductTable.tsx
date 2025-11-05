@@ -219,6 +219,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
   const [modalProduct, setModalProduct] = useState<ProductWithQuantity | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showSelectedOnly, setShowSelectedOnly] = useState(false);
+  const [isSelectingAll, setIsSelectingAll] = useState(false);
   const { isDrawerCollapsed } = useContext(SidebarContext);
   
   // Sorting state
@@ -273,6 +274,34 @@ const ProductTable: React.FC<ProductTableProps> = ({
       selectAllRef.current.indeterminate = indeterminateFiltered;
     }
   }, [indeterminateFiltered, allSelectedFiltered, selectedFiltered, allFilteredIds.length]);
+
+  // Change cursor to loading when selecting all
+  useEffect(() => {
+    if (isSelectingAll) {
+      document.body.style.cursor = 'wait';
+      // Also apply to all elements
+      const style = document.createElement('style');
+      style.id = 'selecting-all-cursor';
+      style.innerHTML = '* { cursor: wait !important; }';
+      document.head.appendChild(style);
+    } else {
+      document.body.style.cursor = '';
+      // Remove the style tag
+      const style = document.getElementById('selecting-all-cursor');
+      if (style) {
+        style.remove();
+      }
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      document.body.style.cursor = '';
+      const style = document.getElementById('selecting-all-cursor');
+      if (style) {
+        style.remove();
+      }
+    };
+  }, [isSelectingAll]);
 
   // Determina se ci sono prodotti selezionati con problemi
   const selectionWithProblems = selected.some(id => {
@@ -378,7 +407,11 @@ const ProductTable: React.FC<ProductTableProps> = ({
   return (
     <div className="w-full flex flex-col gap-1 mb-8">
       {/* Filters section - Migliorato layout e allineamento con reset button */}
-      <div className="flex items-center justify-between mb-4 p-3 bg-white dark:bg-dark-bg-secondary rounded-lg border dark:border-dark-border-primary">
+      <div className="sticky top-4 z-40 flex items-center justify-between mb-4 p-3 bg-white dark:bg-dark-bg-secondary rounded-lg border dark:border-dark-border-primary transition-shadow duration-300"
+        style={{
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+        }}
+      >
         <div className="flex items-center gap-6">
           {/* In Stock Only Toggle */}
           {filterValues && onFilterChange && (
@@ -637,7 +670,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
       </div>
       
       {/* Table container with horizontal scroll only, no extra spacing */}
-      <div className="overflow-x-auto overflow-y-hidden w-full overscroll-x-contain">
+      <div className="overflow-x-auto overflow-y-hidden w-full overscroll-x-contain relative">
         <div 
           className={`${isDrawerCollapsed ? 'min-w-[1000px]' : 'min-w-[1200px]'}`}
           style={{ 
@@ -652,11 +685,25 @@ const ProductTable: React.FC<ProductTableProps> = ({
                 ref={selectAllRef}
                 type="checkbox"
                 checked={allSelectedFiltered}
-                onChange={(e) => {
+                disabled={isSelectingAll}
+                onChange={async (e) => {
                   e.stopPropagation();
-                  onSelectAll && onSelectAll(allFilteredIds, e.target.checked);
+                  const checked = e.target.checked;
+                  
+                  // Set loading state - cursor will change to wait
+                  setIsSelectingAll(true);
+                  
+                  // Use setTimeout to allow UI to update (show cursor change)
+                  await new Promise(resolve => setTimeout(resolve, 50));
+                  
+                  // Perform the selection/deselection
+                  onSelectAll && onSelectAll(allFilteredIds, checked);
+                  
+                  // Remove loading state after a small delay
+                  await new Promise(resolve => setTimeout(resolve, 100));
+                  setIsSelectingAll(false);
                 }}
-                className="w-4 h-4 text-blue-600 dark:text-blue-400 bg-gray-100 dark:bg-dark-bg-tertiary border-gray-300 dark:border-dark-border-primary rounded focus:ring-blue-500 dark:focus:ring-blue-400 focus:ring-2"
+                className="w-4 h-4 text-blue-600 dark:text-blue-400 bg-gray-100 dark:bg-dark-bg-tertiary border-gray-300 dark:border-dark-border-primary rounded focus:ring-blue-500 dark:focus:ring-blue-400 focus:ring-2 disabled:opacity-50"
                 title={`Select all ${allFilteredIds.length} filtered products`}
               />
             </div>
