@@ -373,7 +373,7 @@ export interface CreateUserData {
   email: string;
   entity: string; // Entity ID
   password: string;
-  secret?: string; // Required only for admin creation
+  secret?: string; // Optional security field
 }
 
 export interface UserResponse {
