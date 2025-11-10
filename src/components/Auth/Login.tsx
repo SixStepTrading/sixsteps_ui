@@ -239,17 +239,16 @@ const Login: React.FC = () => {
               </div>
 
               <div className="text-sm">
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
+                <button
+                  type="button"
+                  onClick={() => {
                     // TODO: Implement forgot password functionality
                     alert('Forgot password functionality coming soon!');
                   }}
-                  className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors cursor-pointer"
+                  className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors cursor-pointer bg-transparent border-none p-0"
                 >
                   Forgot your password?
-                </a>
+                </button>
               </div>
             </div>
 
@@ -285,27 +284,25 @@ const Login: React.FC = () => {
         <div className="text-center">
           <p className="text-xs text-gray-500 dark:text-gray-400">
             Protected by Six Steps Security. By signing in, you agree to our{' '}
-            <a 
-              href="#" 
-              onClick={(e) => {
-                e.preventDefault();
+            <button 
+              type="button"
+              onClick={() => {
                 alert('Terms of Service coming soon!');
               }}
-              className="text-blue-600 hover:text-blue-500 dark:text-blue-400 cursor-pointer"
+              className="text-blue-600 hover:text-blue-500 dark:text-blue-400 cursor-pointer bg-transparent border-none p-0 hover:underline"
             >
               Terms of Service
-            </a>{' '}
+            </button>{' '}
             and{' '}
-            <a 
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
+            <button 
+              type="button"
+              onClick={() => {
                 alert('Privacy Policy coming soon!');
               }}
-              className="text-blue-600 hover:text-blue-500 dark:text-blue-400 cursor-pointer"
+              className="text-blue-600 hover:text-blue-500 dark:text-blue-400 cursor-pointer bg-transparent border-none p-0 hover:underline"
             >
               Privacy Policy
-            </a>
+            </button>
             .
           </p>
         </div>

@@ -20,24 +20,6 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
   });
   const [reason, setReason] = useState('');
 
-  const handleQuantityChange = (quantity: number) => {
-    const updatedProduct = {
-      ...editedProduct,
-      quantity,
-      totalPrice: quantity * editedProduct.unitPrice
-    };
-    setEditedProduct(updatedProduct);
-  };
-
-  const handlePriceChange = (unitPrice: number) => {
-    const updatedProduct = {
-      ...editedProduct,
-      unitPrice,
-      totalPrice: editedProduct.quantity * unitPrice
-    };
-    setEditedProduct(updatedProduct);
-  };
-
   const handleSave = () => {
     onSave(editedProduct, reason);
     onClose();

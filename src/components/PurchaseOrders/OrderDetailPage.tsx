@@ -5,7 +5,6 @@ import { useUser } from '../../contexts/UserContext';
 import { 
   getOrderDetails, 
   OrderDetailData, 
-  SupplierInfo, 
   OrderProductDetail,
   getSupplierById 
 } from '../../data/mockOrders';

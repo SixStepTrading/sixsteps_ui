@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
 import {
   Accordion,
-  AccordionSummary,
   AccordionDetails,
   Typography,
   Box,
   Button,
-  IconButton,
-  Divider,
-  Stack
+  Stack,
+  Divider
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import FilterListIcon from '@mui/icons-material/FilterList';
