@@ -136,10 +136,15 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
     setIsSubmitting(true);
     
     try {
-      const userPayload = {
+      const userPayload: CreateUserData = {
         ...userData,
         entity: selectedEntity.id
       };
+      
+      // Remove secret if empty (to match API documentation)
+      if (!userPayload.secret || userPayload.secret.trim() === '') {
+        delete userPayload.secret;
+      }
       
       const newUser = await createUser(userPayload);
       setCreatedUser(newUser);
@@ -373,20 +378,6 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
                     {errors.password && (
                       <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.password}</p>
                     )}
-                  </div>
-
-                  {/* Secret */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Secret
-                    </label>
-                    <input
-                      type="text"
-                      value={userData.secret}
-                      onChange={(e) => handleInputChange('secret', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      placeholder="Enter secret (optional)"
-                    />
                   </div>
                 </div>
 
