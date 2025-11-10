@@ -327,8 +327,6 @@ const ProductTable: React.FC<ProductTableProps> = ({
     setIsModalOpen(true);
   };
 
-  const totalProductCount = baseFilteredProducts.length;
-
   const calculateDiscounts = (publicPrice: number, supplierPrice: number, vatPercentage: number) => {
     const grossDiscount = publicPrice - supplierPrice;
     const grossDiscountPercent = (grossDiscount / publicPrice) * 100;

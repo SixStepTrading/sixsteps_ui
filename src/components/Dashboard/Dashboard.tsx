@@ -1,19 +1,13 @@
 /// <reference path="../../types/xlsx.d.ts" />
-import React, { useState, useEffect, useCallback, useRef, ChangeEvent } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import debounce from 'lodash/debounce';
-import StatCard from '../common/StatCard';
 import { useToast } from '../../contexts/ToastContext';
 import { useUser } from '../../contexts/UserContext';
 import { Product } from '../../data/mockProducts';
 import { fetchProducts } from '../../utils/api';
-import { ProductRow, ActionBar } from '../common/reusable';
+import { ActionBar } from '../common/reusable';
 import { calculateAveragePrice } from '../common/utils';
-import SortableColumnHeader from '../common/reusable/SortableColumnHeader';
-import ProductFilter from '../common/reusable/ProductFilter';
 import { SortDirection } from '../common/reusable/SortableColumnHeader';
-import PriceDisplay from '../common/reusable/PriceDisplay';
-import StockAvailability from '../common/reusable/StockAvailability';
-import { isStockExceeded } from '../common/utils/priceCalculations';
 import * as XLSX from 'xlsx';
 import FileUploadModal from '../common/reusable/FileUploadModal';
 import OrderConfirmationModal, { ProductItem, OrderData } from '../common/molecules/OrderConfirmationModal';
@@ -23,93 +17,13 @@ import AdminStockManagementModal from '../common/molecules/AdminStockManagementM
 import ActiveUploadsModal from '../common/molecules/ActiveUploadsModal';
 import { v4 as uuid } from 'uuid';
 import ProductTable from './ProductTable';
-import TableSkeleton from '../common/atoms/TableSkeleton';
 import ApiErrorMessage from '../common/atoms/ApiErrorMessage';
-import { getCategoryFromMinsan, getAvailableCategoriesFromProducts, getDigitFromCategoryName } from '../../utils/minsanCategories';
+import { getAvailableCategoriesFromProducts, getDigitFromCategoryName } from '../../utils/minsanCategories';
 
-// Icons (we'll use SVG or Heroicons)
-const ShoppingCartIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-  </svg>
-);
-
-const MoneyIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-  </svg>
-);
-
-const InventoryIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-  </svg>
-);
-
-const ShippingIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
-  </svg>
-);
-
-const AddIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-  </svg>
-);
-
-const SearchIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-  </svg>
-);
-
-const FilterListIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-  </svg>
-);
-
+// Icon component used in error notifications
 const ClearIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-  </svg>
-);
-
-const RefreshIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-  </svg>
-);
-
-const InfoIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-  </svg>
-);
-
-const ArrowDownIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-  </svg>
-);
-
-const ArrowUpIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-  </svg>
-);
-
-const ArrowRightIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-  </svg>
-);
-
-const UploadIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
   </svg>
 );
 
@@ -125,7 +39,6 @@ const Dashboard: React.FC = () => {
   const { showToast } = useToast();
   const { userRole, logout } = useUser();
   const isAdmin = userRole === 'Admin';
-  const tableRef = useRef<HTMLDivElement>(null);
   
   // State for product data and pagination
   const [products, setProducts] = useState<ProductWithQuantity[]>([]);
@@ -133,7 +46,7 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // New loading states for operations
+  // Loading states for operations
   const [filteringLoading, setFilteringLoading] = useState(false);
   const [sortingLoading, setSortingLoading] = useState(false);
   const [page, setPage] = useState(0);
@@ -143,26 +56,7 @@ const Dashboard: React.FC = () => {
   const [sortBy, setSortBy] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
   
-  // Calcola quante righe mostrare per pagina in base all'altezza della tabella
-  const calculateRowsPerPage = (tableHeight: number): number => {
-    // Stima l'altezza media di una riga (comprese le intestazioni e i margini)
-    const estimatedRowHeight = 65; // in pixels
-    const headerHeight = 56; // in pixels
-    
-    // Calcola quante righe possono entrare nella tabella
-    const availableHeight = tableHeight - headerHeight;
-    const estimatedRows = Math.floor(availableHeight / estimatedRowHeight);
-    
-    // Ritorna il valore più vicino tra le opzioni disponibili
-    const options = [10, 25, 50, 100];
-    return options.reduce((prev, curr) => 
-      Math.abs(curr - estimatedRows) < Math.abs(prev - estimatedRows) ? curr : prev
-    );
-  };
-
-  // Inizializza rowsPerPage con un valore calcolato in base all'altezza della tabella
-  const [rowsPerPage, setRowsPerPage] = useState<number>(calculateRowsPerPage(600));
-  
+  const [rowsPerPage, setRowsPerPage] = useState<number>(25);
   const [totalCount, setTotalCount] = useState(0);
   const [selected, setSelected] = useState<string[]>([]);
   const [totalAmount, setTotalAmount] = useState(0);
@@ -325,8 +219,6 @@ const Dashboard: React.FC = () => {
           
           // Apply category filter - now based on MINSAN first digit
           if (filterValues.category && filterValues.category !== '') {
-            const beforeCount = filtered.length;
-            
             // Single category selection - compare first digit of MINSAN
             const expectedDigit = getDigitFromCategoryName(filterValues.category);
             
@@ -381,17 +273,9 @@ const Dashboard: React.FC = () => {
           
           // Apply stock filter - show only products with stock > 0 (if enabled)
           if (filterValues.onlyAvailableStock) {
-            const beforeCount = filtered.length;
-            
             filtered = filtered.filter(product => {
               const totalStock = product.bestPrices.reduce((sum, price) => sum + (price.stock || 0), 0);
-              const hasStock = totalStock > 0;
-              
-              // Debug logging for first few products
-              if (beforeCount <= 5) {
-              }
-              
-              return hasStock;
+              return totalStock > 0;
             });
             
           }
@@ -488,18 +372,6 @@ const Dashboard: React.FC = () => {
     });
   }, []);
   
-  // Handle sorting column click (ASYNC - NON-BLOCKING)
-  const handleSort = async (column: string, direction: SortDirection) => {
-    setSortBy(column);
-    setSortDirection(direction);
-    
-    // Re-apply sorting to filtered products asynchronously
-    if (direction) {
-      const sorted = await applySortingAsync(filteredProducts, column, direction);
-      setFilteredProducts(sorted);
-    }
-  };
-  
   // Handle quantity change for a product
   const handleQuantityChange = (id: string, quantity: number) => {
     // Update quantity
@@ -587,31 +459,7 @@ const Dashboard: React.FC = () => {
       setTotalAmount(total);
   }, [selected, filteredProducts]);
   
-  // Pagination handlers (client-side only, no API calls)
-  const handleChangePage = (event: unknown, newPage: number) => {
-    setPage(newPage);
-    // No API call needed - all data is already loaded
-  };
-
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-    // No API call needed - all data is already loaded
-  };
-  
   // Select/deselect handlers
-  const handleSelectAllClick = (event: React.ChangeEvent<HTMLInputElement>) => {
-      // Only select products with quantity > 0
-    if (event.target.checked) {
-      const newSelected = filteredProducts
-        .filter(product => product.quantity > 0)
-        .map(product => product.id);
-      setSelected(newSelected);
-      return;
-    }
-    setSelected([]);
-  };
-
   const handleSelectClick = (event: React.MouseEvent<unknown>, id: string) => {
     const product = filteredProducts.find(p => p.id === id);
     
@@ -635,12 +483,6 @@ const Dashboard: React.FC = () => {
   // Handle filter changes from ProductFilter component
   const handleFilterChange = (newValues: any) => {
     setFilterValues(newValues);
-  };
-  
-  // Apply filters when the Apply button is clicked (now client-side only)
-  const handleApplyFilters = () => {
-    // No API call needed - filtering is now automatic via useEffect
-    // The useEffect will handle re-filtering when filterValues change
   };
   
   // Create ODA
