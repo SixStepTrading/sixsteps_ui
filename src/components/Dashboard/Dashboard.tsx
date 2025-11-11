@@ -105,10 +105,6 @@ const Dashboard: React.FC = () => {
   
   // State for controlling "Selected Only" filter
   const [showSelectedOnly, setShowSelectedOnly] = useState(false);
-  
-  // State for tracking products not found in file upload
-  const [productsNotFound, setProductsNotFound] = useState<string[]>([]);
-  const [showNotFoundAlert, setShowNotFoundAlert] = useState(false);
 
   // Funzione per gestire l'apertura/chiusura della visualizzazione di tutti i prezzi
   const handleToggleAllPrices = (productId: string) => {
@@ -754,10 +750,8 @@ const Dashboard: React.FC = () => {
       // Trigger ProductTable filter reset
       setResetFilters(prev => prev + 1);
       
-      // Reset "Selected Only" filter and clear not found alert
+      // Reset "Selected Only" filter
       setShowSelectedOnly(false);
-      setShowNotFoundAlert(false);
-      setProductsNotFound([]);
       
       // Reload products from API with forceReload flag
       await loadProducts(true, true);
@@ -917,9 +911,6 @@ const Dashboard: React.FC = () => {
       throw new Error('No data found in the file or the file is empty');
     }
     
-    // Track products not found
-    const notFoundProducts: string[] = [];
-    
     // The matching logic starts here
     const matchedProductIds = new Set<string>();
     
@@ -951,7 +942,6 @@ const Dashboard: React.FC = () => {
       const name = extractText(row, ['Product Name', 'name', 'Nome', 'nome', 'Prodotto', 'prodotto', 'Descrizione', 'descrizione', 'Name', 'Product', 'product']);
       const quantity = extractText(row, ['Quantity', 'quantity', 'Quantità', 'quantità', 'Qta', 'qta', 'Q.tà', 'q.tà']);
       const targetPrice = extractText(row, ['Target Price', 'target price', 'Target', 'target', 'Price', 'price', 'Prezzo', 'prezzo']);
-      
       
       // First attempt exact code matches
       let matchedProduct: ProductWithQuantity | null = null;
@@ -1080,25 +1070,6 @@ const Dashboard: React.FC = () => {
           
           products[productIndex] = updatedProduct;
         }
-      } else {
-        // Product not found - track it with all available info
-        let productIdentifier = '';
-        if (ean && minsan && name) {
-          productIdentifier = `${name} (EAN: ${ean}, MINSAN: ${minsan})`;
-        } else if (ean && name) {
-          productIdentifier = `${name} (EAN: ${ean})`;
-        } else if (minsan && name) {
-          productIdentifier = `${name} (MINSAN: ${minsan})`;
-        } else if (ean) {
-          productIdentifier = `EAN: ${ean}`;
-        } else if (minsan) {
-          productIdentifier = `MINSAN: ${minsan}`;
-        } else if (name) {
-          productIdentifier = name;
-        } else {
-          productIdentifier = `Row ${index + 1}`;
-        }
-        notFoundProducts.push(productIdentifier);
       }
     });
     
@@ -1110,10 +1081,8 @@ const Dashboard: React.FC = () => {
       const matchedProducts = products.filter(p => matchedProductIds.has(p.id));
       setFilteredProducts(matchedProducts);
       
-      // Select all matched products with quantity > 0
-      const productsToSelect = matchedProducts
-        .filter(p => p.quantity > 0)
-        .map(p => p.id);
+      // Select ALL matched products (regardless of quantity)
+      const productsToSelect = matchedProducts.map(p => p.id);
       
       setSelected(productsToSelect);
       
@@ -1124,21 +1093,12 @@ const Dashboard: React.FC = () => {
         onlyAvailableStock: false
       }));
       
-      // Store products not found and show alert if any
-      if (notFoundProducts.length > 0) {
-        setProductsNotFound(notFoundProducts);
-        setShowNotFoundAlert(true);
-      } else {
-        setProductsNotFound([]);
-        setShowNotFoundAlert(false);
-      }
-      
       // Reset pagination to show all matched products
       setPage(0);
       
       showToast(`Found and updated ${matchedProductIds.size} products from your file`, 'success');
     } else {
-      throw new Error('No matching products found. Please check product codes or names.');
+      throw new Error('No matching products found. Please check product codes or names in your file.');
     }
   };
 
@@ -1370,46 +1330,6 @@ const Dashboard: React.FC = () => {
           )}
         </div>
       </div>
-
-      {/* Alert for products not found in file upload */}
-      {showNotFoundAlert && productsNotFound.length > 0 && (
-        <div className="mb-4 bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-500 dark:border-amber-400 p-4 rounded-md">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center mb-2">
-                <svg className="w-5 h-5 text-amber-600 dark:text-amber-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-                <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-200">
-                  {productsNotFound.length} {productsNotFound.length === 1 ? 'product' : 'products'} not found in platform
-                </h3>
-              </div>
-              <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
-                The following products from your file are not tracked in our system:
-              </p>
-              <div className="bg-white dark:bg-dark-bg-tertiary rounded-md p-3 border border-amber-200 dark:border-amber-800 max-h-48 overflow-y-auto">
-                <ul className="text-sm text-gray-700 dark:text-dark-text-primary space-y-1">
-                  {productsNotFound.map((product, index) => (
-                    <li key={index} className="flex items-start">
-                      <span className="text-amber-500 mr-2">•</span>
-                      <span className="font-mono text-xs">{product}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-            <button
-              onClick={() => setShowNotFoundAlert(false)}
-              className="ml-4 text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 transition-colors"
-              aria-label="Close alert"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* ProductTable component or API Error Message */}
       {error === 'API_ERROR' ? (
