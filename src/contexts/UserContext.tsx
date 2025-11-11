@@ -36,22 +36,6 @@ interface UserProviderProps {
   children: ReactNode;
 }
 
-// Map entity types to user roles
-const mapEntityTypeToRole = (entityType: string): UserRole => {
-  switch (entityType.toUpperCase()) {
-    case 'ADMIN':
-      return 'Admin';
-    case 'PHARMACY':
-      return 'Pharmacy';
-    case 'SUPPLIER':
-      return 'Supplier';
-    case 'MANAGER':
-      return 'Manager';
-    default:
-      return 'Admin';
-  }
-};
-
 // Map user role to profile using the role from backend
 const mapRoleToProfile = (user: AuthUser): UserProfile => {
   // Use role directly from backend API, map to frontend UserRole

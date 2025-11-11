@@ -1,19 +1,13 @@
 /// <reference path="../../types/xlsx.d.ts" />
-import React, { useState, useEffect, useCallback, useRef, ChangeEvent } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import debounce from 'lodash/debounce';
-import StatCard from '../common/StatCard';
 import { useToast } from '../../contexts/ToastContext';
 import { useUser } from '../../contexts/UserContext';
 import { Product } from '../../data/mockProducts';
 import { fetchProducts } from '../../utils/api';
-import { ProductRow, ActionBar } from '../common/reusable';
+import { ActionBar } from '../common/reusable';
 import { calculateAveragePrice } from '../common/utils';
-import SortableColumnHeader from '../common/reusable/SortableColumnHeader';
-import ProductFilter from '../common/reusable/ProductFilter';
 import { SortDirection } from '../common/reusable/SortableColumnHeader';
-import PriceDisplay from '../common/reusable/PriceDisplay';
-import StockAvailability from '../common/reusable/StockAvailability';
-import { isStockExceeded } from '../common/utils/priceCalculations';
 import * as XLSX from 'xlsx';
 import FileUploadModal from '../common/reusable/FileUploadModal';
 import OrderConfirmationModal, { ProductItem, OrderData } from '../common/molecules/OrderConfirmationModal';
@@ -23,93 +17,13 @@ import AdminStockManagementModal from '../common/molecules/AdminStockManagementM
 import ActiveUploadsModal from '../common/molecules/ActiveUploadsModal';
 import { v4 as uuid } from 'uuid';
 import ProductTable from './ProductTable';
-import TableSkeleton from '../common/atoms/TableSkeleton';
 import ApiErrorMessage from '../common/atoms/ApiErrorMessage';
-import { getCategoryFromMinsan, getAvailableCategoriesFromProducts, getDigitFromCategoryName } from '../../utils/minsanCategories';
+import { getAvailableCategoriesFromProducts, getDigitFromCategoryName } from '../../utils/minsanCategories';
 
-// Icons (we'll use SVG or Heroicons)
-const ShoppingCartIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-  </svg>
-);
-
-const MoneyIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-  </svg>
-);
-
-const InventoryIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-  </svg>
-);
-
-const ShippingIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
-  </svg>
-);
-
-const AddIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-  </svg>
-);
-
-const SearchIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-  </svg>
-);
-
-const FilterListIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-  </svg>
-);
-
+// Icon component used in error notifications
 const ClearIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-  </svg>
-);
-
-const RefreshIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-  </svg>
-);
-
-const InfoIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-  </svg>
-);
-
-const ArrowDownIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-  </svg>
-);
-
-const ArrowUpIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-  </svg>
-);
-
-const ArrowRightIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-  </svg>
-);
-
-const UploadIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
   </svg>
 );
 
@@ -125,7 +39,6 @@ const Dashboard: React.FC = () => {
   const { showToast } = useToast();
   const { userRole, logout } = useUser();
   const isAdmin = userRole === 'Admin';
-  const tableRef = useRef<HTMLDivElement>(null);
   
   // State for product data and pagination
   const [products, setProducts] = useState<ProductWithQuantity[]>([]);
@@ -133,7 +46,7 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // New loading states for operations
+  // Loading states for operations
   const [filteringLoading, setFilteringLoading] = useState(false);
   const [sortingLoading, setSortingLoading] = useState(false);
   const [page, setPage] = useState(0);
@@ -143,26 +56,7 @@ const Dashboard: React.FC = () => {
   const [sortBy, setSortBy] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
   
-  // Calcola quante righe mostrare per pagina in base all'altezza della tabella
-  const calculateRowsPerPage = (tableHeight: number): number => {
-    // Stima l'altezza media di una riga (comprese le intestazioni e i margini)
-    const estimatedRowHeight = 65; // in pixels
-    const headerHeight = 56; // in pixels
-    
-    // Calcola quante righe possono entrare nella tabella
-    const availableHeight = tableHeight - headerHeight;
-    const estimatedRows = Math.floor(availableHeight / estimatedRowHeight);
-    
-    // Ritorna il valore più vicino tra le opzioni disponibili
-    const options = [10, 25, 50, 100];
-    return options.reduce((prev, curr) => 
-      Math.abs(curr - estimatedRows) < Math.abs(prev - estimatedRows) ? curr : prev
-    );
-  };
-
-  // Inizializza rowsPerPage con un valore calcolato in base all'altezza della tabella
-  const [rowsPerPage, setRowsPerPage] = useState<number>(calculateRowsPerPage(600));
-  
+  const [rowsPerPage, setRowsPerPage] = useState<number>(25);
   const [totalCount, setTotalCount] = useState(0);
   const [selected, setSelected] = useState<string[]>([]);
   const [totalAmount, setTotalAmount] = useState(0);
@@ -208,6 +102,13 @@ const Dashboard: React.FC = () => {
 
   // State for triggering filter reset in ProductTable
   const [resetFilters, setResetFilters] = useState(0);
+  
+  // State for controlling "Selected Only" filter
+  const [showSelectedOnly, setShowSelectedOnly] = useState(false);
+  
+  // State for tracking products not found in file upload
+  const [productsNotFound, setProductsNotFound] = useState<string[]>([]);
+  const [showNotFoundAlert, setShowNotFoundAlert] = useState(false);
 
   // Funzione per gestire l'apertura/chiusura della visualizzazione di tutti i prezzi
   const handleToggleAllPrices = (productId: string) => {
@@ -233,13 +134,27 @@ const Dashboard: React.FC = () => {
     setPriceDetailsOpen(priceDetailsOpen === productId ? null : productId);
   };
 
+  // Track if a load is already in progress to prevent duplicate API calls
+  const loadingInProgressRef = useRef(false);
+  const hasLoadedOnceRef = useRef(false);
+  
   // Load products with two-phase approach for better performance
-  const loadProducts = useCallback(async (useServerFiltering = false) => {
+  const loadProducts = useCallback(async (useServerFiltering = false, forceReload = false) => {
+    // Prevent duplicate loads (skip if already loaded and not forcing reload)
+    if (!forceReload && hasLoadedOnceRef.current) {
+      return;
+    }
+    
+    // Prevent concurrent loads
+    if (loadingInProgressRef.current) {
+      return;
+    }
+    
+    loadingInProgressRef.current = true;
     setLoading(true);
     setError(null);
     
     try {
-      
       // SINGLE API CALL: Load products with integrated supplies
       const filters = {
         searchTerm: filterValues.searchTerm
@@ -267,9 +182,11 @@ const Dashboard: React.FC = () => {
       setManufacturers(result.manufacturers || []);
       setSuppliers((result.suppliers || []).map(supplier => ({ value: supplier, label: supplier }))); // Now populated from integrated supplies
       
-      // Apply client-side filtering
-      await applyClientFilters(productsWithQuantity);
+      // Apply initial filtering immediately to avoid flash/double render
+      const initialFiltered = await applyInitialFiltering(productsWithQuantity);
+      setFilteredProducts(initialFiltered);
       
+      hasLoadedOnceRef.current = true; // Mark that we've loaded at least once
       setUsingMockData(false);
       setLoading(false);
       
@@ -293,13 +210,98 @@ const Dashboard: React.FC = () => {
       setSuppliers([]);
     } finally {
       setLoading(false);
+      loadingInProgressRef.current = false;
+      // Don't set hasLoadedOnceRef to false on error - we still attempted the load
     }
-  }, [filterValues.searchTerm]); // Keep minimal dependencies to avoid loops
+  }, [filterValues.searchTerm, isAdmin]); // Keep minimal dependencies to avoid loops
   
   // Initial load of products (only on mount)
   useEffect(() => {
     loadProducts(true);
   }, []); // Empty dependency array to run only on mount
+  
+  // Apply initial filtering (SYNCHRONOUS - returns filtered products)
+  const applyInitialFiltering = async (productsList: ProductWithQuantity[]): Promise<ProductWithQuantity[]> => {
+    return new Promise<ProductWithQuantity[]>((resolve) => {
+      setTimeout(() => {
+        try {
+          let filtered = [...productsList];
+
+          // Apply search filter
+          if (filterValues.searchTerm) {
+            const term = filterValues.searchTerm.toLowerCase();
+            filtered = filtered.filter(product => 
+              product.name.toLowerCase().includes(term) || 
+              product.ean.includes(term) || 
+              product.minsan.includes(term) ||
+              product.manufacturer.toLowerCase().includes(term)
+            );
+          }
+          
+          // Apply category filter
+          if (filterValues.category && filterValues.category !== '') {
+            const expectedDigit = getDigitFromCategoryName(filterValues.category);
+            filtered = filtered.filter(product => {
+              const firstDigit = product.minsan.charAt(0);
+              return firstDigit === expectedDigit;
+            });
+          }
+          
+          // Apply manufacturer filter
+          if (filterValues.manufacturer) {
+            if (Array.isArray(filterValues.manufacturer) && filterValues.manufacturer.length > 0) {
+              filtered = filtered.filter(product => 
+                filterValues.manufacturer.includes(product.manufacturer)
+              );
+            } else if (typeof filterValues.manufacturer === 'string' && filterValues.manufacturer !== '') {
+              filtered = filtered.filter(product => product.manufacturer === filterValues.manufacturer);
+            }
+          }
+          
+          // Apply supplier filter
+          if (filterValues.supplier) {
+            if (Array.isArray(filterValues.supplier) && filterValues.supplier.length > 0) {
+              filtered = filtered.filter(product => 
+                (product.allPrices || product.bestPrices).some(price => {
+                  const priceSupplierWithWarehouse = price.warehouse && price.entityName 
+                    ? `${price.entityName} | ${price.warehouse}`
+                    : price.supplier;
+                  return filterValues.supplier.includes(priceSupplierWithWarehouse);
+                })
+              );
+            } else if (typeof filterValues.supplier === 'string' && filterValues.supplier !== '') {
+              filtered = filtered.filter(product => 
+                (product.allPrices || product.bestPrices).some(price => {
+                  const priceSupplierWithWarehouse = price.warehouse && price.entityName 
+                    ? `${price.entityName} | ${price.warehouse}`
+                    : price.supplier;
+                  return priceSupplierWithWarehouse === filterValues.supplier;
+                })
+              );
+            }
+          }
+          
+          // Apply stock filter
+          if (filterValues.onlyAvailableStock) {
+            filtered = filtered.filter(product => {
+              const totalStock = product.bestPrices.reduce((sum, price) => sum + (price.stock || 0), 0);
+              return totalStock > 0;
+            });
+          }
+          
+          // Apply sorting if needed
+          if (sortBy && sortDirection) {
+            filtered = applySorting(filtered, sortBy, sortDirection);
+          }
+          
+          resolve(filtered);
+        } catch (error) {
+          console.error('❌ Initial filtering error:', error);
+          resolve(productsList); // Return original on error
+        }
+      }, 10);
+    });
+  };
   
   // Apply client-side filters to products (ASYNC - NON-BLOCKING)
   const applyClientFilters = useCallback(async (productsList: ProductWithQuantity[]) => {
@@ -325,8 +327,6 @@ const Dashboard: React.FC = () => {
           
           // Apply category filter - now based on MINSAN first digit
           if (filterValues.category && filterValues.category !== '') {
-            const beforeCount = filtered.length;
-            
             // Single category selection - compare first digit of MINSAN
             const expectedDigit = getDigitFromCategoryName(filterValues.category);
             
@@ -381,17 +381,9 @@ const Dashboard: React.FC = () => {
           
           // Apply stock filter - show only products with stock > 0 (if enabled)
           if (filterValues.onlyAvailableStock) {
-            const beforeCount = filtered.length;
-            
             filtered = filtered.filter(product => {
               const totalStock = product.bestPrices.reduce((sum, price) => sum + (price.stock || 0), 0);
-              const hasStock = totalStock > 0;
-              
-              // Debug logging for first few products
-              if (beforeCount <= 5) {
-              }
-              
-              return hasStock;
+              return totalStock > 0;
             });
             
           }
@@ -488,22 +480,10 @@ const Dashboard: React.FC = () => {
     });
   }, []);
   
-  // Handle sorting column click (ASYNC - NON-BLOCKING)
-  const handleSort = async (column: string, direction: SortDirection) => {
-    setSortBy(column);
-    setSortDirection(direction);
-    
-    // Re-apply sorting to filtered products asynchronously
-    if (direction) {
-      const sorted = await applySortingAsync(filteredProducts, column, direction);
-      setFilteredProducts(sorted);
-    }
-  };
-  
   // Handle quantity change for a product
   const handleQuantityChange = (id: string, quantity: number) => {
-    // Update quantity
-    const updatedProducts = products.map(product => {
+    // Update both products and filteredProducts in a single batch
+    setProducts(prevProducts => prevProducts.map(product => {
       if (product.id === id) {
         // Calculate average price if quantity > 0
         let averagePrice = null;
@@ -518,12 +498,9 @@ const Dashboard: React.FC = () => {
         };
       }
       return product;
-    });
+    }));
     
-    setProducts(updatedProducts);
-    
-    // Also update filtered products
-    const updatedFilteredProducts = filteredProducts.map(product => {
+    setFilteredProducts(prevFiltered => prevFiltered.map(product => {
       if (product.id === id) {
         // Calculate average price if quantity > 0
         let averagePrice = null;
@@ -538,9 +515,7 @@ const Dashboard: React.FC = () => {
         };
       }
       return product;
-    });
-    
-    setFilteredProducts(updatedFilteredProducts);
+    }));
     
     // If quantity is set to 0, unselect the product
     if (quantity === 0) {
@@ -561,9 +536,22 @@ const Dashboard: React.FC = () => {
     [applyClientFilters]
   );
 
+  // Track previous filter values to detect actual filter changes
+  const prevFilterValuesRef = useRef(filterValues);
+  
   // Re-filter when filters change (client-side only, no more API calls)
   useEffect(() => {
-    if (products.length > 0) {
+    // Skip if this is the initial load (filtering already done in loadProducts)
+    if (!hasLoadedOnceRef.current) {
+      return;
+    }
+    
+    // Check if filterValues actually changed
+    const filterChanged = JSON.stringify(filterValues) !== JSON.stringify(prevFilterValuesRef.current);
+    
+    // Only apply filters if filter values actually changed
+    if (products.length > 0 && filterChanged) {
+      prevFilterValuesRef.current = filterValues;
       // Use debounced version to prevent excessive filtering
       debouncedApplyFilters(products);
     }
@@ -572,7 +560,7 @@ const Dashboard: React.FC = () => {
     return () => {
       debouncedApplyFilters.cancel();
     };
-  }, [products, filterValues, debouncedApplyFilters]);
+  }, [products.length, filterValues, debouncedApplyFilters]);
   
   // Calculate total amount whenever selection changes or product quantities change
   useEffect(() => {
@@ -587,31 +575,7 @@ const Dashboard: React.FC = () => {
       setTotalAmount(total);
   }, [selected, filteredProducts]);
   
-  // Pagination handlers (client-side only, no API calls)
-  const handleChangePage = (event: unknown, newPage: number) => {
-    setPage(newPage);
-    // No API call needed - all data is already loaded
-  };
-
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-    // No API call needed - all data is already loaded
-  };
-  
   // Select/deselect handlers
-  const handleSelectAllClick = (event: React.ChangeEvent<HTMLInputElement>) => {
-      // Only select products with quantity > 0
-    if (event.target.checked) {
-      const newSelected = filteredProducts
-        .filter(product => product.quantity > 0)
-        .map(product => product.id);
-      setSelected(newSelected);
-      return;
-    }
-    setSelected([]);
-  };
-
   const handleSelectClick = (event: React.MouseEvent<unknown>, id: string) => {
     const product = filteredProducts.find(p => p.id === id);
     
@@ -635,12 +599,6 @@ const Dashboard: React.FC = () => {
   // Handle filter changes from ProductFilter component
   const handleFilterChange = (newValues: any) => {
     setFilterValues(newValues);
-  };
-  
-  // Apply filters when the Apply button is clicked (now client-side only)
-  const handleApplyFilters = () => {
-    // No API call needed - filtering is now automatic via useEffect
-    // The useEffect will handle re-filtering when filterValues change
   };
   
   // Create ODA
@@ -766,6 +724,9 @@ const Dashboard: React.FC = () => {
     setError(null);
     
     try {
+      // Reset hasLoadedOnce flag so initial filtering happens again
+      hasLoadedOnceRef.current = false;
+      
       // Reset filter values to default state
       setFilterValues({
         searchTerm: '',
@@ -793,8 +754,13 @@ const Dashboard: React.FC = () => {
       // Trigger ProductTable filter reset
       setResetFilters(prev => prev + 1);
       
-      // Reload products from API
-      await loadProducts(true);
+      // Reset "Selected Only" filter and clear not found alert
+      setShowSelectedOnly(false);
+      setShowNotFoundAlert(false);
+      setProductsNotFound([]);
+      
+      // Reload products from API with forceReload flag
+      await loadProducts(true, true);
       
       // Show confirmation toast
       showToast('Prodotti aggiornati e filtri resettati', 'success');
@@ -951,7 +917,8 @@ const Dashboard: React.FC = () => {
       throw new Error('No data found in the file or the file is empty');
     }
     
-    // Debug all our static products for comparison
+    // Track products not found
+    const notFoundProducts: string[] = [];
     
     // The matching logic starts here
     const matchedProductIds = new Set<string>();
@@ -1114,6 +1081,24 @@ const Dashboard: React.FC = () => {
           products[productIndex] = updatedProduct;
         }
       } else {
+        // Product not found - track it with all available info
+        let productIdentifier = '';
+        if (ean && minsan && name) {
+          productIdentifier = `${name} (EAN: ${ean}, MINSAN: ${minsan})`;
+        } else if (ean && name) {
+          productIdentifier = `${name} (EAN: ${ean})`;
+        } else if (minsan && name) {
+          productIdentifier = `${name} (MINSAN: ${minsan})`;
+        } else if (ean) {
+          productIdentifier = `EAN: ${ean}`;
+        } else if (minsan) {
+          productIdentifier = `MINSAN: ${minsan}`;
+        } else if (name) {
+          productIdentifier = name;
+        } else {
+          productIdentifier = `Row ${index + 1}`;
+        }
+        notFoundProducts.push(productIdentifier);
       }
     });
     
@@ -1132,12 +1117,28 @@ const Dashboard: React.FC = () => {
       
       setSelected(productsToSelect);
       
+      // Enable "Selected Only" filter and disable "In Stock Only" to show all matched products
+      setShowSelectedOnly(true);
+      setFilterValues(prev => ({
+        ...prev,
+        onlyAvailableStock: false
+      }));
+      
+      // Store products not found and show alert if any
+      if (notFoundProducts.length > 0) {
+        setProductsNotFound(notFoundProducts);
+        setShowNotFoundAlert(true);
+      } else {
+        setProductsNotFound([]);
+        setShowNotFoundAlert(false);
+      }
+      
       // Reset pagination to show all matched products
       setPage(0);
       
       showToast(`Found and updated ${matchedProductIds.size} products from your file`, 'success');
     } else {
-      throw new Error('No matching products found. Please check product codes or names. Our system has 4 products: ALVITA GINOCCHIERA, BIODERMA ATODERM, ZERODOL, and ENTEROGERMINA.');
+      throw new Error('No matching products found. Please check product codes or names.');
     }
   };
 
@@ -1180,8 +1181,10 @@ const Dashboard: React.FC = () => {
   // Handle successful stock upload - refresh products
   const handleStockUploadSuccess = () => {
     showToast('Stock data uploaded successfully!', 'success');
-    // Refresh products to show updated stock levels
-    loadProducts();
+    // Reset hasLoadedOnce flag so initial filtering happens again
+    hasLoadedOnceRef.current = false;
+    // Refresh products to show updated stock levels (force reload)
+    loadProducts(true, true);
   };
 
   // Funzione per aggiungere un nuovo prodotto
@@ -1368,6 +1371,46 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Alert for products not found in file upload */}
+      {showNotFoundAlert && productsNotFound.length > 0 && (
+        <div className="mb-4 bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-500 dark:border-amber-400 p-4 rounded-md">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-center mb-2">
+                <svg className="w-5 h-5 text-amber-600 dark:text-amber-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                  {productsNotFound.length} {productsNotFound.length === 1 ? 'product' : 'products'} not found in platform
+                </h3>
+              </div>
+              <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
+                The following products from your file are not tracked in our system:
+              </p>
+              <div className="bg-white dark:bg-dark-bg-tertiary rounded-md p-3 border border-amber-200 dark:border-amber-800 max-h-48 overflow-y-auto">
+                <ul className="text-sm text-gray-700 dark:text-dark-text-primary space-y-1">
+                  {productsNotFound.map((product, index) => (
+                    <li key={index} className="flex items-start">
+                      <span className="text-amber-500 mr-2">•</span>
+                      <span className="font-mono text-xs">{product}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowNotFoundAlert(false)}
+              className="ml-4 text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 transition-colors"
+              aria-label="Close alert"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ProductTable component or API Error Message */}
       {error === 'API_ERROR' ? (
         <ApiErrorMessage
@@ -1412,6 +1455,8 @@ const Dashboard: React.FC = () => {
           onRefresh={handleRefresh}
           filterValues={filterValues}
           onFilterChange={setFilterValues}
+          showSelectedOnly={showSelectedOnly}
+          onShowSelectedOnlyChange={setShowSelectedOnly}
         />
       )}
       

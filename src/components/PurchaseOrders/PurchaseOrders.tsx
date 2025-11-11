@@ -3,9 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
 import { SidebarContext } from '../../contexts/SidebarContext';
 
-// Import Tooltip component from ProductTable
-import { Tooltip } from '../Dashboard/ProductTable';
-
 // Import order data from mock data file
 import { 
   mockOrders, 
@@ -20,46 +17,6 @@ import {
 import CounterOfferModal from '../common/molecules/CounterOfferModal';
 import PickingPreferencesModal from './PickingPreferencesModal';
 import PickingNotificationModal from './PickingNotificationModal';
-
-// Dati dei prodotti che simulano quelli della dashboard
-const DASHBOARD_PRODUCTS = [
-  {
-    id: 'P001',
-    code: 'ALVG-001',
-    name: 'ALVITA GINOCCHIERA',
-    price: 22.50
-  },
-  {
-    id: 'P002',
-    code: 'BIOD-002',
-    name: 'BIODERMA ATODERM',
-    price: 15.80
-  },
-  {
-    id: 'P003',
-    code: 'ZERO-003',
-    name: 'ZERODOL GEL',
-    price: 12.40
-  },
-  {
-    id: 'P004',
-    code: 'ENTG-004',
-    name: 'ENTEROGERMINA 2MLD',
-    price: 9.90
-  },
-  {
-    id: 'P005',
-    code: 'OMEG-005',
-    name: 'OMEGA 3 PLUS',
-    price: 18.70
-  },
-  {
-    id: 'P006',
-    code: 'VITC-006',
-    name: 'VITAMINA C 1000MG',
-    price: 11.25
-  }
-];
 
 const PurchaseOrders: React.FC = () => {
   const { showToast } = useToast();
@@ -163,32 +120,12 @@ const PurchaseOrders: React.FC = () => {
   // Handle item selection
   const isSelected = (id: string) => selected.includes(id);
 
-  // Toggle selection
-  const handleSelect = (id: string) => {
-    const selectedIndex = selected.indexOf(id);
-    let newSelected: string[] = [];
-
-    if (selectedIndex === -1) {
-      // Add to selection
-      newSelected = [...selected, id];
-    } else {
-      // Remove from selection
-      newSelected = selected.filter(selectedId => selectedId !== id);
-    }
-
-    setSelected(newSelected);
-  };
-
   // Action handlers
   const handleReorder = (id: string) => showToast(`Reordering order ${id}`, 'info');
   const handleEdit = (id: string) => showToast(`Editing order ${id}`, 'info');
-  const handleDelete = (id: string) => showToast(`Order ${id} has been deleted`, 'success');
   const handleTrack = (id: string) => showToast(`Tracking information for order ${id}`, 'info');
   const handleFollowUp = (id: string) => showToast(`Follow up email sent for order ${id}`, 'success');
   const handleSubmit = (id: string) => showToast(`Draft order ${id} submitted for approval`, 'success');
-  const handleContinueEditing = (id: string) => showToast(`Continuing to edit order ${id}`, 'info');
-  const handlePrintOrder = () => showToast('Printing order...', 'info');
-  const handleDownloadOrder = () => showToast('Order downloaded as PDF', 'success');
 
   // Counter offer handlers
   const handleViewCounterOffer = (order: OrderWithDetails) => {

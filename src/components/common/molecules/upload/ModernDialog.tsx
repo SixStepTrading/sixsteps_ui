@@ -7,7 +7,6 @@ import {
   Box,
   Typography,
   IconButton,
-  Button,
   Stepper,
   Step,
   StepLabel
