@@ -54,6 +54,9 @@ type ProductTableProps = {
     onlyAvailableStock: boolean;
   };
   onFilterChange?: (filters: any) => void;
+  // Selected Only filter control
+  showSelectedOnly?: boolean;
+  onShowSelectedOnlyChange?: (value: boolean) => void;
 };
 
 interface PriceModalProps {
@@ -214,11 +217,16 @@ const ProductTable: React.FC<ProductTableProps> = ({
   onRefresh,
   filterValues,
   onFilterChange,
+  showSelectedOnly: showSelectedOnlyProp,
+  onShowSelectedOnlyChange,
 }) => {
   const selectAllRef = React.useRef<HTMLInputElement>(null);
   const [modalProduct, setModalProduct] = useState<ProductWithQuantity | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [showSelectedOnly, setShowSelectedOnly] = useState(false);
+  // Use controlled prop if provided, otherwise use internal state
+  const [showSelectedOnlyInternal, setShowSelectedOnlyInternal] = useState(false);
+  const showSelectedOnly = showSelectedOnlyProp !== undefined ? showSelectedOnlyProp : showSelectedOnlyInternal;
+  const setShowSelectedOnly = onShowSelectedOnlyChange || setShowSelectedOnlyInternal;
   const [isSelectingAll, startSelectTransition] = useTransition();
   const { isDrawerCollapsed } = useContext(SidebarContext);
   
@@ -247,9 +255,16 @@ const ProductTable: React.FC<ProductTableProps> = ({
     { value: -1, label: 'Tutti' }, // -1 means show all
   ];
   
-  // Reset page to 0 when products change (filters applied) or items per page changes
+  // Track previous products length to detect actual filter changes (not just quantity/price updates)
+  const prevProductsLengthRef = React.useRef(products.length);
+  
+  // Reset page to 0 only when products list actually changes (not just quantity/price updates)
   useEffect(() => {
-    setCurrentPage(0);
+    // Only reset page if the number of products actually changed (filtering) or if toggle/items changed
+    if (prevProductsLengthRef.current !== products.length) {
+      setCurrentPage(0);
+      prevProductsLengthRef.current = products.length;
+    }
   }, [products.length, showSelectedOnly, itemsPerPage]);
   
   // Calculate pagination (handle "show all" case)
@@ -388,19 +403,19 @@ const ProductTable: React.FC<ProductTableProps> = ({
       : <span className="ml-1 text-blue-600">↓</span>;
   };
 
-  // Reset showSelectedOnly filter when resetFilters prop is triggered
+  // Reset showSelectedOnly filter when resetFilters prop is triggered (only if not controlled)
   useEffect(() => {
-    if (resetFilters) {
-      setShowSelectedOnly(false);
+    if (resetFilters && showSelectedOnlyProp === undefined) {
+      setShowSelectedOnlyInternal(false);
     }
-  }, [resetFilters]);
+  }, [resetFilters, showSelectedOnlyProp]);
 
-  // Auto-disable showSelectedOnly when no products are selected
+  // Auto-disable showSelectedOnly when no products are selected (only if not controlled)
   useEffect(() => {
-    if (showSelectedOnly && selected.length === 0) {
-      setShowSelectedOnly(false);
+    if (showSelectedOnly && selected.length === 0 && showSelectedOnlyProp === undefined) {
+      setShowSelectedOnlyInternal(false);
     }
-  }, [selected.length, showSelectedOnly]);
+  }, [selected.length, showSelectedOnly, showSelectedOnlyProp]);
 
   return (
     <div className="w-full flex flex-col gap-1 mb-8">

@@ -102,6 +102,13 @@ const Dashboard: React.FC = () => {
 
   // State for triggering filter reset in ProductTable
   const [resetFilters, setResetFilters] = useState(0);
+  
+  // State for controlling "Selected Only" filter
+  const [showSelectedOnly, setShowSelectedOnly] = useState(false);
+  
+  // State for tracking products not found in file upload
+  const [productsNotFound, setProductsNotFound] = useState<string[]>([]);
+  const [showNotFoundAlert, setShowNotFoundAlert] = useState(false);
 
   // Funzione per gestire l'apertura/chiusura della visualizzazione di tutti i prezzi
   const handleToggleAllPrices = (productId: string) => {
@@ -127,13 +134,27 @@ const Dashboard: React.FC = () => {
     setPriceDetailsOpen(priceDetailsOpen === productId ? null : productId);
   };
 
+  // Track if a load is already in progress to prevent duplicate API calls
+  const loadingInProgressRef = useRef(false);
+  const hasLoadedOnceRef = useRef(false);
+  
   // Load products with two-phase approach for better performance
-  const loadProducts = useCallback(async (useServerFiltering = false) => {
+  const loadProducts = useCallback(async (useServerFiltering = false, forceReload = false) => {
+    // Prevent duplicate loads (skip if already loaded and not forcing reload)
+    if (!forceReload && hasLoadedOnceRef.current) {
+      return;
+    }
+    
+    // Prevent concurrent loads
+    if (loadingInProgressRef.current) {
+      return;
+    }
+    
+    loadingInProgressRef.current = true;
     setLoading(true);
     setError(null);
     
     try {
-      
       // SINGLE API CALL: Load products with integrated supplies
       const filters = {
         searchTerm: filterValues.searchTerm
@@ -161,9 +182,11 @@ const Dashboard: React.FC = () => {
       setManufacturers(result.manufacturers || []);
       setSuppliers((result.suppliers || []).map(supplier => ({ value: supplier, label: supplier }))); // Now populated from integrated supplies
       
-      // Apply client-side filtering
-      await applyClientFilters(productsWithQuantity);
+      // Apply initial filtering immediately to avoid flash/double render
+      const initialFiltered = await applyInitialFiltering(productsWithQuantity);
+      setFilteredProducts(initialFiltered);
       
+      hasLoadedOnceRef.current = true; // Mark that we've loaded at least once
       setUsingMockData(false);
       setLoading(false);
       
@@ -187,13 +210,98 @@ const Dashboard: React.FC = () => {
       setSuppliers([]);
     } finally {
       setLoading(false);
+      loadingInProgressRef.current = false;
+      // Don't set hasLoadedOnceRef to false on error - we still attempted the load
     }
-  }, [filterValues.searchTerm]); // Keep minimal dependencies to avoid loops
+  }, [filterValues.searchTerm, isAdmin]); // Keep minimal dependencies to avoid loops
   
   // Initial load of products (only on mount)
   useEffect(() => {
     loadProducts(true);
   }, []); // Empty dependency array to run only on mount
+  
+  // Apply initial filtering (SYNCHRONOUS - returns filtered products)
+  const applyInitialFiltering = async (productsList: ProductWithQuantity[]): Promise<ProductWithQuantity[]> => {
+    return new Promise<ProductWithQuantity[]>((resolve) => {
+      setTimeout(() => {
+        try {
+          let filtered = [...productsList];
+
+          // Apply search filter
+          if (filterValues.searchTerm) {
+            const term = filterValues.searchTerm.toLowerCase();
+            filtered = filtered.filter(product => 
+              product.name.toLowerCase().includes(term) || 
+              product.ean.includes(term) || 
+              product.minsan.includes(term) ||
+              product.manufacturer.toLowerCase().includes(term)
+            );
+          }
+          
+          // Apply category filter
+          if (filterValues.category && filterValues.category !== '') {
+            const expectedDigit = getDigitFromCategoryName(filterValues.category);
+            filtered = filtered.filter(product => {
+              const firstDigit = product.minsan.charAt(0);
+              return firstDigit === expectedDigit;
+            });
+          }
+          
+          // Apply manufacturer filter
+          if (filterValues.manufacturer) {
+            if (Array.isArray(filterValues.manufacturer) && filterValues.manufacturer.length > 0) {
+              filtered = filtered.filter(product => 
+                filterValues.manufacturer.includes(product.manufacturer)
+              );
+            } else if (typeof filterValues.manufacturer === 'string' && filterValues.manufacturer !== '') {
+              filtered = filtered.filter(product => product.manufacturer === filterValues.manufacturer);
+            }
+          }
+          
+          // Apply supplier filter
+          if (filterValues.supplier) {
+            if (Array.isArray(filterValues.supplier) && filterValues.supplier.length > 0) {
+              filtered = filtered.filter(product => 
+                (product.allPrices || product.bestPrices).some(price => {
+                  const priceSupplierWithWarehouse = price.warehouse && price.entityName 
+                    ? `${price.entityName} | ${price.warehouse}`
+                    : price.supplier;
+                  return filterValues.supplier.includes(priceSupplierWithWarehouse);
+                })
+              );
+            } else if (typeof filterValues.supplier === 'string' && filterValues.supplier !== '') {
+              filtered = filtered.filter(product => 
+                (product.allPrices || product.bestPrices).some(price => {
+                  const priceSupplierWithWarehouse = price.warehouse && price.entityName 
+                    ? `${price.entityName} | ${price.warehouse}`
+                    : price.supplier;
+                  return priceSupplierWithWarehouse === filterValues.supplier;
+                })
+              );
+            }
+          }
+          
+          // Apply stock filter
+          if (filterValues.onlyAvailableStock) {
+            filtered = filtered.filter(product => {
+              const totalStock = product.bestPrices.reduce((sum, price) => sum + (price.stock || 0), 0);
+              return totalStock > 0;
+            });
+          }
+          
+          // Apply sorting if needed
+          if (sortBy && sortDirection) {
+            filtered = applySorting(filtered, sortBy, sortDirection);
+          }
+          
+          resolve(filtered);
+        } catch (error) {
+          console.error('❌ Initial filtering error:', error);
+          resolve(productsList); // Return original on error
+        }
+      }, 10);
+    });
+  };
   
   // Apply client-side filters to products (ASYNC - NON-BLOCKING)
   const applyClientFilters = useCallback(async (productsList: ProductWithQuantity[]) => {
@@ -374,8 +482,8 @@ const Dashboard: React.FC = () => {
   
   // Handle quantity change for a product
   const handleQuantityChange = (id: string, quantity: number) => {
-    // Update quantity
-    const updatedProducts = products.map(product => {
+    // Update both products and filteredProducts in a single batch
+    setProducts(prevProducts => prevProducts.map(product => {
       if (product.id === id) {
         // Calculate average price if quantity > 0
         let averagePrice = null;
@@ -390,12 +498,9 @@ const Dashboard: React.FC = () => {
         };
       }
       return product;
-    });
+    }));
     
-    setProducts(updatedProducts);
-    
-    // Also update filtered products
-    const updatedFilteredProducts = filteredProducts.map(product => {
+    setFilteredProducts(prevFiltered => prevFiltered.map(product => {
       if (product.id === id) {
         // Calculate average price if quantity > 0
         let averagePrice = null;
@@ -410,9 +515,7 @@ const Dashboard: React.FC = () => {
         };
       }
       return product;
-    });
-    
-    setFilteredProducts(updatedFilteredProducts);
+    }));
     
     // If quantity is set to 0, unselect the product
     if (quantity === 0) {
@@ -433,9 +536,22 @@ const Dashboard: React.FC = () => {
     [applyClientFilters]
   );
 
+  // Track previous filter values to detect actual filter changes
+  const prevFilterValuesRef = useRef(filterValues);
+  
   // Re-filter when filters change (client-side only, no more API calls)
   useEffect(() => {
-    if (products.length > 0) {
+    // Skip if this is the initial load (filtering already done in loadProducts)
+    if (!hasLoadedOnceRef.current) {
+      return;
+    }
+    
+    // Check if filterValues actually changed
+    const filterChanged = JSON.stringify(filterValues) !== JSON.stringify(prevFilterValuesRef.current);
+    
+    // Only apply filters if filter values actually changed
+    if (products.length > 0 && filterChanged) {
+      prevFilterValuesRef.current = filterValues;
       // Use debounced version to prevent excessive filtering
       debouncedApplyFilters(products);
     }
@@ -444,7 +560,7 @@ const Dashboard: React.FC = () => {
     return () => {
       debouncedApplyFilters.cancel();
     };
-  }, [products, filterValues, debouncedApplyFilters]);
+  }, [products.length, filterValues, debouncedApplyFilters]);
   
   // Calculate total amount whenever selection changes or product quantities change
   useEffect(() => {
@@ -608,6 +724,9 @@ const Dashboard: React.FC = () => {
     setError(null);
     
     try {
+      // Reset hasLoadedOnce flag so initial filtering happens again
+      hasLoadedOnceRef.current = false;
+      
       // Reset filter values to default state
       setFilterValues({
         searchTerm: '',
@@ -635,8 +754,13 @@ const Dashboard: React.FC = () => {
       // Trigger ProductTable filter reset
       setResetFilters(prev => prev + 1);
       
-      // Reload products from API
-      await loadProducts(true);
+      // Reset "Selected Only" filter and clear not found alert
+      setShowSelectedOnly(false);
+      setShowNotFoundAlert(false);
+      setProductsNotFound([]);
+      
+      // Reload products from API with forceReload flag
+      await loadProducts(true, true);
       
       // Show confirmation toast
       showToast('Prodotti aggiornati e filtri resettati', 'success');
@@ -793,7 +917,8 @@ const Dashboard: React.FC = () => {
       throw new Error('No data found in the file or the file is empty');
     }
     
-    // Debug all our static products for comparison
+    // Track products not found
+    const notFoundProducts: string[] = [];
     
     // The matching logic starts here
     const matchedProductIds = new Set<string>();
@@ -956,6 +1081,24 @@ const Dashboard: React.FC = () => {
           products[productIndex] = updatedProduct;
         }
       } else {
+        // Product not found - track it with all available info
+        let productIdentifier = '';
+        if (ean && minsan && name) {
+          productIdentifier = `${name} (EAN: ${ean}, MINSAN: ${minsan})`;
+        } else if (ean && name) {
+          productIdentifier = `${name} (EAN: ${ean})`;
+        } else if (minsan && name) {
+          productIdentifier = `${name} (MINSAN: ${minsan})`;
+        } else if (ean) {
+          productIdentifier = `EAN: ${ean}`;
+        } else if (minsan) {
+          productIdentifier = `MINSAN: ${minsan}`;
+        } else if (name) {
+          productIdentifier = name;
+        } else {
+          productIdentifier = `Row ${index + 1}`;
+        }
+        notFoundProducts.push(productIdentifier);
       }
     });
     
@@ -974,12 +1117,28 @@ const Dashboard: React.FC = () => {
       
       setSelected(productsToSelect);
       
+      // Enable "Selected Only" filter and disable "In Stock Only" to show all matched products
+      setShowSelectedOnly(true);
+      setFilterValues(prev => ({
+        ...prev,
+        onlyAvailableStock: false
+      }));
+      
+      // Store products not found and show alert if any
+      if (notFoundProducts.length > 0) {
+        setProductsNotFound(notFoundProducts);
+        setShowNotFoundAlert(true);
+      } else {
+        setProductsNotFound([]);
+        setShowNotFoundAlert(false);
+      }
+      
       // Reset pagination to show all matched products
       setPage(0);
       
       showToast(`Found and updated ${matchedProductIds.size} products from your file`, 'success');
     } else {
-      throw new Error('No matching products found. Please check product codes or names. Our system has 4 products: ALVITA GINOCCHIERA, BIODERMA ATODERM, ZERODOL, and ENTEROGERMINA.');
+      throw new Error('No matching products found. Please check product codes or names.');
     }
   };
 
@@ -1022,8 +1181,10 @@ const Dashboard: React.FC = () => {
   // Handle successful stock upload - refresh products
   const handleStockUploadSuccess = () => {
     showToast('Stock data uploaded successfully!', 'success');
-    // Refresh products to show updated stock levels
-    loadProducts();
+    // Reset hasLoadedOnce flag so initial filtering happens again
+    hasLoadedOnceRef.current = false;
+    // Refresh products to show updated stock levels (force reload)
+    loadProducts(true, true);
   };
 
   // Funzione per aggiungere un nuovo prodotto
@@ -1210,6 +1371,46 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Alert for products not found in file upload */}
+      {showNotFoundAlert && productsNotFound.length > 0 && (
+        <div className="mb-4 bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-500 dark:border-amber-400 p-4 rounded-md">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-center mb-2">
+                <svg className="w-5 h-5 text-amber-600 dark:text-amber-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                  {productsNotFound.length} {productsNotFound.length === 1 ? 'product' : 'products'} not found in platform
+                </h3>
+              </div>
+              <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
+                The following products from your file are not tracked in our system:
+              </p>
+              <div className="bg-white dark:bg-dark-bg-tertiary rounded-md p-3 border border-amber-200 dark:border-amber-800 max-h-48 overflow-y-auto">
+                <ul className="text-sm text-gray-700 dark:text-dark-text-primary space-y-1">
+                  {productsNotFound.map((product, index) => (
+                    <li key={index} className="flex items-start">
+                      <span className="text-amber-500 mr-2">•</span>
+                      <span className="font-mono text-xs">{product}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowNotFoundAlert(false)}
+              className="ml-4 text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 transition-colors"
+              aria-label="Close alert"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ProductTable component or API Error Message */}
       {error === 'API_ERROR' ? (
         <ApiErrorMessage
@@ -1254,6 +1455,8 @@ const Dashboard: React.FC = () => {
           onRefresh={handleRefresh}
           filterValues={filterValues}
           onFilterChange={setFilterValues}
+          showSelectedOnly={showSelectedOnly}
+          onShowSelectedOnlyChange={setShowSelectedOnly}
         />
       )}
       
