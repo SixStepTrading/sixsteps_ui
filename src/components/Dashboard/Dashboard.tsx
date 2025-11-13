@@ -19,6 +19,7 @@ import { v4 as uuid } from 'uuid';
 import ProductTable from './ProductTable';
 import ApiErrorMessage from '../common/atoms/ApiErrorMessage';
 import { getAvailableCategoriesFromProducts, getDigitFromCategoryName } from '../../utils/minsanCategories';
+import MultiSelectDropdown from '../common/atoms/MultiSelectDropdown';
 
 // Icon component used in error notifications
 const ClearIcon = () => (
@@ -63,11 +64,17 @@ const Dashboard: React.FC = () => {
   const [usingMockData, setUsingMockData] = useState(false);
   
   // State for ProductFilter component
-  const [filterValues, setFilterValues] = useState({
+  const [filterValues, setFilterValues] = useState<{
+    searchTerm: string;
+    category: string | string[];
+    manufacturer: string | string[];
+    supplier: string | string[];
+    onlyAvailableStock: boolean;
+  }>({
     searchTerm: '',
-    category: '',
-    manufacturer: '',
-    supplier: '',
+    category: [], // Empty array means "All Categories" by default
+    manufacturer: [], // Empty array means "All Manufacturers" by default
+    supplier: [], // Empty array means "All Warehouses" by default
     onlyAvailableStock: true // ON BY DEFAULT - show only products with stock
   });
   
@@ -234,16 +241,28 @@ const Dashboard: React.FC = () => {
             );
           }
           
-          // Apply category filter
-          if (filterValues.category && filterValues.category !== '') {
-            const expectedDigit = getDigitFromCategoryName(filterValues.category);
-            filtered = filtered.filter(product => {
-              const firstDigit = product.minsan.charAt(0);
-              return firstDigit === expectedDigit;
-            });
+          // Apply category filter (empty array means "All Categories" - no filtering)
+          if (filterValues.category) {
+            if (Array.isArray(filterValues.category) && filterValues.category.length > 0) {
+              const categories = filterValues.category as string[];
+              filtered = filtered.filter(product => {
+                const firstDigit = product.minsan.charAt(0);
+                return categories.some((cat: string) => {
+                  const expectedDigit = getDigitFromCategoryName(cat);
+                  return firstDigit === expectedDigit;
+                });
+              });
+            } else if (typeof filterValues.category === 'string' && filterValues.category !== '') {
+              const expectedDigit = getDigitFromCategoryName(filterValues.category);
+              filtered = filtered.filter(product => {
+                const firstDigit = product.minsan.charAt(0);
+                return firstDigit === expectedDigit;
+              });
+            }
+            // If category is an empty array, don't filter (show all)
           }
           
-          // Apply manufacturer filter
+          // Apply manufacturer filter (empty array means "All Manufacturers" - no filtering)
           if (filterValues.manufacturer) {
             if (Array.isArray(filterValues.manufacturer) && filterValues.manufacturer.length > 0) {
               filtered = filtered.filter(product => 
@@ -252,9 +271,10 @@ const Dashboard: React.FC = () => {
             } else if (typeof filterValues.manufacturer === 'string' && filterValues.manufacturer !== '') {
               filtered = filtered.filter(product => product.manufacturer === filterValues.manufacturer);
             }
+            // If manufacturer is an empty array, don't filter (show all)
           }
           
-          // Apply supplier filter
+          // Apply supplier filter (empty array means "All Warehouses" - no filtering)
           if (filterValues.supplier) {
             if (Array.isArray(filterValues.supplier) && filterValues.supplier.length > 0) {
               filtered = filtered.filter(product => 
@@ -275,6 +295,7 @@ const Dashboard: React.FC = () => {
                 })
               );
             }
+            // If supplier is an empty array, don't filter (show all)
           }
           
           // Apply stock filter
@@ -321,23 +342,29 @@ const Dashboard: React.FC = () => {
             );
           }
           
-          // Apply category filter - now based on MINSAN first digit
-          if (filterValues.category && filterValues.category !== '') {
-            // Single category selection - compare first digit of MINSAN
-            const expectedDigit = getDigitFromCategoryName(filterValues.category);
-            
-            filtered = filtered.filter(product => {
-              const firstDigit = product.minsan.charAt(0);
-              const matches = firstDigit === expectedDigit;
-              if (!matches) {
-              } else {
-              }
-              return matches;
-            });
-            
+          // Apply category filter - now supporting multi-selection based on MINSAN first digit (empty array means "All Categories" - no filtering)
+          if (filterValues.category) {
+            if (Array.isArray(filterValues.category) && filterValues.category.length > 0) {
+              const categories = filterValues.category as string[];
+              filtered = filtered.filter(product => {
+                const firstDigit = product.minsan.charAt(0);
+                return categories.some((cat: string) => {
+                  const expectedDigit = getDigitFromCategoryName(cat);
+                  return firstDigit === expectedDigit;
+                });
+              });
+            } else if (typeof filterValues.category === 'string' && filterValues.category !== '') {
+              // Backward compatibility for single selection
+              const expectedDigit = getDigitFromCategoryName(filterValues.category);
+              filtered = filtered.filter(product => {
+                const firstDigit = product.minsan.charAt(0);
+                return firstDigit === expectedDigit;
+              });
+            }
+            // If category is an empty array, don't filter (show all)
           }
           
-          // Apply manufacturer filter - now supporting multi-selection
+          // Apply manufacturer filter - now supporting multi-selection (empty array means "All Manufacturers" - no filtering)
           if (filterValues.manufacturer) {
             if (Array.isArray(filterValues.manufacturer) && filterValues.manufacturer.length > 0) {
               filtered = filtered.filter(product => 
@@ -347,9 +374,10 @@ const Dashboard: React.FC = () => {
               // Backward compatibility for single selection
               filtered = filtered.filter(product => product.manufacturer === filterValues.manufacturer);
             }
+            // If manufacturer is an empty array, don't filter (show all)
           }
           
-          // Apply supplier filter - now supporting warehouse format "Entity | Warehouse"
+          // Apply supplier filter - now supporting warehouse format "Entity | Warehouse" (empty array means "All Warehouses" - no filtering)
           if (filterValues.supplier) {
             if (Array.isArray(filterValues.supplier) && filterValues.supplier.length > 0) {
               filtered = filtered.filter(product => 
@@ -373,6 +401,7 @@ const Dashboard: React.FC = () => {
                 })
               );
             }
+            // If supplier is an empty array, don't filter (show all)
           }
           
           // Apply stock filter - show only products with stock > 0 (if enabled)
@@ -726,9 +755,9 @@ const Dashboard: React.FC = () => {
       // Reset filter values to default state
       setFilterValues({
         searchTerm: '',
-        category: '',
-        manufacturer: '',
-        supplier: '',
+        category: [], // Empty array means "All Categories"
+        manufacturer: [], // Empty array means "All Manufacturers"
+        supplier: [], // Empty array means "All Warehouses"
         onlyAvailableStock: true // Keep ON BY DEFAULT even after refresh
       });
       
@@ -1289,43 +1318,34 @@ const Dashboard: React.FC = () => {
           </div>
 
           <div>
-            <select
-              className="w-full py-2 pl-3 pr-10 border border-gray-300 dark:border-dark-border-primary rounded-md leading-5 bg-white dark:bg-dark-bg-tertiary text-gray-900 dark:text-dark-text-primary focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 text-sm"
-              value={filterValues.category || ''}
-              onChange={(e) => handleFilterChange({...filterValues, category: e.target.value})}
-            >
-              <option value="">Category</option>
-              {categories.map(category => (
-                <option key={category} value={category}>{category}</option>
-              ))}
-            </select>
+            <MultiSelectDropdown
+              options={categories.map(cat => ({ value: cat, label: cat }))}
+              selectedValues={Array.isArray(filterValues.category) ? filterValues.category : (filterValues.category ? [filterValues.category] : [])}
+              onChange={(values) => handleFilterChange({...filterValues, category: values})}
+              placeholder="Category"
+              allOptionsLabel="All Categories"
+            />
           </div>
 
           <div>
-            <select
-              className="w-full py-2 pl-3 pr-10 border border-gray-300 dark:border-dark-border-primary rounded-md leading-5 bg-white dark:bg-dark-bg-tertiary text-gray-900 dark:text-dark-text-primary focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 text-sm"
-              value={filterValues.manufacturer || ''}
-              onChange={(e) => handleFilterChange({...filterValues, manufacturer: e.target.value})}
-            >
-              <option value="">Manufacturer</option>
-              {manufacturers.map(manufacturer => (
-                <option key={manufacturer} value={manufacturer}>{manufacturer}</option>
-              ))}
-            </select>
+            <MultiSelectDropdown
+              options={manufacturers.map(man => ({ value: man, label: man }))}
+              selectedValues={Array.isArray(filterValues.manufacturer) ? filterValues.manufacturer : (filterValues.manufacturer ? [filterValues.manufacturer] : [])}
+              onChange={(values) => handleFilterChange({...filterValues, manufacturer: values})}
+              placeholder="Manufacturer"
+              allOptionsLabel="All Manufacturers"
+            />
           </div>
 
           {isAdmin && (
             <div>
-              <select
-                className="w-full py-2 pl-3 pr-10 border border-gray-300 dark:border-dark-border-primary rounded-md leading-5 bg-white dark:bg-dark-bg-tertiary text-gray-900 dark:text-dark-text-primary focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 text-sm"
-                value={filterValues.supplier || ''}
-                onChange={(e) => handleFilterChange({...filterValues, supplier: e.target.value})}
-              >
-                <option value="">Supplier</option>
-                {suppliers.map(sup => (
-                  <option key={sup.value} value={sup.value}>{sup.label}</option>
-                ))}
-              </select>
+              <MultiSelectDropdown
+                options={suppliers}
+                selectedValues={Array.isArray(filterValues.supplier) ? filterValues.supplier : (filterValues.supplier ? [filterValues.supplier] : [])}
+                onChange={(values) => handleFilterChange({...filterValues, supplier: values})}
+                placeholder="Warehouses"
+                allOptionsLabel="All Warehouses"
+              />
             </div>
           )}
         </div>
