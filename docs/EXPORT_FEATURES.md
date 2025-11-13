@@ -292,3 +292,4 @@ Soluzione: Usare `;` come field separator (standard Europa)
 *Last Updated: 2025-01-05*
 *Version: 2.0.0 - Chunking & Regional Config*
 
+

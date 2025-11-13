@@ -48,9 +48,9 @@ type ProductTableProps = {
   // Filter controls
   filterValues?: {
     searchTerm: string;
-    category: string;
-    manufacturer: string;
-    supplier: string;
+    category: string | string[];
+    manufacturer: string | string[];
+    supplier: string | string[];
     onlyAvailableStock: boolean;
   };
   onFilterChange?: (filters: any) => void;
@@ -452,6 +452,9 @@ const ProductTable: React.FC<ProductTableProps> = ({
                 </div>
                 <span className="ml-3 text-sm font-medium text-gray-700 dark:text-dark-text-primary">
                   In Stock Only
+                  <span className="ml-1.5 text-[10px] font-normal text-gray-400 dark:text-dark-text-muted opacity-60">
+                    {baseFilteredProducts.length.toLocaleString()} products
+                  </span>
                 </span>
               </label>
             </div>
@@ -1135,6 +1138,9 @@ const ProductTable: React.FC<ProductTableProps> = ({
                   </div>
                   <span className="ml-3 text-sm font-medium text-gray-700 dark:text-dark-text-primary">
                     In Stock Only
+                    <span className="ml-1.5 text-[10px] font-normal text-gray-400 dark:text-dark-text-muted opacity-60">
+                      {baseFilteredProducts.length.toLocaleString()} products
+                    </span>
                   </span>
                 </label>
               </div>
