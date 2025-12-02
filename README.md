@@ -6,6 +6,7 @@ A comprehensive pharmaceutical management platform with real-time API integratio
 
 ### Frontend Infrastructure
 - **Framework**: React 19 with TypeScript
+- **Package Manager**: pnpm v9.15.0+ (faster and more efficient than npm)
 - **Styling**: Tailwind CSS 3.x with comprehensive Dark Mode support
 - **State Management**: React Context API (User, Theme, Toast, Sidebar)
 - **Routing**: React Router DOM v7 with Protected Routes
@@ -204,7 +205,9 @@ src/
 
 ## 🔧 Environment Variables
 
-Create a `.env` file in the root directory:
+### Configuration
+
+Create a `.env` file in the root directory with your configuration:
 
 ```env
 # Sixstep Core API Configuration
@@ -217,11 +220,20 @@ REACT_APP_PHARMA_API_KEY=your_api_key_here
 REACT_APP_DEBUG_MODE=false
 ```
 
+### Important Notes
+
+⚠️ **Security**: The `.env` file is automatically ignored by Git (configured in `.gitignore`). Never commit your `.env` file to the repository as it may contain sensitive credentials.
+
+- All `.env*` files are excluded from version control
+- Create your own `.env` file locally with your specific configuration
+- The `.env` file should remain in your local workspace only
+
 ## 🚀 Getting Started
 
 ### Prerequisites
-- **Node.js**: v16.0.0 or higher
-- **npm**: v8.0.0 or higher (or yarn/pnpm equivalent)
+- **Node.js**: v16.0.0 or higher (v24.11.1 recommended)
+- **pnpm**: v9.15.0 or higher (this project uses pnpm as the package manager)
+  - Install pnpm: `npm install -g pnpm`
 - **Modern Browser**: Chrome 90+, Firefox 88+, Safari 14+
 
 ### Installation
@@ -234,22 +246,28 @@ REACT_APP_DEBUG_MODE=false
 
 2. **Install dependencies**
    ```bash
-   npm install
-   # or
    pnpm install
    ```
+   
+   ⚠️ **Note**: This project uses `pnpm` as the package manager. If you don't have pnpm installed, run `npm install -g pnpm` first.
 
 3. **Environment setup**
    ```bash
+   # Create .env file (if .env.example exists)
    cp .env.example .env
+   # Or create .env manually with the configuration above
    # Edit .env with your API configuration
    ```
+   
+   ⚠️ **Note**: The `.env` file is already configured in `.gitignore` and will not be committed to the repository.
 
 4. **Start development server**
    ```bash
-   npm start
+   pnpm start
    ```
-   Access the application at [http://localhost:3000](http://localhost:3000)
+   The development server will start and automatically open your browser at [http://localhost:3000](http://localhost:3000)
+   
+   The server will automatically reload when you make changes to the code.
 
 ### First Login
 Use your Sixstep Core API credentials to login. The system will automatically:
@@ -320,24 +338,25 @@ Use your Sixstep Core API credentials to login. The system will automatically:
 
 ## 🧰 Available Scripts
 
+All scripts use `pnpm` as the package manager:
+
 ### Development
 ```bash
-npm start          # Start development server (http://localhost:3000)
-npm run build      # Create production build
-npm test           # Run test suite
-npm run test:coverage  # Run tests with coverage report
+pnpm start         # Start development server (http://localhost:3000)
+pnpm build         # Create production build
+pnpm test          # Run test suite
 ```
 
 ### Code Quality
 ```bash
-npm run lint       # ESLint code analysis
-npm run lint:fix   # Fix auto-fixable ESLint issues
+# ESLint is configured via react-scripts
+# Code formatting follows project standards
 ```
 
 ### Production
 ```bash
-npm run build      # Create optimized production build
-npm run serve      # Serve production build locally
+pnpm build         # Create optimized production build
+# The build folder contains the production-ready files
 ```
 
 ## 🎨 Design System
@@ -397,7 +416,7 @@ npm run serve      # Serve production build locally
 
 ### Production Build
 ```bash
-npm run build
+pnpm build
 ```
 
 ### Deployment Options
