@@ -29,9 +29,17 @@ const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
   
   // Special value for "All Warehouses"
   const ALL_VALUE = '__ALL__';
+  // Special value to indicate "none selected" (distinct from empty array which means "all selected" in initial state)
+  const NONE_SELECTED_VALUE = '__NONE__';
   
   // Check if "All Warehouses" is selected
-  const isAllSelected = selectedValues.length === 0 || selectedValues.includes(ALL_VALUE);
+  // "All" is selected when all options are selected OR when selectedValues is empty (default state)
+  // "All" is NOT selected when NONE_SELECTED_VALUE is present
+  const allOptionValues = options.map(opt => opt.value);
+  const isNoneSelected = selectedValues.includes(NONE_SELECTED_VALUE);
+  const areAllOptionsSelected = allOptionValues.length > 0 && 
+    allOptionValues.every(val => selectedValues.includes(val));
+  const isAllSelected = !isNoneSelected && (selectedValues.length === 0 || areAllOptionsSelected);
   
   // Filter options based on search term
   const filteredOptions = options.filter(option => 
@@ -78,21 +86,52 @@ const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
   
   const handleToggleOption = (value: string) => {
     if (value === ALL_VALUE) {
-      // If "All Warehouses" is clicked, deselect everything else
-      onChange([]);
+      // If "All Warehouses" is clicked
+      if (isAllSelected) {
+        // If "All Warehouses" is currently selected, deselect all
+        // Use NONE_SELECTED_VALUE to indicate explicit deselection
+        onChange([NONE_SELECTED_VALUE]);
+      } else {
+        // If "All Warehouses" is not selected, select all options
+        const allValues = options.map(opt => opt.value);
+        onChange(allValues);
+      }
     } else {
       // If a specific warehouse is clicked
       if (isAllSelected) {
-        // If "All Warehouses" is currently selected, deselect it and select this warehouse
-        onChange([value]);
+        // If "All Warehouses" is currently selected
+        if (selectedValues.length === 0 || selectedValues.includes(NONE_SELECTED_VALUE)) {
+          // If we're in the default state (empty array = all selected) or explicitly none selected,
+          // select only this warehouse
+          onChange([value]);
+        } else {
+          // If all options are explicitly selected, deselect this warehouse
+          const newValues = selectedValues.filter(v => v !== value && v !== NONE_SELECTED_VALUE);
+          onChange(newValues.length === 0 ? [NONE_SELECTED_VALUE] : newValues);
+        }
       } else {
         // Toggle the specific warehouse
-        const newValues = selectedValues.includes(value)
-          ? selectedValues.filter(v => v !== value) // Remove if already selected
-          : [...selectedValues, value]; // Add to selection
+        // Remove NONE_SELECTED_VALUE if present
+        const cleanValues = selectedValues.filter(v => v !== NONE_SELECTED_VALUE);
+        const newValues = cleanValues.includes(value)
+          ? cleanValues.filter(v => v !== value) // Remove if already selected
+          : [...cleanValues, value]; // Add to selection
         
-        // If no specific warehouses are selected, default back to "All"
-        onChange(newValues.length === 0 ? [] : newValues);
+        // Check if all options are now selected
+        const allOptionValues = options.map(opt => opt.value);
+        const allSelected = allOptionValues.length > 0 && 
+          allOptionValues.every(val => newValues.includes(val));
+        
+        // If all options are selected, select all (which will show "All Warehouses" as selected)
+        // If no options are selected, use NONE_SELECTED_VALUE to indicate explicit deselection
+        // Otherwise, use the new values
+        if (allSelected) {
+          onChange(allOptionValues);
+        } else if (newValues.length === 0) {
+          onChange([NONE_SELECTED_VALUE]);
+        } else {
+          onChange(newValues);
+        }
       }
     }
   };
@@ -183,7 +222,9 @@ const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
             
             {/* Individual warehouse options */}
             {filteredOptions.map((option) => {
-            const isSelected = selectedValues.includes(option.value) && !isAllSelected;
+            // A warehouse is selected if it's in selectedValues, but we also show it as selected when "All" is selected
+            // A warehouse is NOT selected if NONE_SELECTED_VALUE is present (unless it's explicitly in selectedValues)
+            const isSelected = !isNoneSelected && (isAllSelected || selectedValues.includes(option.value));
             
             return (
               <label
