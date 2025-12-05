@@ -1,7 +1,7 @@
 
 
 // Definizione dei tipi di dato
-export type OrderStatus = 'Draft' | 'Pending Approval' | 'Processing' | 'Approved' | 'Rejected' | 'Counter Offer' | 'Picking Required' | 'Partial Approved';
+export type OrderStatus = 'Draft' | 'Processing' | 'Pending Approval' | 'Partially Filled' | 'Executed';
 
 // Interface for supplier information
 export interface SupplierInfo {
@@ -77,6 +77,8 @@ export interface OrderProductDetail {
   totalPrice: number;
   supplierId?: string;
   supplierName?: string;
+  warehouseId?: string; // Warehouse identifier (format: "Entity | Warehouse")
+  warehouseName?: string; // Warehouse display name
   stockAvailable?: number;
   estimatedDelivery?: string;
   pickingDetails?: PickingDetails; // New field for picking information
@@ -442,115 +444,159 @@ export const ORDER_ADDITIONAL_INFO: Record<string, OrderAdditionalInfo> = {
 };
 
 // Mock orders data
+// Mock orders data - 2 orders per status (10 total)
 export const MOCK_ORDERS: OrderWithDetails[] = [
+  // DRAFT - 2 orders
   {
-    id: 'ODA-2587',
-    createdOn: 'May 8, 2025',
-    totalProducts: 128,
-    items: 895,
-    amount: 124580.80,
-    status: 'Approved',
-    deliveryStatus: 'Delivered',
-    deliveryDate: 'May 15, 2025',
-    suppliers: [MOCK_SUPPLIERS[0], MOCK_SUPPLIERS[1]],
-    priority: 'Medium',
-    orderType: 'Standard'
-  },
-  {
-    id: 'ODA-2590',
-    createdOn: 'May 10, 2025',
-    totalProducts: 95,
-    items: 650,
-    amount: 95000.00,
-    status: 'Counter Offer',
-    estimatedDelivery: 'Pending response',
-    counterOffer: MOCK_COUNTER_OFFERS['ODA-2590'],
-    suppliers: [MOCK_SUPPLIERS[0]],
-    priority: 'High',
-    orderType: 'Bulk'
-  },
-  {
-    id: 'ODA-2591',
-    createdOn: 'May 9, 2025',
-    totalProducts: 156,
-    items: 1200,
-    amount: 156000.00,
-    status: 'Counter Offer',
-    estimatedDelivery: 'Pending response',
-    counterOffer: MOCK_COUNTER_OFFERS['ODA-2591'],
-    suppliers: [MOCK_SUPPLIERS[1], MOCK_SUPPLIERS[2]],
-    priority: 'High',
-    orderType: 'Express'
-  },
-  {
-    id: 'ODA-2586',
-    createdOn: 'May 7, 2025',
-    totalProducts: 215,
-    items: 1452,
-    amount: 184550.50,
-    status: 'Pending Approval',
-    estimatedDelivery: 'Awaiting approval',
-    suppliers: [MOCK_SUPPLIERS[1]],
-    priority: 'Medium',
-    orderType: 'Standard'
-  },
-  {
-    id: 'ODA-2585',
-    createdOn: 'May 6, 2025',
-    totalProducts: 142,
-    items: 1037,
-    amount: 189230.30,
-    status: 'Processing',
-    estimatedDelivery: 'May 20, 2025',
-    suppliers: [MOCK_SUPPLIERS[2], MOCK_SUPPLIERS[3]],
-    priority: 'Low',
-    orderType: 'Standard'
-  },
-  {
-    id: 'ODA-2584-DRAFT',
-    createdOn: 'May 5, 2025',
-    totalProducts: 108,
-    items: 722,
-    amount: 132075.75,
+    id: 'ODA-DRAFT-001',
+    createdOn: 'May 15, 2025',
+    totalProducts: 5,
+    items: 45,
+    amount: 1250.50,
     status: 'Draft',
-    completion: 60,
+    completion: 75,
     priority: 'Medium',
-    orderType: 'Standard'
+    orderType: 'Standard',
+    buyerId: 'BUY-001',
+    buyerName: 'Farmacia Central'
   },
   {
-    id: 'ODA-2583-DRAFT',
-    createdOn: 'May 3, 2025',
-    totalProducts: 90,
-    items: 490,
-    amount: 100000.00,
+    id: 'ODA-DRAFT-002',
+    createdOn: 'May 14, 2025',
+    totalProducts: 3,
+    items: 28,
+    amount: 890.30,
     status: 'Draft',
-    completion: 10,
+    completion: 45,
     priority: 'Low',
-    orderType: 'Standard'
+    orderType: 'Standard',
+    buyerId: 'BUY-002',
+    buyerName: 'Farmacia San Marco'
   },
+  // PROCESSING - 2 orders
   {
-    id: 'ODA-2592',
-    createdOn: 'May 11, 2025',
-    totalProducts: 325,
-    items: 425,
-    amount: 4776.50,
-    status: 'Pending Approval',
-    estimatedDelivery: 'Awaiting approval',
-    suppliers: [MOCK_SUPPLIERS[0], MOCK_SUPPLIERS[1], MOCK_SUPPLIERS[3]],
-    priority: 'High',
-    orderType: 'Bulk'
-  },
-  {
-    id: 'ODA-2593',
-    createdOn: 'May 12, 2025',
-    totalProducts: 395,
-    items: 395,
-    amount: 5142.75,
+    id: 'ODA-PROC-001',
+    createdOn: 'May 13, 2025',
+    totalProducts: 8,
+    items: 120,
+    amount: 3450.80,
     status: 'Processing',
     estimatedDelivery: 'May 25, 2025',
-    suppliers: [MOCK_SUPPLIERS[0], MOCK_SUPPLIERS[1], MOCK_SUPPLIERS[2], MOCK_SUPPLIERS[3]],
+    suppliers: [MOCK_SUPPLIERS[0], MOCK_SUPPLIERS[1]],
     priority: 'Medium',
-    orderType: 'Standard'
+    orderType: 'Standard',
+    buyerId: 'BUY-001',
+    buyerName: 'Farmacia Central'
+  },
+  {
+    id: 'ODA-PROC-002',
+    createdOn: 'May 12, 2025',
+    totalProducts: 6,
+    items: 95,
+    amount: 2780.40,
+    status: 'Processing',
+    estimatedDelivery: 'May 24, 2025',
+    suppliers: [MOCK_SUPPLIERS[2]],
+    priority: 'High',
+    orderType: 'Express',
+    buyerId: 'BUY-003',
+    buyerName: 'Farmacia Nord'
+  },
+  // PENDING APPROVAL - 2 orders
+  {
+    id: 'ODA-PEND-001',
+    createdOn: 'May 11, 2025',
+    totalProducts: 10,
+    items: 180,
+    amount: 5670.90,
+    status: 'Pending Approval',
+    estimatedDelivery: 'Awaiting approval',
+    suppliers: [MOCK_SUPPLIERS[0], MOCK_SUPPLIERS[3]],
+    priority: 'High',
+    orderType: 'Bulk',
+    buyerId: 'BUY-001',
+    buyerName: 'Farmacia Central',
+    counterOffer: MOCK_COUNTER_OFFERS['ODA-2590']
+  },
+  {
+    id: 'ODA-PEND-002',
+    createdOn: 'May 10, 2025',
+    totalProducts: 7,
+    items: 145,
+    amount: 4120.60,
+    status: 'Pending Approval',
+    estimatedDelivery: 'Awaiting approval',
+    suppliers: [MOCK_SUPPLIERS[1], MOCK_SUPPLIERS[2]],
+    priority: 'Medium',
+    orderType: 'Standard',
+    buyerId: 'BUY-002',
+    buyerName: 'Farmacia San Marco',
+    pickingRequired: true,
+    buyerPreferences: MOCK_BUYER_PREFERENCES,
+    pickingNotifications: [MOCK_PICKING_NOTIFICATIONS[0]],
+    hasPartialPickingApproval: false
+  },
+  // PARTIALLY FILLED - 2 orders
+  {
+    id: 'ODA-PART-001',
+    createdOn: 'May 9, 2025',
+    totalProducts: 12,
+    items: 250,
+    amount: 7890.20,
+    status: 'Partially Filled',
+    estimatedDelivery: 'May 22, 2025',
+    suppliers: [MOCK_SUPPLIERS[0], MOCK_SUPPLIERS[1], MOCK_SUPPLIERS[2]],
+    priority: 'High',
+    orderType: 'Bulk',
+    buyerId: 'BUY-001',
+    buyerName: 'Farmacia Central',
+    hasPartialPickingApproval: true
+  },
+  {
+    id: 'ODA-PART-002',
+    createdOn: 'May 8, 2025',
+    totalProducts: 9,
+    items: 195,
+    amount: 6230.70,
+    status: 'Partially Filled',
+    estimatedDelivery: 'May 21, 2025',
+    suppliers: [MOCK_SUPPLIERS[2], MOCK_SUPPLIERS[3]],
+    priority: 'Medium',
+    orderType: 'Standard',
+    buyerId: 'BUY-003',
+    buyerName: 'Farmacia Nord',
+    hasPartialPickingApproval: true
+  },
+  // EXECUTED - 2 orders
+  {
+    id: 'ODA-EXEC-001',
+    createdOn: 'May 7, 2025',
+    totalProducts: 15,
+    items: 320,
+    amount: 12450.80,
+    status: 'Executed',
+    deliveryStatus: 'Delivered',
+    deliveryDate: 'May 14, 2025',
+    suppliers: [MOCK_SUPPLIERS[0], MOCK_SUPPLIERS[1], MOCK_SUPPLIERS[3]],
+    priority: 'Medium',
+    orderType: 'Standard',
+    buyerId: 'BUY-001',
+    buyerName: 'Farmacia Central'
+  },
+  {
+    id: 'ODA-EXEC-002',
+    createdOn: 'May 6, 2025',
+    totalProducts: 11,
+    items: 275,
+    amount: 9870.40,
+    status: 'Executed',
+    deliveryStatus: 'Delivered',
+    deliveryDate: 'May 13, 2025',
+    suppliers: [MOCK_SUPPLIERS[1], MOCK_SUPPLIERS[2]],
+    priority: 'High',
+    orderType: 'Express',
+    buyerId: 'BUY-002',
+    buyerName: 'Farmacia San Marco'
   }
 ];
 
@@ -593,7 +639,8 @@ export const getSupplierById = (supplierId: string): SupplierInfo | null => {
 export const acceptCounterOffer = (orderId: string): boolean => {
   const orderIndex = MOCK_ORDERS.findIndex(order => order.id === orderId);
   if (orderIndex !== -1 && MOCK_ORDERS[orderIndex].counterOffer) {
-    MOCK_ORDERS[orderIndex].status = 'Approved';
+    // Counter offers are handled internally, status remains as Pending Approval
+    // The backend will update status when warehouse responds
     MOCK_ORDERS[orderIndex].amount = MOCK_ORDERS[orderIndex].counterOffer!.proposedAmount;
     if (MOCK_ORDERS[orderIndex].counterOffer) {
       MOCK_ORDERS[orderIndex].counterOffer!.status = 'Accepted';
@@ -607,7 +654,8 @@ export const acceptCounterOffer = (orderId: string): boolean => {
 export const rejectCounterOffer = (orderId: string): boolean => {
   const orderIndex = MOCK_ORDERS.findIndex(order => order.id === orderId);
   if (orderIndex !== -1 && MOCK_ORDERS[orderIndex].counterOffer) {
-    MOCK_ORDERS[orderIndex].status = 'Rejected';
+    // Rejection doesn't change order status, it remains in current state
+    // The backend will handle status updates when warehouse responds
     if (MOCK_ORDERS[orderIndex].counterOffer) {
       MOCK_ORDERS[orderIndex].counterOffer!.status = 'Rejected';
     }
@@ -626,7 +674,7 @@ export const generateMockOrders = (count: number = 20): OrderWithDetails[] => {
   
   // Statuses for new orders
   const statuses: OrderStatus[] = [
-    'Approved', 'Pending Approval', 'Processing', 'Draft'
+    'Draft', 'Processing', 'Pending Approval', 'Partially Filled', 'Executed'
   ];
   
   // Generate additional orders
@@ -656,11 +704,19 @@ export const generateMockOrders = (count: number = 20): OrderWithDetails[] => {
     };
     
     // Add status-specific fields
-    if (status === 'Approved') {
+    if (status === 'Executed') {
       const deliveryDate = new Date(date);
       deliveryDate.setDate(date.getDate() + Math.floor(Math.random() * 14) + 1);
       newOrder.deliveryStatus = Math.random() > 0.5 ? 'Delivered' : 'In Transit';
       newOrder.deliveryDate = deliveryDate.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    } else if (status === 'Partially Filled') {
+      const estimatedDate = new Date(date);
+      estimatedDate.setDate(date.getDate() + Math.floor(Math.random() * 14) + 7);
+      newOrder.estimatedDelivery = estimatedDate.toLocaleDateString('en-US', { 
         year: 'numeric', 
         month: 'short', 
         day: 'numeric' 
@@ -726,7 +782,7 @@ const ENHANCED_PICKING_ORDERS: OrderWithDetails[] = [
   {
     id: 'ODA-2593',
     createdOn: 'May 12, 2025',
-    status: 'Picking Required',
+    status: 'Pending Approval',
     totalProducts: 3,
     items: 150,
     amount: 3875.00,
@@ -743,7 +799,7 @@ const ENHANCED_PICKING_ORDERS: OrderWithDetails[] = [
   {
     id: 'ODA-2594',
     createdOn: 'May 12, 2025',
-    status: 'Counter Offer',
+    status: 'Pending Approval',
     totalProducts: 4,
     items: 220,
     amount: 4250.00,
@@ -812,10 +868,11 @@ export const processPickingDecision = (orderId: string, decision: 'accept' | 're
   const orderIndex = mockOrders.findIndex(order => order.id === orderId);
   if (orderIndex !== -1) {
     if (decision === 'accept') {
-      mockOrders[orderIndex].status = 'Partial Approved';
+      mockOrders[orderIndex].status = 'Partially Filled';
       mockOrders[orderIndex].hasPartialPickingApproval = true;
     } else if (decision === 'reject') {
-      mockOrders[orderIndex].status = 'Rejected';
+      // Rejection doesn't change order status, order remains in current state
+      // Status will be updated by backend when warehouse responds
     }
     return true;
   }

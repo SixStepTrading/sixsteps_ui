@@ -38,9 +38,10 @@ const PurchaseOrders: React.FC = () => {
   // Available filter options
   const [statuses] = useState([
     'Draft',
-    'Pending Approval',
     'Processing',
-    'Approved'
+    'Pending Approval',
+    'Partially Filled',
+    'Executed'
   ]);
 
   const [dateRanges] = useState([
@@ -139,10 +140,11 @@ const PurchaseOrders: React.FC = () => {
     try {
       const success = acceptCounterOffer(orderId);
       if (success) {
-        // Update local state
+        // Update local state - counter offers are now internal, status remains as is
+        // The backend will handle status updates when warehouse responds
         const updatedOrders = orders.map(order => 
           order.id === orderId 
-            ? { ...order, status: 'Approved' as any, amount: order.counterOffer?.proposedAmount || order.amount }
+            ? { ...order, amount: order.counterOffer?.proposedAmount || order.amount }
             : order
         );
         setOrders(updatedOrders);
@@ -159,10 +161,10 @@ const PurchaseOrders: React.FC = () => {
     try {
       const success = rejectCounterOffer(orderId);
       if (success) {
-        // Update local state
+        // Update local state - rejection doesn't change status, order remains in current state
         const updatedOrders = orders.map(order => 
           order.id === orderId 
-            ? { ...order, status: 'Rejected' as any }
+            ? { ...order }
             : order
         );
         setOrders(updatedOrders);
@@ -198,11 +200,15 @@ const PurchaseOrders: React.FC = () => {
         if (order.id === selectedPickingNotification.orderId) {
           let newStatus: OrderWithDetails['status'] = order.status;
           if (decision === 'accept') {
-            newStatus = 'Partial Approved';
+            // If accepting partial picking, status becomes Partially Filled
+            newStatus = 'Partially Filled';
           } else if (decision === 'reject') {
-            newStatus = 'Rejected';
+            // Rejection doesn't change status, order remains in current state
+            // Status will be updated by backend when warehouse responds
+            newStatus = order.status;
           } else if (decision === 'request_alternatives') {
-            newStatus = 'Counter Offer';
+            // Requesting alternatives keeps order in Pending Approval
+            newStatus = 'Pending Approval';
           }
           return { ...order, status: newStatus, hasPartialPickingApproval: decision === 'accept' };
         }
@@ -229,20 +235,14 @@ const PurchaseOrders: React.FC = () => {
     switch (status) {
       case 'Draft':
         return 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300';
-      case 'Pending Approval':
-        return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300';
       case 'Processing':
         return 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300';
-      case 'Approved':
-        return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300';
-      case 'Rejected':
-        return 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300';
-      case 'Counter Offer':
-        return 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300';
-      case 'Picking Required':
+      case 'Pending Approval':
+        return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300';
+      case 'Partially Filled':
         return 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300';
-      case 'Partial Approved':
-        return 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300';
+      case 'Executed':
+        return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300';
       default:
         return 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300';
     }
@@ -556,7 +556,7 @@ const PurchaseOrders: React.FC = () => {
                         View Details
                       </button>
                       
-                      {order.status === 'Approved' && (
+                      {order.status === 'Executed' && (
                         <button
                           className="px-2 py-1 text-xs font-medium text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 rounded hover:bg-green-200 dark:hover:bg-green-900/50"
                           onClick={(e) => {
@@ -581,8 +581,15 @@ const PurchaseOrders: React.FC = () => {
                       )}
                       
                       {order.status === 'Processing' && (
+                        // Processing is a stalling state, no actions available
+                        <span className="px-2 py-1 text-xs text-gray-500 dark:text-gray-400 italic">
+                          Awaiting processing
+                        </span>
+                      )}
+                      
+                      {order.status === 'Partially Filled' && (
                         <button
-                          className="px-2 py-1 text-xs font-medium text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/30 rounded hover:bg-blue-200 dark:hover:bg-blue-900/50"
+                          className="px-2 py-1 text-xs font-medium text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-900/30 rounded hover:bg-orange-200 dark:hover:bg-orange-900/50"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleTrack(order.id);
@@ -592,19 +599,8 @@ const PurchaseOrders: React.FC = () => {
                         </button>
                       )}
                       
-                      {order.status === 'Counter Offer' && (
-                        <button
-                          className="px-2 py-1 text-xs font-medium text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/30 rounded hover:bg-purple-200 dark:hover:bg-purple-900/50"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleViewCounterOffer(order);
-                          }}
-                        >
-                          View Offer
-                        </button>
-                      )}
-                      
-                      {order.status === 'Picking Required' && (
+                      {/* Show picking notification button if there are unacknowledged notifications */}
+                      {pickingNotifications.some(n => n.orderId === order.id && !n.acknowledged) && (
                         <button
                           className="px-2 py-1 text-xs font-medium text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-900/30 rounded hover:bg-orange-200 dark:hover:bg-orange-900/50"
                           onClick={(e) => {
@@ -614,18 +610,6 @@ const PurchaseOrders: React.FC = () => {
                           }}
                         >
                           Review Picking
-                        </button>
-                      )}
-                      
-                      {order.status === 'Partial Approved' && (
-                        <button
-                          className="px-2 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/30 rounded hover:bg-emerald-200 dark:hover:bg-emerald-900/50"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleTrack(order.id);
-                          }}
-                        >
-                          Track Partial
                         </button>
                       )}
                       

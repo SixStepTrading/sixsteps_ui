@@ -120,18 +120,16 @@ const OrderDetailPage: React.FC = () => {
 
   const getStatusClass = (status: string) => {
     switch (status) {
-      case 'Approved':
-        return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300';
-      case 'Pending Approval':
-        return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300';
-      case 'Processing':
-        return 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300';
-      case 'Counter Offer':
-        return 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300';
-      case 'Rejected':
-        return 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300';
       case 'Draft':
         return 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300';
+      case 'Processing':
+        return 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300';
+      case 'Pending Approval':
+        return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300';
+      case 'Partially Filled':
+        return 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300';
+      case 'Executed':
+        return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300';
       default:
         return 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400';
     }
@@ -152,15 +150,17 @@ const OrderDetailPage: React.FC = () => {
     }
   };
 
-  const groupProductsBySupplier = (products: OrderProductDetail[]) => {
+  // Group products by warehouse (for Admin view) or keep flat (for Buyer view)
+  const groupProductsByWarehouse = (products: OrderProductDetail[]) => {
     const grouped: Record<string, OrderProductDetail[]> = {};
     
     products.forEach(product => {
-      const supplierId = product.supplierId || 'unknown';
-      if (!grouped[supplierId]) {
-        grouped[supplierId] = [];
+      // Use warehouseId if available, otherwise fallback to supplierId
+      const warehouseId = product.warehouseId || product.supplierId || 'unknown';
+      if (!grouped[warehouseId]) {
+        grouped[warehouseId] = [];
       }
-      grouped[supplierId].push(product);
+      grouped[warehouseId].push(product);
     });
     
     return grouped;
@@ -194,7 +194,7 @@ const OrderDetailPage: React.FC = () => {
     );
   }
 
-  const groupedProducts = groupProductsBySupplier(orderDetails.products);
+  const groupedProducts = groupProductsByWarehouse(orderDetails.products);
 
   return (
     <div className="flex-grow p-6 pb-20">
@@ -334,7 +334,7 @@ const OrderDetailPage: React.FC = () => {
               <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-dark-text-primary">Quick Actions</h2>
               <div className="space-y-3">
                 {/* Actions for regular users */}
-                {orderDetails?.status === 'Approved' && (
+                {orderDetails?.status === 'Executed' && (
                   <button
                     onClick={() => showToast('Reorder functionality coming soon', 'info')}
                     className="w-full px-4 py-2 bg-green-600 dark:bg-green-700 text-white rounded-md hover:bg-green-700 dark:hover:bg-green-800 flex items-center justify-center"
@@ -343,6 +343,18 @@ const OrderDetailPage: React.FC = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
                     Reorder
+                  </button>
+                )}
+                
+                {orderDetails?.status === 'Partially Filled' && (
+                  <button
+                    onClick={() => showToast('Tracking partial order', 'info')}
+                    className="w-full px-4 py-2 bg-orange-600 dark:bg-orange-700 text-white rounded-md hover:bg-orange-700 dark:hover:bg-orange-800 flex items-center justify-center"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Track Partial
                   </button>
                 )}
                 
@@ -371,8 +383,8 @@ const OrderDetailPage: React.FC = () => {
         </div>
       )}
 
-      {/* Counter Offer Section */}
-      {orderDetails.counterOffer && (
+      {/* Counter Offer Section - Only visible to Admin, not to regular buyers */}
+      {orderDetails.counterOffer && userRole === 'Admin' && (
         <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800/30 rounded-lg p-6 mb-8">
           <h2 className="text-lg font-semibold text-purple-900 dark:text-purple-300 mb-4">Counter Offer Details</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -396,38 +408,40 @@ const OrderDetailPage: React.FC = () => {
         </div>
       )}
 
-      {/* Products by Supplier - Admin View */}
+      {/* Products by Warehouse - Admin View */}
       {userRole === 'Admin' && (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Products by Supplier</h2>
-            <p className="text-sm text-gray-600">
-              {Object.keys(groupedProducts).length} supplier(s) involved
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary">Products by Warehouse</h2>
+            <p className="text-sm text-gray-600 dark:text-dark-text-muted">
+              {Object.keys(groupedProducts).length} warehouse(s) involved
             </p>
           </div>
 
-          {Object.entries(groupedProducts).map(([supplierId, products]) => {
-            const supplier = supplierId !== 'unknown' ? getSupplierById(supplierId) : null;
-            const isSelected = selectedSuppliers.includes(supplierId);
-            const isSending = sendingToSuppliers.includes(supplierId);
+          {Object.entries(groupedProducts).map(([warehouseId, products]) => {
+            // Get warehouse name from first product in group, or use warehouseId
+            const warehouseName = products[0]?.warehouseName || products[0]?.warehouseId || warehouseId;
+            const supplier = warehouseId !== 'unknown' ? getSupplierById(warehouseId) : null;
+            const isSelected = selectedSuppliers.includes(warehouseId);
+            const isSending = sendingToSuppliers.includes(warehouseId);
           
           return (
-            <div key={supplierId} className="bg-white rounded-lg shadow">
-              <div className="p-6 border-b border-gray-200">
+            <div key={warehouseId} className="bg-white dark:bg-dark-bg-card rounded-lg shadow dark:shadow-dark-md border dark:border-dark-border-primary">
+              <div className="p-6 border-b border-gray-200 dark:border-dark-border-primary">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
                     <input
                       type="checkbox"
                       checked={isSelected}
-                      onChange={() => toggleSupplierSelection(supplierId)}
-                      className="mr-3 h-4 w-4 text-blue-600 rounded border-gray-300"
+                      onChange={() => toggleSupplierSelection(warehouseId)}
+                      className="mr-3 h-4 w-4 text-blue-600 rounded border-gray-300 dark:border-dark-border-primary"
                     />
                     <div>
-                      <h3 className="text-lg font-medium">
-                        {supplier ? supplier.name : 'Unknown Supplier'}
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-dark-text-primary">
+                        {warehouseName}
                       </h3>
                       {supplier && (
-                        <div className="text-sm text-gray-600 mt-1">
+                        <div className="text-sm text-gray-600 dark:text-dark-text-muted mt-1">
                           <p>{supplier.email} • {supplier.phone}</p>
                           <p>{supplier.address}</p>
                           <div className="flex items-center mt-1">
@@ -440,25 +454,33 @@ const OrderDetailPage: React.FC = () => {
                     </div>
                   </div>
                   
-                  <button
-                    onClick={() => handleSendToSupplier(supplierId)}
-                    disabled={isSending}
-                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                  >
-                    {isSending ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                        Sending...
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                        </svg>
-                        Send Order
-                      </>
-                    )}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => showToast('Approve warehouse functionality coming soon', 'info')}
+                      className="px-4 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center text-sm"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => handleSendToSupplier(warehouseId)}
+                      disabled={isSending}
+                      className="px-4 py-2 bg-green-600 dark:bg-green-700 text-white rounded-md hover:bg-green-700 dark:hover:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center text-sm"
+                    >
+                      {isSending ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                          </svg>
+                          Send to Warehouse
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
               
@@ -466,51 +488,51 @@ const OrderDetailPage: React.FC = () => {
                 <div className="overflow-x-auto">
                   <table className="min-w-full">
                     <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-2 text-sm font-medium text-gray-600">Product</th>
-                        <th className="text-center py-2 text-sm font-medium text-gray-600">Quantity</th>
-                        <th className="text-right py-2 text-sm font-medium text-gray-600">Unit Price</th>
-                        <th className="text-right py-2 text-sm font-medium text-gray-600">Total</th>
-                        <th className="text-center py-2 text-sm font-medium text-gray-600">Stock</th>
-                        <th className="text-center py-2 text-sm font-medium text-gray-600">Delivery</th>
+                      <tr className="border-b border-gray-200 dark:border-dark-border-primary">
+                        <th className="text-left py-2 text-sm font-medium text-gray-600 dark:text-dark-text-muted">Product</th>
+                        <th className="text-center py-2 text-sm font-medium text-gray-600 dark:text-dark-text-muted">Quantity</th>
+                        <th className="text-right py-2 text-sm font-medium text-gray-600 dark:text-dark-text-muted">Unit Price</th>
+                        <th className="text-right py-2 text-sm font-medium text-gray-600 dark:text-dark-text-muted">Total</th>
+                        <th className="text-center py-2 text-sm font-medium text-gray-600 dark:text-dark-text-muted">Stock</th>
+                        <th className="text-center py-2 text-sm font-medium text-gray-600 dark:text-dark-text-muted">Delivery</th>
                         {orderDetails.status === 'Pending Approval' && (
-                          <th className="text-center py-2 text-sm font-medium text-gray-600">Actions</th>
+                          <th className="text-center py-2 text-sm font-medium text-gray-600 dark:text-dark-text-muted">Actions</th>
                         )}
                       </tr>
                     </thead>
                     <tbody>
                       {products.map((product) => (
-                        <tr key={product.id} className="border-b border-gray-100">
+                        <tr key={product.id} className="border-b border-gray-100 dark:border-dark-border-primary">
                           <td className="py-3">
                             <div>
-                              <p className="font-medium">{product.name}</p>
-                              <p className="text-sm text-gray-600">{product.code}</p>
+                              <p className="font-medium text-gray-900 dark:text-dark-text-primary">{product.name}</p>
+                              <p className="text-sm text-gray-600 dark:text-dark-text-muted">{product.code}</p>
                             </div>
                           </td>
-                          <td className="text-center py-3">{product.quantity}</td>
-                          <td className="text-right py-3">€{product.unitPrice.toFixed(2)}</td>
-                          <td className="text-right py-3 font-medium">€{product.totalPrice.toFixed(2)}</td>
+                          <td className="text-center py-3 text-gray-900 dark:text-dark-text-primary">{product.quantity}</td>
+                          <td className="text-right py-3 text-gray-900 dark:text-dark-text-primary">€{product.unitPrice.toFixed(2)}</td>
+                          <td className="text-right py-3 font-medium text-gray-900 dark:text-dark-text-primary">€{product.totalPrice.toFixed(2)}</td>
                           <td className="text-center py-3">
                             {product.stockAvailable ? (
                               <span className={`px-2 py-1 rounded-full text-xs ${
                                 product.stockAvailable >= product.quantity 
-                                  ? 'bg-green-100 text-green-800' 
-                                  : 'bg-red-100 text-red-800'
+                                  ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' 
+                                  : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
                               }`}>
                                 {product.stockAvailable}
                               </span>
                             ) : (
-                              <span className="text-gray-400">N/A</span>
+                              <span className="text-gray-400 dark:text-dark-text-disabled">N/A</span>
                             )}
                           </td>
-                          <td className="text-center py-3 text-sm text-gray-600">
+                          <td className="text-center py-3 text-sm text-gray-600 dark:text-dark-text-muted">
                             {product.estimatedDelivery || 'N/A'}
                           </td>
                           {orderDetails.status === 'Pending Approval' && (
                             <td className="text-center py-3">
                               <button
                                 onClick={() => handleEditProduct(product)}
-                                className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                                className="px-3 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
                               >
                                 Edit
                               </button>
@@ -520,9 +542,9 @@ const OrderDetailPage: React.FC = () => {
                       ))}
                     </tbody>
                     <tfoot>
-                      <tr className="border-t-2 border-gray-200">
-                        <td colSpan={3} className="py-3 font-medium">Supplier Total:</td>
-                        <td className="text-right py-3 font-semibold">
+                      <tr className="border-t-2 border-gray-200 dark:border-dark-border-primary">
+                        <td colSpan={3} className="py-3 font-medium text-gray-900 dark:text-dark-text-primary">Warehouse Total:</td>
+                        <td className="text-right py-3 font-semibold text-gray-900 dark:text-dark-text-primary">
                           €{products.reduce((sum, p) => sum + p.totalPrice, 0).toFixed(2)}
                         </td>
                         <td colSpan={orderDetails.status === 'Pending Approval' ? 3 : 2}></td>
@@ -537,56 +559,60 @@ const OrderDetailPage: React.FC = () => {
       </div>
       )}
 
-      {/* Products List - Regular User View */}
+      {/* Products List - Regular User View (No warehouse/supplier references) */}
       {userRole !== 'Admin' && (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Order Products</h2>
-            <p className="text-sm text-gray-600">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary">Order Products</h2>
+            <p className="text-sm text-gray-600 dark:text-dark-text-muted">
               {orderDetails.products.length} product(s) in this order
             </p>
           </div>
 
-          <div className="bg-white rounded-lg shadow">
+          <div className="bg-white dark:bg-dark-bg-card rounded-lg shadow dark:shadow-dark-md border dark:border-dark-border-primary">
             <div className="p-6">
               <div className="overflow-x-auto">
                 <table className="min-w-full">
                   <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-2 text-sm font-medium text-gray-600">Product</th>
-                      <th className="text-center py-2 text-sm font-medium text-gray-600">Quantity</th>
-                      <th className="text-right py-2 text-sm font-medium text-gray-600">Unit Price</th>
-                      <th className="text-right py-2 text-sm font-medium text-gray-600">Total</th>
-                      <th className="text-center py-2 text-sm font-medium text-gray-600">Status</th>
+                    <tr className="border-b border-gray-200 dark:border-dark-border-primary">
+                      <th className="text-left py-2 text-sm font-medium text-gray-600 dark:text-dark-text-muted">Product</th>
+                      <th className="text-center py-2 text-sm font-medium text-gray-600 dark:text-dark-text-muted">Quantity</th>
+                      <th className="text-right py-2 text-sm font-medium text-gray-600 dark:text-dark-text-muted">Unit Price</th>
+                      <th className="text-right py-2 text-sm font-medium text-gray-600 dark:text-dark-text-muted">Total</th>
+                      <th className="text-center py-2 text-sm font-medium text-gray-600 dark:text-dark-text-muted">Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {orderDetails.products.map((product) => (
-                      <tr key={product.id} className="border-b border-gray-100">
+                      <tr key={product.id} className="border-b border-gray-100 dark:border-dark-border-primary">
                         <td className="py-3">
                           <div>
-                            <p className="font-medium">{product.name}</p>
-                            <p className="text-sm text-gray-600">{product.code}</p>
+                            <p className="font-medium text-gray-900 dark:text-dark-text-primary">{product.name}</p>
+                            <p className="text-sm text-gray-600 dark:text-dark-text-muted">{product.code}</p>
                           </div>
                         </td>
-                        <td className="text-center py-3">{product.quantity}</td>
-                        <td className="text-right py-3">€{product.unitPrice.toFixed(2)}</td>
-                        <td className="text-right py-3 font-medium">€{product.totalPrice.toFixed(2)}</td>
+                        <td className="text-center py-3 text-gray-900 dark:text-dark-text-primary">{product.quantity}</td>
+                        <td className="text-right py-3 text-gray-900 dark:text-dark-text-primary">€{product.unitPrice.toFixed(2)}</td>
+                        <td className="text-right py-3 font-medium text-gray-900 dark:text-dark-text-primary">€{product.totalPrice.toFixed(2)}</td>
                         <td className="text-center py-3">
-                          {orderDetails.status === 'Approved' ? (
-                            <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                          {orderDetails.status === 'Executed' ? (
+                            <span className="px-2 py-1 rounded-full text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
                               Confirmed
                             </span>
+                          ) : orderDetails.status === 'Partially Filled' ? (
+                            <span className="px-2 py-1 rounded-full text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300">
+                              Partial
+                            </span>
                           ) : orderDetails.status === 'Processing' ? (
-                            <span className="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                            <span className="px-2 py-1 rounded-full text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
                               Processing
                             </span>
                           ) : orderDetails.status === 'Pending Approval' ? (
-                            <span className="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">
+                            <span className="px-2 py-1 rounded-full text-xs bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300">
                               Pending
                             </span>
                           ) : (
-                            <span className="px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800">
+                            <span className="px-2 py-1 rounded-full text-xs bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300">
                               {orderDetails.status}
                             </span>
                           )}
@@ -595,9 +621,9 @@ const OrderDetailPage: React.FC = () => {
                     ))}
                   </tbody>
                   <tfoot>
-                    <tr className="border-t-2 border-gray-200">
-                      <td colSpan={3} className="py-3 font-medium">Order Total:</td>
-                      <td className="text-right py-3 font-semibold text-lg">
+                    <tr className="border-t-2 border-gray-200 dark:border-dark-border-primary">
+                      <td colSpan={3} className="py-3 font-medium text-gray-900 dark:text-dark-text-primary">Order Total:</td>
+                      <td className="text-right py-3 font-semibold text-lg text-gray-900 dark:text-dark-text-primary">
                         €{orderDetails.totalAmount.toFixed(2)}
                       </td>
                       <td></td>
