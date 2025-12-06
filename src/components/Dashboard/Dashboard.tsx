@@ -342,14 +342,14 @@ const Dashboard: React.FC = () => {
             const supplierFilterArray = Array.isArray(supplierFilter) ? supplierFilter : [supplierFilter];
             
             // First, filter products that have prices from selected warehouses
-            filtered = filtered.filter(product => 
-              (product.allPrices || product.bestPrices).some(price => {
-                const priceSupplierWithWarehouse = price.warehouse && price.entityName 
-                  ? `${price.entityName} | ${price.warehouse}`
-                  : price.supplier;
+              filtered = filtered.filter(product => 
+                (product.allPrices || product.bestPrices).some(price => {
+                  const priceSupplierWithWarehouse = price.warehouse && price.entityName 
+                    ? `${price.entityName} | ${price.warehouse}`
+                    : price.supplier;
                 return supplierFilterArray.includes(priceSupplierWithWarehouse);
-              })
-            );
+                })
+              );
             
             // Then, filter bestPrices of remaining products to show only selected warehouses
             filtered = filtered.map(product => filterProductPricesByWarehouses(product, supplierFilterArray));
@@ -446,15 +446,15 @@ const Dashboard: React.FC = () => {
             const supplierFilterArray = Array.isArray(supplierFilter) ? supplierFilter : [supplierFilter];
             
             // First, filter products that have prices from selected warehouses
-            filtered = filtered.filter(product => 
-              (product.allPrices || product.bestPrices).some(price => {
-                // Create the same format as in the dropdown: "Entity | Warehouse"
-                const priceSupplierWithWarehouse = price.warehouse && price.entityName 
-                  ? `${price.entityName} | ${price.warehouse}`
-                  : price.supplier;
+              filtered = filtered.filter(product => 
+                (product.allPrices || product.bestPrices).some(price => {
+                  // Create the same format as in the dropdown: "Entity | Warehouse"
+                  const priceSupplierWithWarehouse = price.warehouse && price.entityName 
+                    ? `${price.entityName} | ${price.warehouse}`
+                    : price.supplier;
                 return supplierFilterArray.includes(priceSupplierWithWarehouse);
-              })
-            );
+                })
+              );
             
             // Then, filter bestPrices of remaining products to show only selected warehouses
             filtered = filtered.map(product => filterProductPricesByWarehouses(product, supplierFilterArray));

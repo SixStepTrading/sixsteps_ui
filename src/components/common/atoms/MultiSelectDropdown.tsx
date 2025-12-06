@@ -103,7 +103,7 @@ const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
         if (selectedValues.length === 0 || selectedValues.includes(NONE_SELECTED_VALUE)) {
           // If we're in the default state (empty array = all selected) or explicitly none selected,
           // select only this warehouse
-          onChange([value]);
+        onChange([value]);
         } else {
           // If all options are explicitly selected, deselect this warehouse
           const newValues = selectedValues.filter(v => v !== value && v !== NONE_SELECTED_VALUE);
