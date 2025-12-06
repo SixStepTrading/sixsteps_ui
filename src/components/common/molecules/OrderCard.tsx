@@ -25,7 +25,7 @@ export interface OrderData {
   totalProducts: number;
   items: number;
   amount: number;
-  status: 'Approved' | 'Pending Approval' | 'Processing' | 'Draft';
+  status: 'Draft' | 'Processing' | 'Pending Approval' | 'Partially Filled' | 'Executed';
   deliveryStatus?: string;
   deliveryDate?: string;
   estimatedDelivery?: string;
@@ -58,14 +58,16 @@ const OrderCard: React.FC<OrderCardProps> = ({
   // Determine status chip color
   const getStatusChip = () => {
     switch (order.status) {
-      case 'Approved':
-        return <Chip size="small" label="Approved" color="success" />;
-      case 'Pending Approval':
-        return <Chip size="small" label="Pending Approval" color="warning" />;
-      case 'Processing':
-        return <Chip size="small" label="Processing" color="info" />;
       case 'Draft':
         return <Chip size="small" label="Draft" variant="outlined" />;
+      case 'Processing':
+        return <Chip size="small" label="Processing" color="info" />;
+      case 'Pending Approval':
+        return <Chip size="small" label="Pending Approval" color="warning" />;
+      case 'Partially Filled':
+        return <Chip size="small" label="Partially Filled" color="warning" />;
+      case 'Executed':
+        return <Chip size="small" label="Executed" color="success" />;
       default:
         return null;
     }
@@ -73,7 +75,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
 
   // Show appropriate action buttons based on order status
   const renderActions = () => {
-    if (order.status === 'Approved') {
+    if (order.status === 'Executed') {
       return (
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button 
@@ -131,6 +133,20 @@ const OrderCard: React.FC<OrderCardProps> = ({
         </Box>
       );
     } else if (order.status === 'Processing') {
+      // Processing is a stalling state, no actions available
+      return (
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button 
+            startIcon={<ViewIcon />} 
+            variant="text" 
+            size="small" 
+            onClick={() => onViewDetails(order.id)}
+          >
+            View Details
+          </Button>
+        </Box>
+      );
+    } else if (order.status === 'Partially Filled') {
       return (
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button 
@@ -149,7 +165,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
               color="primary"
               onClick={() => onTrack(order.id)}
             >
-              Track Order
+              Track
             </Button>
           )}
         </Box>
@@ -244,7 +260,8 @@ const OrderCard: React.FC<OrderCardProps> = ({
         border: '1px solid',
         borderColor: order.status === 'Pending Approval' ? 'warning.light' : 
                       order.status === 'Processing' ? 'info.light' : 
-                      order.status === 'Approved' ? 'success.light' : 
+                      order.status === 'Partially Filled' ? 'warning.light' :
+                      order.status === 'Executed' ? 'success.light' : 
                       'divider',
         borderRadius: 1,
         overflow: 'hidden',
@@ -255,7 +272,8 @@ const OrderCard: React.FC<OrderCardProps> = ({
         borderLeft: '4px solid', 
         borderLeftColor: order.status === 'Pending Approval' ? 'warning.main' : 
                           order.status === 'Processing' ? 'info.main' : 
-                          order.status === 'Approved' ? 'success.main' : 
+                          order.status === 'Partially Filled' ? 'warning.main' :
+                          order.status === 'Executed' ? 'success.main' : 
                           'divider',
         p: 2
       }}>
@@ -296,9 +314,9 @@ const OrderCard: React.FC<OrderCardProps> = ({
           
           <Box sx={{ minWidth: 150, flex: { xs: '1 1 33%', md: 1 } }}>
             <Typography variant="caption" color="text.secondary">
-              {order.status === 'Approved' ? 'Delivery Status' : 'Estimated Delivery'}
+              {order.status === 'Executed' ? 'Delivery Status' : 'Estimated Delivery'}
             </Typography>
-            {order.status === 'Approved' && order.deliveryStatus && order.deliveryDate ? (
+            {order.status === 'Executed' && order.deliveryStatus && order.deliveryDate ? (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <Chip 
                   size="small" 

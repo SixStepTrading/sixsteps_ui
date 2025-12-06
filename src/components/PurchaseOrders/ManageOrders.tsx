@@ -75,9 +75,12 @@ const ManageOrders: React.FC = () => {
   useEffect(() => {
     // In a real app, this would fetch only buyers' orders
     // For now, filter mock orders to simulate buyer orders
-    // Admin should not see Draft orders as they haven't been submitted yet
+    // Admin should not see Draft orders (not submitted) or Processing orders (stalling state)
     const buyersData = mockOrders
-      .filter(order => order.status !== 'Draft') // Admin doesn't see draft orders
+      .filter(order => 
+        order.status !== 'Draft' && 
+        order.status !== 'Processing' // Exclude stalling state
+      )
       .map(order => ({
       ...order,
       buyerId: buyers[Math.floor(Math.random() * buyers.length)].id,
@@ -94,17 +97,17 @@ const ManageOrders: React.FC = () => {
   // Calculate and update order statistics
   const updateOrderStats = (orders: OrderWithDetails[]) => {
     const pendingCount = orders.filter(order => order.status === 'Pending Approval').length;
-    const approvedCount = orders.filter(order => order.status === 'Approved').length;
-    const rejectedCount = orders.filter(order => order.status === 'Rejected').length || 0;
+    const partiallyFilledCount = orders.filter(order => order.status === 'Partially Filled').length;
+    const executedCount = orders.filter(order => order.status === 'Executed').length;
     
     setOrderStats({
       totalOrders: orders.length,
       pendingApproval: pendingCount,
-      approved: approvedCount,
-      rejected: rejectedCount,
+      approved: executedCount, // Executed orders are considered "approved/completed"
+      rejected: 0, // Rejected status no longer exists
       processingTime: '1.2 days', // Example static value
-      approvalRate: approvedCount > 0 
-        ? Math.round((approvedCount / (approvedCount + rejectedCount)) * 100) 
+      approvalRate: executedCount > 0 
+        ? Math.round((executedCount / orders.length) * 100) 
         : 0
     });
   };
@@ -187,44 +190,29 @@ const ManageOrders: React.FC = () => {
     
     switch (action) {
       case AdminAction.APPROVE:
-        // Update orders status to Approved
+        // Approve orders - this will be handled per warehouse, not globally
+        // For now, mark as Pending Approval (will be updated when warehouse responds)
         const approvedOrders = buyerOrders.map(order => 
           selectedOrderIds.includes(order.id)
-            ? {...order, status: 'Approved' as OrderStatus}
+            ? {...order, status: 'Pending Approval' as OrderStatus}
             : order
         );
         setBuyerOrders(approvedOrders);
         updateOrderStats(approvedOrders);
-        showToast(`${selectedOrderIds.length} order(s) approved`, 'success');
+        showToast(`${selectedOrderIds.length} order(s) approved for processing`, 'success');
         setSelectedOrderIds([]);
         break;
         
       case AdminAction.REJECT:
-        // Update orders status to Rejected 
-        const rejectedOrders = buyerOrders.map(order => 
-          selectedOrderIds.includes(order.id)
-            ? {...order, status: 'Rejected' as OrderStatus}
-            : order
-        );
-        setBuyerOrders(rejectedOrders);
-        updateOrderStats(rejectedOrders);
-        showToast(`${selectedOrderIds.length} order(s) rejected`, 'success');
+        // Rejection is no longer a status, but we can mark orders for review
+        showToast('Rejection functionality has been removed. Orders remain in current state.', 'info');
         setSelectedOrderIds([]);
         break;
         
       case AdminAction.COUNTER_OFFER:
-        // Open counter offer modal for the selected order
-        setSelectedOrderForCounter(selectedOrderIds[0]);
-        setCounterOfferModalOpen(true);
-        
-        // Pre-fill with current order amount
-        const selectedOrder = buyerOrders.find(order => order.id === selectedOrderIds[0]);
-        if (selectedOrder) {
-          setCounterOfferDetails({
-            newAmount: selectedOrder.amount * 0.95, // Example: 5% discount
-            message: 'We can offer a better price with these adjustments.',
-          });
-        }
+        // Counter offers are now handled internally, not as a visible status
+        // This action can be used for internal notes/communications
+        showToast('Counter offer functionality will be handled per warehouse', 'info');
         break;
     }
   };
@@ -272,18 +260,16 @@ const ManageOrders: React.FC = () => {
   // Get class for status badge
   const getStatusClass = (status: string) => {
     switch (status) {
-      case 'Approved':
-        return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300';
-      case 'Pending Approval':
-        return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300';
-      case 'Processing':
-        return 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300';
-      case 'Rejected':
-        return 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300';
-      case 'Counter Offer':
-        return 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300';
       case 'Draft':
         return 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300';
+      case 'Processing':
+        return 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300';
+      case 'Pending Approval':
+        return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300';
+      case 'Partially Filled':
+        return 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300';
+      case 'Executed':
+        return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300';
       default:
         return 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400';
     }
@@ -400,10 +386,8 @@ const ManageOrders: React.FC = () => {
               >
                 <option value="">All Statuses</option>
                 <option value="Pending Approval">Pending Approval</option>
-                <option value="Approved">Approved</option>
-                <option value="Rejected">Rejected</option>
-                <option value="Counter Offer">Counter Offer</option>
-                <option value="Processing">Processing</option>
+                <option value="Partially Filled">Partially Filled</option>
+                <option value="Executed">Executed</option>
               </select>
             </div>
 

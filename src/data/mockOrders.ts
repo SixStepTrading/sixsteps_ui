@@ -1,7 +1,7 @@
 
 
 // Definizione dei tipi di dato
-export type OrderStatus = 'Draft' | 'Pending Approval' | 'Processing' | 'Approved' | 'Rejected' | 'Counter Offer' | 'Picking Required' | 'Partial Approved';
+export type OrderStatus = 'Draft' | 'Processing' | 'Pending Approval' | 'Partially Filled' | 'Executed';
 
 // Interface for supplier information
 export interface SupplierInfo {
@@ -67,6 +67,9 @@ export interface PickingNotification {
   autoProcessed: boolean;
 }
 
+// Product status type
+export type ProductStatus = 'Executed' | 'Pending Approval' | 'Rejected';
+
 // Enhanced interface for order product details with picking info
 export interface OrderProductDetail {
   id: string;
@@ -77,9 +80,20 @@ export interface OrderProductDetail {
   totalPrice: number;
   supplierId?: string;
   supplierName?: string;
+  warehouseId?: string; // Warehouse identifier (format: "Entity | Warehouse")
+  warehouseName?: string; // Warehouse display name
   stockAvailable?: number;
   estimatedDelivery?: string;
-  pickingDetails?: PickingDetails; // New field for picking information
+  productStatus?: ProductStatus; // Status of individual product (Executed, Pending Approval, Rejected)
+  // New fields for buyer view with pricing information
+  publicPrice?: number; // Retail price
+  vat?: number; // VAT percentage
+  averagePrice?: number | null; // Average purchase price
+  targetPrice?: number | null; // Target price set by buyer
+  bestPrices?: Array<{ price: number; stock: number; supplier?: string; warehouse?: string; entityName?: string }>; // Available prices
+  ean?: string; // EAN code
+  minsan?: string; // Minsan code
+  manufacturer?: string; // Manufacturer name
 }
 
 // Interface for counter offer details (enhanced)
@@ -193,69 +207,36 @@ export const MOCK_SUPPLIERS: SupplierInfo[] = [
 
 // Mock counter offers data
 export const MOCK_COUNTER_OFFERS: Record<string, CounterOfferDetail> = {
-  'ODA-2590': {
+  'ODA-PEND-001': {
     id: 'CO-001',
-    originalAmount: 95000.00,
-    proposedAmount: 89500.00,
+    originalAmount: 5670.90,
+    proposedAmount: 5350.00,
     message: 'We can offer a 6% discount for bulk purchase. This includes free express delivery and extended payment terms. Some quantities adjusted based on current stock availability.',
-    createdDate: 'May 10, 2025',
-    expiryDate: 'May 17, 2025',
+    createdDate: 'May 11, 2025',
+    expiryDate: 'May 18, 2025',
     status: 'Pending',
     adminId: 'ADM-001',
     adminName: 'Marco Rossi',
     productChanges: [
       {
         productId: 'P001',
-        originalQuantity: 50,
-        proposedQuantity: 45,
+        originalQuantity: 30,
+        proposedQuantity: 28,
         originalUnitPrice: 22.50,
         proposedUnitPrice: 21.00,
-        originalTotalPrice: 1125.00,
-        proposedTotalPrice: 945.00,
+        originalTotalPrice: 675.00,
+        proposedTotalPrice: 588.00,
         reason: 'Limited stock, better unit price offered'
       },
       {
         productId: 'P007',
-        originalQuantity: 200,
-        proposedQuantity: 200,
+        originalQuantity: 15,
+        proposedQuantity: 15,
         originalUnitPrice: 8.50,
         proposedUnitPrice: 7.90,
-        originalTotalPrice: 1700.00,
-        proposedTotalPrice: 1580.00,
+        originalTotalPrice: 127.50,
+        proposedTotalPrice: 118.50,
         reason: 'Bulk discount applied'
-      }
-    ]
-  },
-  'ODA-2591': {
-    id: 'CO-002',
-    originalAmount: 156000.00,
-    proposedAmount: 148200.00,
-    message: 'Special pricing available for loyal customers. Includes priority handling and dedicated support. Express delivery quantities optimized.',
-    createdDate: 'May 9, 2025',
-    expiryDate: 'May 16, 2025',
-    status: 'Pending',
-    adminId: 'ADM-002',
-    adminName: 'Laura Bianchi',
-    productChanges: [
-      {
-        productId: 'P002',
-        originalQuantity: 80,
-        proposedQuantity: 75,
-        originalUnitPrice: 15.80,
-        proposedUnitPrice: 15.20,
-        originalTotalPrice: 1264.00,
-        proposedTotalPrice: 1140.00,
-        reason: 'Express delivery optimization'
-      },
-      {
-        productId: 'P010',
-        originalQuantity: 300,
-        proposedQuantity: 320,
-        originalUnitPrice: 6.90,
-        proposedUnitPrice: 6.50,
-        originalTotalPrice: 2070.00,
-        proposedTotalPrice: 2080.00,
-        reason: 'Better availability, volume discount'
       }
     ]
   }
@@ -326,235 +307,525 @@ export const ORDER_PRODUCTS = [
 ];
 
 // Detailed product data for each order
+// Detailed product data for each order - with warehouse information for Admin view
 export const ORDER_DETAILS: Record<string, OrderProductDetail[]> = {
-  'ODA-2587': [
-    { id: 'P001', code: 'ALVG-001', name: 'ALVITA GINOCCHIERA', quantity: 10, unitPrice: 22.50, totalPrice: 225.00, supplierId: 'SUP-001', supplierName: 'MediSupply Italia', stockAvailable: 150, estimatedDelivery: '2-3 days' },
-    { id: 'P002', code: 'BIOD-002', name: 'BIODERMA ATODERM', quantity: 15, unitPrice: 15.80, totalPrice: 237.00, supplierId: 'SUP-002', supplierName: 'PharmaDistribution', stockAvailable: 89, estimatedDelivery: '1-2 days' },
-    { id: 'P004', code: 'ENTG-004', name: 'ENTEROGERMINA 2MLD', quantity: 25, unitPrice: 9.90, totalPrice: 247.50, supplierId: 'SUP-001', supplierName: 'MediSupply Italia', stockAvailable: 200, estimatedDelivery: '2-3 days' },
-    { id: 'P006', code: 'VITC-006', name: 'VITAMINA C 1000MG', quantity: 45, unitPrice: 11.90, totalPrice: 535.50, supplierId: 'SUP-003', supplierName: 'HealthCare Solutions', stockAvailable: 67, estimatedDelivery: '3-5 days' }
+  // DRAFT orders
+  'ODA-DRAFT-001': [
+    { 
+      id: 'P001', code: 'ALVG-001', name: 'ALVITA GINOCCHIERA', quantity: 10, unitPrice: 22.50, totalPrice: 225.00, 
+      supplierId: 'SUP-001', supplierName: 'MediSupply Italia', warehouseId: 'MediSupply Italia | Warehouse Milano', warehouseName: 'MediSupply Italia | Warehouse Milano', 
+      stockAvailable: 150, estimatedDelivery: '2-3 days',
+      ean: '8001234567890', minsan: '934512688', manufacturer: 'URIACH ITALY SRL',
+      publicPrice: 28.50, vat: 22,
+      bestPrices: [
+        { price: 22.50, stock: 100, supplier: 'MediSupply Italia', warehouse: 'Warehouse Milano', entityName: 'MediSupply Italia' },
+        { price: 23.20, stock: 50, supplier: 'PharmaDistribution', warehouse: 'Warehouse Roma', entityName: 'PharmaDistribution' }
+      ],
+      averagePrice: 22.85, targetPrice: 22.00
+    },
+    { 
+      id: 'P002', code: 'BIOD-002', name: 'BIODERMA ATODERM', quantity: 15, unitPrice: 15.80, totalPrice: 237.00, 
+      supplierId: 'SUP-002', supplierName: 'PharmaDistribution', warehouseId: 'PharmaDistribution | Warehouse Roma', warehouseName: 'PharmaDistribution | Warehouse Roma', 
+      stockAvailable: 89, estimatedDelivery: '1-2 days',
+      ean: '8001234567891', minsan: '934512689', manufacturer: 'BIODERMA LABORATORIES',
+      publicPrice: 19.90, vat: 22,
+      bestPrices: [
+        { price: 15.80, stock: 89, supplier: 'PharmaDistribution', warehouse: 'Warehouse Roma', entityName: 'PharmaDistribution' },
+        { price: 16.20, stock: 120, supplier: 'MediSupply Italia', warehouse: 'Warehouse Milano', entityName: 'MediSupply Italia' }
+      ],
+      averagePrice: 15.80, targetPrice: null
+    },
+    { 
+      id: 'P003', code: 'ZERO-003', name: 'ZERODOL GEL', quantity: 8, unitPrice: 12.40, totalPrice: 99.20, 
+      supplierId: 'SUP-003', supplierName: 'HealthCare Solutions', warehouseId: 'HealthCare Solutions | Warehouse Torino', warehouseName: 'HealthCare Solutions | Warehouse Torino', 
+      stockAvailable: 200, estimatedDelivery: '3-5 days',
+      ean: '8001234567892', minsan: '934512690', manufacturer: 'MENARINI',
+      publicPrice: 15.20, vat: 22,
+      bestPrices: [
+        { price: 12.40, stock: 150, supplier: 'HealthCare Solutions', warehouse: 'Warehouse Torino', entityName: 'HealthCare Solutions' },
+        { price: 12.80, stock: 50, supplier: 'MediSupply Italia', warehouse: 'Warehouse Milano', entityName: 'MediSupply Italia' }
+      ],
+      averagePrice: 12.40, targetPrice: 12.00
+    },
+    { 
+      id: 'P004', code: 'ENTG-004', name: 'ENTEROGERMINA 2MLD', quantity: 7, unitPrice: 9.90, totalPrice: 69.30, 
+      supplierId: 'SUP-001', supplierName: 'MediSupply Italia', warehouseId: 'MediSupply Italia | Warehouse Milano', warehouseName: 'MediSupply Italia | Warehouse Milano', 
+      stockAvailable: 200, estimatedDelivery: '2-3 days',
+      ean: '8001234567893', minsan: '934512691', manufacturer: 'SANOFI',
+      publicPrice: 12.50, vat: 22,
+      bestPrices: [
+        { price: 9.90, stock: 200, supplier: 'MediSupply Italia', warehouse: 'Warehouse Milano', entityName: 'MediSupply Italia' },
+        { price: 10.20, stock: 100, supplier: 'PharmaDistribution', warehouse: 'Warehouse Roma', entityName: 'PharmaDistribution' }
+      ],
+      averagePrice: 9.90, targetPrice: null
+    },
+    { 
+      id: 'P005', code: 'OMEG-005', name: 'OMEGA 3 PLUS', quantity: 5, unitPrice: 18.70, totalPrice: 93.50, 
+      supplierId: 'SUP-002', supplierName: 'PharmaDistribution', warehouseId: 'PharmaDistribution | Warehouse Roma', warehouseName: 'PharmaDistribution | Warehouse Roma', 
+      stockAvailable: 150, estimatedDelivery: '1-2 days',
+      ean: '8001234567894', minsan: '934512692', manufacturer: 'SOLGAR',
+      publicPrice: 23.80, vat: 22,
+      bestPrices: [
+        { price: 18.70, stock: 150, supplier: 'PharmaDistribution', warehouse: 'Warehouse Roma', entityName: 'PharmaDistribution' },
+        { price: 19.20, stock: 80, supplier: 'MediSupply Italia', warehouse: 'Warehouse Milano', entityName: 'MediSupply Italia' }
+      ],
+      averagePrice: 18.70, targetPrice: 18.50
+    }
   ],
-  'ODA-2590': [
-    { id: 'P001', code: 'ALVG-001', name: 'ALVITA GINOCCHIERA', quantity: 50, unitPrice: 22.50, totalPrice: 1125.00, supplierId: 'SUP-001', supplierName: 'MediSupply Italia', stockAvailable: 150, estimatedDelivery: '2-3 days' },
-    { id: 'P007', code: 'PARA-007', name: 'PARACETAMOL 500MG', quantity: 200, unitPrice: 8.50, totalPrice: 1700.00, supplierId: 'SUP-001', supplierName: 'MediSupply Italia', stockAvailable: 500, estimatedDelivery: '2-3 days' },
-    { id: 'P008', code: 'IBUP-008', name: 'IBUPROFEN 400MG', quantity: 150, unitPrice: 14.20, totalPrice: 2130.00, supplierId: 'SUP-001', supplierName: 'MediSupply Italia', stockAvailable: 300, estimatedDelivery: '2-3 days' },
-    { id: 'P009', code: 'AMOX-009', name: 'AMOXICILLIN 875MG', quantity: 100, unitPrice: 25.80, totalPrice: 2580.00, supplierId: 'SUP-001', supplierName: 'MediSupply Italia', stockAvailable: 120, estimatedDelivery: '2-3 days' }
+  'ODA-DRAFT-002': [
+    { 
+      id: 'P006', code: 'VITC-006', name: 'VITAMINA C 1000MG', quantity: 8, unitPrice: 11.25, totalPrice: 90.00, 
+      supplierId: 'SUP-003', supplierName: 'HealthCare Solutions', warehouseId: 'HealthCare Solutions | Warehouse Torino', warehouseName: 'HealthCare Solutions | Warehouse Torino', 
+      stockAvailable: 200, estimatedDelivery: '3-5 days',
+      ean: '8001234567895', minsan: '934512693', manufacturer: 'SOLGAR',
+      publicPrice: 14.20, vat: 22,
+      bestPrices: [
+        { price: 11.25, stock: 150, supplier: 'HealthCare Solutions', warehouse: 'Warehouse Torino', entityName: 'HealthCare Solutions' },
+        { price: 11.50, stock: 50, supplier: 'MediSupply Italia', warehouse: 'Warehouse Milano', entityName: 'MediSupply Italia' }
+      ],
+      averagePrice: 11.25, targetPrice: null
+    },
+    { 
+      id: 'P007', code: 'PARA-007', name: 'PARACETAMOL 500MG', quantity: 12, unitPrice: 8.50, totalPrice: 102.00, 
+      supplierId: 'SUP-001', supplierName: 'MediSupply Italia', warehouseId: 'MediSupply Italia | Warehouse Milano', warehouseName: 'MediSupply Italia | Warehouse Milano', 
+      stockAvailable: 500, estimatedDelivery: '2-3 days',
+      ean: '8001234567896', minsan: '934512694', manufacturer: 'ANGELINI',
+      publicPrice: 10.80, vat: 22,
+      bestPrices: [
+        { price: 8.50, stock: 300, supplier: 'MediSupply Italia', warehouse: 'Warehouse Milano', entityName: 'MediSupply Italia' },
+        { price: 8.70, stock: 200, supplier: 'PharmaDistribution', warehouse: 'Warehouse Roma', entityName: 'PharmaDistribution' }
+      ],
+      averagePrice: 8.50, targetPrice: 8.30
+    },
+    { 
+      id: 'P008', code: 'IBUP-008', name: 'IBUPROFEN 400MG', quantity: 8, unitPrice: 14.20, totalPrice: 113.60, 
+      supplierId: 'SUP-002', supplierName: 'PharmaDistribution', warehouseId: 'PharmaDistribution | Warehouse Roma', warehouseName: 'PharmaDistribution | Warehouse Roma', 
+      stockAvailable: 300, estimatedDelivery: '1-2 days',
+      ean: '8001234567897', minsan: '934512695', manufacturer: 'MENARINI',
+      publicPrice: 18.00, vat: 22,
+      bestPrices: [
+        { price: 14.20, stock: 200, supplier: 'PharmaDistribution', warehouse: 'Warehouse Roma', entityName: 'PharmaDistribution' },
+        { price: 14.50, stock: 100, supplier: 'MediSupply Italia', warehouse: 'Warehouse Milano', entityName: 'MediSupply Italia' }
+      ],
+      averagePrice: 14.20, targetPrice: null
+    }
   ],
-  'ODA-2591': [
-    { id: 'P002', code: 'BIOD-002', name: 'BIODERMA ATODERM', quantity: 80, unitPrice: 15.80, totalPrice: 1264.00, supplierId: 'SUP-002', supplierName: 'PharmaDistribution', stockAvailable: 89, estimatedDelivery: '1-2 days' },
-    { id: 'P003', code: 'ZERO-003', name: 'ZERODOL GEL', quantity: 120, unitPrice: 12.40, totalPrice: 1488.00, supplierId: 'SUP-003', supplierName: 'HealthCare Solutions', stockAvailable: 200, estimatedDelivery: '3-5 days' },
-    { id: 'P005', code: 'OMEG-005', name: 'OMEGA 3 PLUS', quantity: 60, unitPrice: 18.70, totalPrice: 1122.00, supplierId: 'SUP-002', supplierName: 'PharmaDistribution', stockAvailable: 150, estimatedDelivery: '1-2 days' },
-    { id: 'P010', code: 'ASPI-010', name: 'ASPIRIN 100MG', quantity: 300, unitPrice: 6.90, totalPrice: 2070.00, supplierId: 'SUP-003', supplierName: 'HealthCare Solutions', stockAvailable: 400, estimatedDelivery: '3-5 days' }
+  // PROCESSING orders
+  'ODA-PROC-001': [
+    { id: 'P001', code: 'ALVG-001', name: 'ALVITA GINOCCHIERA', quantity: 20, unitPrice: 22.50, totalPrice: 450.00, supplierId: 'SUP-001', supplierName: 'MediSupply Italia', warehouseId: 'MediSupply Italia | Warehouse Milano', warehouseName: 'MediSupply Italia | Warehouse Milano', stockAvailable: 150, estimatedDelivery: '2-3 days' },
+    { id: 'P002', code: 'BIOD-002', name: 'BIODERMA ATODERM', quantity: 25, unitPrice: 15.80, totalPrice: 395.00, supplierId: 'SUP-002', supplierName: 'PharmaDistribution', warehouseId: 'PharmaDistribution | Warehouse Roma', warehouseName: 'PharmaDistribution | Warehouse Roma', stockAvailable: 89, estimatedDelivery: '1-2 days' },
+    { id: 'P003', code: 'ZERO-003', name: 'ZERODOL GEL', quantity: 15, unitPrice: 12.40, totalPrice: 186.00, supplierId: 'SUP-001', supplierName: 'MediSupply Italia', warehouseId: 'MediSupply Italia | Warehouse Milano', warehouseName: 'MediSupply Italia | Warehouse Milano', stockAvailable: 200, estimatedDelivery: '2-3 days' },
+    { id: 'P004', code: 'ENTG-004', name: 'ENTEROGERMINA 2MLD', quantity: 18, unitPrice: 9.90, totalPrice: 178.20, supplierId: 'SUP-002', supplierName: 'PharmaDistribution', warehouseId: 'PharmaDistribution | Warehouse Roma', warehouseName: 'PharmaDistribution | Warehouse Roma', stockAvailable: 200, estimatedDelivery: '1-2 days' },
+    { id: 'P005', code: 'OMEG-005', name: 'OMEGA 3 PLUS', quantity: 12, unitPrice: 18.70, totalPrice: 224.40, supplierId: 'SUP-001', supplierName: 'MediSupply Italia', warehouseId: 'MediSupply Italia | Warehouse Milano', warehouseName: 'MediSupply Italia | Warehouse Milano', stockAvailable: 150, estimatedDelivery: '2-3 days' },
+    { id: 'P006', code: 'VITC-006', name: 'VITAMINA C 1000MG', quantity: 10, unitPrice: 11.25, totalPrice: 112.50, supplierId: 'SUP-002', supplierName: 'PharmaDistribution', warehouseId: 'PharmaDistribution | Warehouse Roma', warehouseName: 'PharmaDistribution | Warehouse Roma', stockAvailable: 200, estimatedDelivery: '1-2 days' },
+    { id: 'P007', code: 'PARA-007', name: 'PARACETAMOL 500MG', quantity: 10, unitPrice: 8.50, totalPrice: 85.00, supplierId: 'SUP-001', supplierName: 'MediSupply Italia', warehouseId: 'MediSupply Italia | Warehouse Milano', warehouseName: 'MediSupply Italia | Warehouse Milano', stockAvailable: 500, estimatedDelivery: '2-3 days' },
+    { id: 'P008', code: 'IBUP-008', name: 'IBUPROFEN 400MG', quantity: 10, unitPrice: 14.20, totalPrice: 142.00, supplierId: 'SUP-002', supplierName: 'PharmaDistribution', warehouseId: 'PharmaDistribution | Warehouse Roma', warehouseName: 'PharmaDistribution | Warehouse Roma', stockAvailable: 300, estimatedDelivery: '1-2 days' }
   ],
-  'ODA-2586': [
-    { id: 'P003', code: 'ZERO-003', name: 'ZERODOL GEL', quantity: 20, unitPrice: 12.40, totalPrice: 248.00, supplierId: 'SUP-002', supplierName: 'PharmaDistribution', stockAvailable: 200, estimatedDelivery: '1-2 days' },
-    { id: 'P005', code: 'OMEG-005', name: 'OMEGA 3 PLUS', quantity: 32, unitPrice: 18.70, totalPrice: 598.40, supplierId: 'SUP-002', supplierName: 'PharmaDistribution', stockAvailable: 150, estimatedDelivery: '1-2 days' },
-    { id: 'P007', code: 'PARA-007', name: 'PARACETAMOL 500MG', quantity: 100, unitPrice: 8.50, totalPrice: 850.00, supplierId: 'SUP-002', supplierName: 'PharmaDistribution', stockAvailable: 500, estimatedDelivery: '1-2 days' },
-    { id: 'P008', code: 'IBUP-008', name: 'IBUPROFEN 400MG', quantity: 75, unitPrice: 14.20, totalPrice: 1065.00, supplierId: 'SUP-002', supplierName: 'PharmaDistribution', stockAvailable: 300, estimatedDelivery: '1-2 days' }
+  'ODA-PROC-002': [
+    { id: 'P001', code: 'ALVG-001', name: 'ALVITA GINOCCHIERA', quantity: 15, unitPrice: 22.50, totalPrice: 337.50, supplierId: 'SUP-002', supplierName: 'HealthCare Solutions', warehouseId: 'HealthCare Solutions | Warehouse Torino', warehouseName: 'HealthCare Solutions | Warehouse Torino', stockAvailable: 50, estimatedDelivery: '3-5 days' },
+    { id: 'P003', code: 'ZERO-003', name: 'ZERODOL GEL', quantity: 20, unitPrice: 12.40, totalPrice: 248.00, supplierId: 'SUP-002', supplierName: 'HealthCare Solutions', warehouseId: 'HealthCare Solutions | Warehouse Torino', warehouseName: 'HealthCare Solutions | Warehouse Torino', stockAvailable: 200, estimatedDelivery: '3-5 days' },
+    { id: 'P005', code: 'OMEG-005', name: 'OMEGA 3 PLUS', quantity: 10, unitPrice: 18.70, totalPrice: 187.00, supplierId: 'SUP-002', supplierName: 'HealthCare Solutions', warehouseId: 'HealthCare Solutions | Warehouse Torino', warehouseName: 'HealthCare Solutions | Warehouse Torino', stockAvailable: 150, estimatedDelivery: '3-5 days' },
+    { id: 'P006', code: 'VITC-006', name: 'VITAMINA C 1000MG', quantity: 15, unitPrice: 11.25, totalPrice: 168.75, supplierId: 'SUP-002', supplierName: 'HealthCare Solutions', warehouseId: 'HealthCare Solutions | Warehouse Torino', warehouseName: 'HealthCare Solutions | Warehouse Torino', stockAvailable: 200, estimatedDelivery: '3-5 days' },
+    { id: 'P007', code: 'PARA-007', name: 'PARACETAMOL 500MG', quantity: 20, unitPrice: 8.50, totalPrice: 170.00, supplierId: 'SUP-002', supplierName: 'HealthCare Solutions', warehouseId: 'HealthCare Solutions | Warehouse Torino', warehouseName: 'HealthCare Solutions | Warehouse Torino', stockAvailable: 500, estimatedDelivery: '3-5 days' },
+    { id: 'P008', code: 'IBUP-008', name: 'IBUPROFEN 400MG', quantity: 15, unitPrice: 14.20, totalPrice: 213.00, supplierId: 'SUP-002', supplierName: 'HealthCare Solutions', warehouseId: 'HealthCare Solutions | Warehouse Torino', warehouseName: 'HealthCare Solutions | Warehouse Torino', stockAvailable: 300, estimatedDelivery: '3-5 days' }
   ],
-  'ODA-2585': [
-    { id: 'P001', code: 'ALVG-001', name: 'ALVITA GINOCCHIERA', quantity: 15, unitPrice: 22.50, totalPrice: 337.50, supplierId: 'SUP-003', supplierName: 'HealthCare Solutions', stockAvailable: 50, estimatedDelivery: '3-5 days' },
-    { id: 'P002', code: 'BIOD-002', name: 'BIODERMA ATODERM', quantity: 25, unitPrice: 15.80, totalPrice: 395.00, supplierId: 'SUP-004', supplierName: 'BioMed Express', stockAvailable: 100, estimatedDelivery: '1 day' },
-    { id: 'P003', code: 'ZERO-003', name: 'ZERODOL GEL', quantity: 30, unitPrice: 12.40, totalPrice: 372.00, supplierId: 'SUP-003', supplierName: 'HealthCare Solutions', stockAvailable: 200, estimatedDelivery: '3-5 days' },
-    { id: 'P004', code: 'ENTG-004', name: 'ENTEROGERMINA 2MLD', quantity: 40, unitPrice: 9.90, totalPrice: 396.00, supplierId: 'SUP-004', supplierName: 'BioMed Express', stockAvailable: 250, estimatedDelivery: '1 day' },
-    { id: 'P005', code: 'OMEG-005', name: 'OMEGA 3 PLUS', quantity: 12, unitPrice: 18.70, totalPrice: 224.40, supplierId: 'SUP-003', supplierName: 'HealthCare Solutions', stockAvailable: 150, estimatedDelivery: '3-5 days' },
-    { id: 'P006', code: 'VITC-006', name: 'VITAMINA C 1000MG', quantity: 15, unitPrice: 11.25, totalPrice: 168.75, supplierId: 'SUP-004', supplierName: 'BioMed Express', stockAvailable: 200, estimatedDelivery: '1 day' }
+  // PENDING APPROVAL orders
+  'ODA-PEND-001': [
+    { id: 'P001', code: 'ALVG-001', name: 'ALVITA GINOCCHIERA', quantity: 30, unitPrice: 22.50, totalPrice: 675.00, supplierId: 'SUP-001', supplierName: 'MediSupply Italia', warehouseId: 'MediSupply Italia | Warehouse Milano', warehouseName: 'MediSupply Italia | Warehouse Milano', stockAvailable: 150, estimatedDelivery: '2-3 days' },
+    { id: 'P002', code: 'BIOD-002', name: 'BIODERMA ATODERM', quantity: 25, unitPrice: 15.80, totalPrice: 395.00, supplierId: 'SUP-004', supplierName: 'BioMed Express', warehouseId: 'BioMed Express | Warehouse Bologna', warehouseName: 'BioMed Express | Warehouse Bologna', stockAvailable: 100, estimatedDelivery: '1 day' },
+    { id: 'P003', code: 'ZERO-003', name: 'ZERODOL GEL', quantity: 20, unitPrice: 12.40, totalPrice: 248.00, supplierId: 'SUP-001', supplierName: 'MediSupply Italia', warehouseId: 'MediSupply Italia | Warehouse Milano', warehouseName: 'MediSupply Italia | Warehouse Milano', stockAvailable: 200, estimatedDelivery: '2-3 days' },
+    { id: 'P004', code: 'ENTG-004', name: 'ENTEROGERMINA 2MLD', quantity: 15, unitPrice: 9.90, totalPrice: 148.50, supplierId: 'SUP-004', supplierName: 'BioMed Express', warehouseId: 'BioMed Express | Warehouse Bologna', warehouseName: 'BioMed Express | Warehouse Bologna', stockAvailable: 250, estimatedDelivery: '1 day' },
+    { id: 'P005', code: 'OMEG-005', name: 'OMEGA 3 PLUS', quantity: 18, unitPrice: 18.70, totalPrice: 336.60, supplierId: 'SUP-001', supplierName: 'MediSupply Italia', warehouseId: 'MediSupply Italia | Warehouse Milano', warehouseName: 'MediSupply Italia | Warehouse Milano', stockAvailable: 150, estimatedDelivery: '2-3 days' },
+    { id: 'P006', code: 'VITC-006', name: 'VITAMINA C 1000MG', quantity: 12, unitPrice: 11.25, totalPrice: 135.00, supplierId: 'SUP-004', supplierName: 'BioMed Express', warehouseId: 'BioMed Express | Warehouse Bologna', warehouseName: 'BioMed Express | Warehouse Bologna', stockAvailable: 200, estimatedDelivery: '1 day' },
+    { id: 'P007', code: 'PARA-007', name: 'PARACETAMOL 500MG', quantity: 15, unitPrice: 8.50, totalPrice: 127.50, supplierId: 'SUP-001', supplierName: 'MediSupply Italia', warehouseId: 'MediSupply Italia | Warehouse Milano', warehouseName: 'MediSupply Italia | Warehouse Milano', stockAvailable: 500, estimatedDelivery: '2-3 days' },
+    { id: 'P008', code: 'IBUP-008', name: 'IBUPROFEN 400MG', quantity: 10, unitPrice: 14.20, totalPrice: 142.00, supplierId: 'SUP-004', supplierName: 'BioMed Express', warehouseId: 'BioMed Express | Warehouse Bologna', warehouseName: 'BioMed Express | Warehouse Bologna', stockAvailable: 300, estimatedDelivery: '1 day' },
+    { id: 'P009', code: 'AMOX-009', name: 'AMOXICILLIN 875MG', quantity: 8, unitPrice: 25.80, totalPrice: 206.40, supplierId: 'SUP-001', supplierName: 'MediSupply Italia', warehouseId: 'MediSupply Italia | Warehouse Milano', warehouseName: 'MediSupply Italia | Warehouse Milano', stockAvailable: 120, estimatedDelivery: '2-3 days' },
+    { id: 'P010', code: 'ASPI-010', name: 'ASPIRIN 100MG', quantity: 17, unitPrice: 6.90, totalPrice: 117.30, supplierId: 'SUP-004', supplierName: 'BioMed Express', warehouseId: 'BioMed Express | Warehouse Bologna', warehouseName: 'BioMed Express | Warehouse Bologna', stockAvailable: 400, estimatedDelivery: '1 day' }
   ],
-  'ODA-2584-DRAFT': [
-    { id: 'P001', code: 'ALVG-001', name: 'ALVITA GINOCCHIERA', quantity: 5, unitPrice: 22.50, totalPrice: 112.50, supplierId: 'SUP-001', supplierName: 'MediSupply Italia', stockAvailable: 150, estimatedDelivery: '2-3 days' },
-    { id: 'P003', code: 'ZERO-003', name: 'ZERODOL GEL', quantity: 10, unitPrice: 12.40, totalPrice: 124.00, supplierId: 'SUP-002', supplierName: 'PharmaDistribution', stockAvailable: 200, estimatedDelivery: '1-2 days' },
-    { id: 'P006', code: 'VITC-006', name: 'VITAMINA C 1000MG', quantity: 8, unitPrice: 11.25, totalPrice: 90.00, supplierId: 'SUP-003', supplierName: 'HealthCare Solutions', stockAvailable: 200, estimatedDelivery: '3-5 days' }
+  'ODA-PEND-002': [
+    { id: 'P001', code: 'ALVG-001', name: 'ALVITA GINOCCHIERA', quantity: 20, unitPrice: 22.50, totalPrice: 450.00, supplierId: 'SUP-002', supplierName: 'PharmaDistribution', warehouseId: 'PharmaDistribution | Warehouse Roma', warehouseName: 'PharmaDistribution | Warehouse Roma', stockAvailable: 89, estimatedDelivery: '1-2 days' },
+    { id: 'P003', code: 'ZERO-003', name: 'ZERODOL GEL', quantity: 25, unitPrice: 12.40, totalPrice: 310.00, supplierId: 'SUP-003', supplierName: 'HealthCare Solutions', warehouseId: 'HealthCare Solutions | Warehouse Torino', warehouseName: 'HealthCare Solutions | Warehouse Torino', stockAvailable: 200, estimatedDelivery: '3-5 days' },
+    { id: 'P004', code: 'ENTG-004', name: 'ENTEROGERMINA 2MLD', quantity: 18, unitPrice: 9.90, totalPrice: 178.20, supplierId: 'SUP-002', supplierName: 'PharmaDistribution', warehouseId: 'PharmaDistribution | Warehouse Roma', warehouseName: 'PharmaDistribution | Warehouse Roma', stockAvailable: 200, estimatedDelivery: '1-2 days' },
+    { id: 'P005', code: 'OMEG-005', name: 'OMEGA 3 PLUS', quantity: 15, unitPrice: 18.70, totalPrice: 280.50, supplierId: 'SUP-003', supplierName: 'HealthCare Solutions', warehouseId: 'HealthCare Solutions | Warehouse Torino', warehouseName: 'HealthCare Solutions | Warehouse Torino', stockAvailable: 150, estimatedDelivery: '3-5 days' },
+    { id: 'P006', code: 'VITC-006', name: 'VITAMINA C 1000MG', quantity: 20, unitPrice: 11.25, totalPrice: 225.00, supplierId: 'SUP-002', supplierName: 'PharmaDistribution', warehouseId: 'PharmaDistribution | Warehouse Roma', warehouseName: 'PharmaDistribution | Warehouse Roma', stockAvailable: 200, estimatedDelivery: '1-2 days' },
+    { id: 'P007', code: 'PARA-007', name: 'PARACETAMOL 500MG', quantity: 22, unitPrice: 8.50, totalPrice: 187.00, supplierId: 'SUP-003', supplierName: 'HealthCare Solutions', warehouseId: 'HealthCare Solutions | Warehouse Torino', warehouseName: 'HealthCare Solutions | Warehouse Torino', stockAvailable: 500, estimatedDelivery: '3-5 days' },
+    { id: 'P008', code: 'IBUP-008', name: 'IBUPROFEN 400MG', quantity: 25, unitPrice: 14.20, totalPrice: 355.00, supplierId: 'SUP-002', supplierName: 'PharmaDistribution', warehouseId: 'PharmaDistribution | Warehouse Roma', warehouseName: 'PharmaDistribution | Warehouse Roma', stockAvailable: 300, estimatedDelivery: '1-2 days' }
   ],
-  'ODA-2583-DRAFT': [
-    { id: 'P007', code: 'PARA-007', name: 'PARACETAMOL 500MG', quantity: 50, unitPrice: 8.50, totalPrice: 425.00, supplierId: 'SUP-001', supplierName: 'MediSupply Italia', stockAvailable: 500, estimatedDelivery: '2-3 days' },
-    { id: 'P008', code: 'IBUP-008', name: 'IBUPROFEN 400MG', quantity: 30, unitPrice: 14.20, totalPrice: 426.00, supplierId: 'SUP-002', supplierName: 'PharmaDistribution', stockAvailable: 300, estimatedDelivery: '1-2 days' },
-    { id: 'P010', code: 'ASPI-010', name: 'ASPIRIN 100MG', quantity: 100, unitPrice: 6.90, totalPrice: 690.00, supplierId: 'SUP-003', supplierName: 'HealthCare Solutions', stockAvailable: 400, estimatedDelivery: '3-5 days' }
+  // PARTIALLY FILLED orders - mix of Executed, Pending Approval, and Rejected products
+  'ODA-PART-001': [
+    { id: 'P001', code: 'ALVG-001', name: 'ALVITA GINOCCHIERA', quantity: 40, unitPrice: 22.50, totalPrice: 900.00, supplierId: 'SUP-001', supplierName: 'MediSupply Italia', warehouseId: 'MediSupply Italia | Warehouse Milano', warehouseName: 'MediSupply Italia | Warehouse Milano', stockAvailable: 150, estimatedDelivery: '2-3 days', productStatus: 'Executed' },
+    { id: 'P002', code: 'BIOD-002', name: 'BIODERMA ATODERM', quantity: 35, unitPrice: 15.80, totalPrice: 553.00, supplierId: 'SUP-002', supplierName: 'PharmaDistribution', warehouseId: 'PharmaDistribution | Warehouse Roma', warehouseName: 'PharmaDistribution | Warehouse Roma', stockAvailable: 89, estimatedDelivery: '1-2 days', productStatus: 'Executed' },
+    { id: 'P003', code: 'ZERO-003', name: 'ZERODOL GEL', quantity: 30, unitPrice: 12.40, totalPrice: 372.00, supplierId: 'SUP-003', supplierName: 'HealthCare Solutions', warehouseId: 'HealthCare Solutions | Warehouse Torino', warehouseName: 'HealthCare Solutions | Warehouse Torino', stockAvailable: 200, estimatedDelivery: '3-5 days', productStatus: 'Pending Approval' },
+    { id: 'P004', code: 'ENTG-004', name: 'ENTEROGERMINA 2MLD', quantity: 25, unitPrice: 9.90, totalPrice: 247.50, supplierId: 'SUP-001', supplierName: 'MediSupply Italia', warehouseId: 'MediSupply Italia | Warehouse Milano', warehouseName: 'MediSupply Italia | Warehouse Milano', stockAvailable: 200, estimatedDelivery: '2-3 days', productStatus: 'Rejected' },
+    { id: 'P005', code: 'OMEG-005', name: 'OMEGA 3 PLUS', quantity: 28, unitPrice: 18.70, totalPrice: 523.60, supplierId: 'SUP-002', supplierName: 'PharmaDistribution', warehouseId: 'PharmaDistribution | Warehouse Roma', warehouseName: 'PharmaDistribution | Warehouse Roma', stockAvailable: 150, estimatedDelivery: '1-2 days', productStatus: 'Executed' },
+    { id: 'P006', code: 'VITC-006', name: 'VITAMINA C 1000MG', quantity: 22, unitPrice: 11.25, totalPrice: 247.50, supplierId: 'SUP-003', supplierName: 'HealthCare Solutions', warehouseId: 'HealthCare Solutions | Warehouse Torino', warehouseName: 'HealthCare Solutions | Warehouse Torino', stockAvailable: 200, estimatedDelivery: '3-5 days', productStatus: 'Pending Approval' },
+    { id: 'P007', code: 'PARA-007', name: 'PARACETAMOL 500MG', quantity: 20, unitPrice: 8.50, totalPrice: 170.00, supplierId: 'SUP-001', supplierName: 'MediSupply Italia', warehouseId: 'MediSupply Italia | Warehouse Milano', warehouseName: 'MediSupply Italia | Warehouse Milano', stockAvailable: 500, estimatedDelivery: '2-3 days', productStatus: 'Rejected' },
+    { id: 'P008', code: 'IBUP-008', name: 'IBUPROFEN 400MG', quantity: 18, unitPrice: 14.20, totalPrice: 255.60, supplierId: 'SUP-002', supplierName: 'PharmaDistribution', warehouseId: 'PharmaDistribution | Warehouse Roma', warehouseName: 'PharmaDistribution | Warehouse Roma', stockAvailable: 300, estimatedDelivery: '1-2 days', productStatus: 'Executed' },
+    { id: 'P009', code: 'AMOX-009', name: 'AMOXICILLIN 875MG', quantity: 15, unitPrice: 25.80, totalPrice: 387.00, supplierId: 'SUP-003', supplierName: 'HealthCare Solutions', warehouseId: 'HealthCare Solutions | Warehouse Torino', warehouseName: 'HealthCare Solutions | Warehouse Torino', stockAvailable: 120, estimatedDelivery: '3-5 days', productStatus: 'Pending Approval' },
+    { id: 'P010', code: 'ASPI-010', name: 'ASPIRIN 100MG', quantity: 12, unitPrice: 6.90, totalPrice: 82.80, supplierId: 'SUP-001', supplierName: 'MediSupply Italia', warehouseId: 'MediSupply Italia | Warehouse Milano', warehouseName: 'MediSupply Italia | Warehouse Milano', stockAvailable: 400, estimatedDelivery: '2-3 days', productStatus: 'Rejected' },
+    { id: 'P001', code: 'ALVG-001', name: 'ALVITA GINOCCHIERA', quantity: 8, unitPrice: 22.50, totalPrice: 180.00, supplierId: 'SUP-002', supplierName: 'PharmaDistribution', warehouseId: 'PharmaDistribution | Warehouse Roma', warehouseName: 'PharmaDistribution | Warehouse Roma', stockAvailable: 89, estimatedDelivery: '1-2 days', productStatus: 'Pending Approval' },
+    { id: 'P003', code: 'ZERO-003', name: 'ZERODOL GEL', quantity: 5, unitPrice: 12.40, totalPrice: 62.00, supplierId: 'SUP-001', supplierName: 'MediSupply Italia', warehouseId: 'MediSupply Italia | Warehouse Milano', warehouseName: 'MediSupply Italia | Warehouse Milano', stockAvailable: 200, estimatedDelivery: '2-3 days', productStatus: 'Executed' }
   ],
-  // Complex order with multiple suppliers for same products
-  'ODA-2592': [
-    { id: 'P007-A', code: 'PARA-007', name: 'PARACETAMOL 500MG', quantity: 150, unitPrice: 8.50, totalPrice: 1275.00, supplierId: 'SUP-001', supplierName: 'MediSupply Italia', stockAvailable: 200, estimatedDelivery: '2-3 days' },
-    { id: 'P007-B', code: 'PARA-007', name: 'PARACETAMOL 500MG', quantity: 100, unitPrice: 8.30, totalPrice: 830.00, supplierId: 'SUP-002', supplierName: 'PharmaDistribution', stockAvailable: 300, estimatedDelivery: '1-2 days' },
-    { id: 'P008-A', code: 'IBUP-008', name: 'IBUPROFEN 400MG', quantity: 80, unitPrice: 14.20, totalPrice: 1136.00, supplierId: 'SUP-002', supplierName: 'PharmaDistribution', stockAvailable: 150, estimatedDelivery: '1-2 days' },
-    { id: 'P008-B', code: 'IBUP-008', name: 'IBUPROFEN 400MG', quantity: 70, unitPrice: 13.90, totalPrice: 973.00, supplierId: 'SUP-004', supplierName: 'BioMed Express', stockAvailable: 200, estimatedDelivery: '1 day' },
-    { id: 'P001', code: 'ALVG-001', name: 'ALVITA GINOCCHIERA', quantity: 25, unitPrice: 22.50, totalPrice: 562.50, supplierId: 'SUP-001', supplierName: 'MediSupply Italia', stockAvailable: 150, estimatedDelivery: '2-3 days' }
+  'ODA-PART-002': [
+    { id: 'P001', code: 'ALVG-001', name: 'ALVITA GINOCCHIERA', quantity: 25, unitPrice: 22.50, totalPrice: 562.50, supplierId: 'SUP-003', supplierName: 'HealthCare Solutions', warehouseId: 'HealthCare Solutions | Warehouse Torino', warehouseName: 'HealthCare Solutions | Warehouse Torino', stockAvailable: 50, estimatedDelivery: '3-5 days', productStatus: 'Executed' },
+    { id: 'P002', code: 'BIOD-002', name: 'BIODERMA ATODERM', quantity: 20, unitPrice: 15.80, totalPrice: 316.00, supplierId: 'SUP-004', supplierName: 'BioMed Express', warehouseId: 'BioMed Express | Warehouse Bologna', warehouseName: 'BioMed Express | Warehouse Bologna', stockAvailable: 100, estimatedDelivery: '1 day', productStatus: 'Pending Approval' },
+    { id: 'P004', code: 'ENTG-004', name: 'ENTEROGERMINA 2MLD', quantity: 30, unitPrice: 9.90, totalPrice: 297.00, supplierId: 'SUP-004', supplierName: 'BioMed Express', warehouseId: 'BioMed Express | Warehouse Bologna', warehouseName: 'BioMed Express | Warehouse Bologna', stockAvailable: 250, estimatedDelivery: '1 day', productStatus: 'Rejected' },
+    { id: 'P005', code: 'OMEG-005', name: 'OMEGA 3 PLUS', quantity: 22, unitPrice: 18.70, totalPrice: 411.40, supplierId: 'SUP-003', supplierName: 'HealthCare Solutions', warehouseId: 'HealthCare Solutions | Warehouse Torino', warehouseName: 'HealthCare Solutions | Warehouse Torino', stockAvailable: 150, estimatedDelivery: '3-5 days', productStatus: 'Executed' },
+    { id: 'P006', code: 'VITC-006', name: 'VITAMINA C 1000MG', quantity: 28, unitPrice: 11.25, totalPrice: 315.00, supplierId: 'SUP-004', supplierName: 'BioMed Express', warehouseId: 'BioMed Express | Warehouse Bologna', warehouseName: 'BioMed Express | Warehouse Bologna', stockAvailable: 200, estimatedDelivery: '1 day', productStatus: 'Pending Approval' },
+    { id: 'P007', code: 'PARA-007', name: 'PARACETAMOL 500MG', quantity: 25, unitPrice: 8.50, totalPrice: 212.50, supplierId: 'SUP-003', supplierName: 'HealthCare Solutions', warehouseId: 'HealthCare Solutions | Warehouse Torino', warehouseName: 'HealthCare Solutions | Warehouse Torino', stockAvailable: 500, estimatedDelivery: '3-5 days', productStatus: 'Rejected' },
+    { id: 'P008', code: 'IBUP-008', name: 'IBUPROFEN 400MG', quantity: 20, unitPrice: 14.20, totalPrice: 284.00, supplierId: 'SUP-004', supplierName: 'BioMed Express', warehouseId: 'BioMed Express | Warehouse Bologna', warehouseName: 'BioMed Express | Warehouse Bologna', stockAvailable: 300, estimatedDelivery: '1 day', productStatus: 'Executed' },
+    { id: 'P009', code: 'AMOX-009', name: 'AMOXICILLIN 875MG', quantity: 12, unitPrice: 25.80, totalPrice: 309.60, supplierId: 'SUP-003', supplierName: 'HealthCare Solutions', warehouseId: 'HealthCare Solutions | Warehouse Torino', warehouseName: 'HealthCare Solutions | Warehouse Torino', stockAvailable: 120, estimatedDelivery: '3-5 days', productStatus: 'Pending Approval' },
+    { id: 'P010', code: 'ASPI-010', name: 'ASPIRIN 100MG', quantity: 13, unitPrice: 6.90, totalPrice: 89.70, supplierId: 'SUP-004', supplierName: 'BioMed Express', warehouseId: 'BioMed Express | Warehouse Bologna', warehouseName: 'BioMed Express | Warehouse Bologna', stockAvailable: 400, estimatedDelivery: '1 day', productStatus: 'Rejected' }
   ],
-  // Large order with all suppliers
-  'ODA-2593': [
-    { id: 'P001', code: 'ALVG-001', name: 'ALVITA GINOCCHIERA', quantity: 30, unitPrice: 22.50, totalPrice: 675.00, supplierId: 'SUP-001', supplierName: 'MediSupply Italia', stockAvailable: 150, estimatedDelivery: '2-3 days' },
-    { id: 'P002', code: 'BIOD-002', name: 'BIODERMA ATODERM', quantity: 40, unitPrice: 15.80, totalPrice: 632.00, supplierId: 'SUP-002', supplierName: 'PharmaDistribution', stockAvailable: 89, estimatedDelivery: '1-2 days' },
-    { id: 'P003', code: 'ZERO-003', name: 'ZERODOL GEL', quantity: 50, unitPrice: 12.40, totalPrice: 620.00, supplierId: 'SUP-003', supplierName: 'HealthCare Solutions', stockAvailable: 200, estimatedDelivery: '3-5 days' },
-    { id: 'P004', code: 'ENTG-004', name: 'ENTEROGERMINA 2MLD', quantity: 60, unitPrice: 9.90, totalPrice: 594.00, supplierId: 'SUP-004', supplierName: 'BioMed Express', stockAvailable: 250, estimatedDelivery: '1 day' },
-    { id: 'P005', code: 'OMEG-005', name: 'OMEGA 3 PLUS', quantity: 35, unitPrice: 18.70, totalPrice: 654.50, supplierId: 'SUP-002', supplierName: 'PharmaDistribution', stockAvailable: 150, estimatedDelivery: '1-2 days' },
-    { id: 'P006', code: 'VITC-006', name: 'VITAMINA C 1000MG', quantity: 45, unitPrice: 11.25, totalPrice: 506.25, supplierId: 'SUP-003', supplierName: 'HealthCare Solutions', stockAvailable: 200, estimatedDelivery: '3-5 days' },
-    { id: 'P007', code: 'PARA-007', name: 'PARACETAMOL 500MG', quantity: 80, unitPrice: 8.50, totalPrice: 680.00, supplierId: 'SUP-001', supplierName: 'MediSupply Italia', stockAvailable: 500, estimatedDelivery: '2-3 days' },
-    { id: 'P008', code: 'IBUP-008', name: 'IBUPROFEN 400MG', quantity: 55, unitPrice: 14.20, totalPrice: 781.00, supplierId: 'SUP-004', supplierName: 'BioMed Express', stockAvailable: 300, estimatedDelivery: '1 day' }
+  // EXECUTED orders - mix of Executed and Rejected products (NO Pending Approval)
+  'ODA-EXEC-001': [
+    { id: 'P001', code: 'ALVG-001', name: 'ALVITA GINOCCHIERA', quantity: 50, unitPrice: 22.50, totalPrice: 1125.00, supplierId: 'SUP-001', supplierName: 'MediSupply Italia', warehouseId: 'MediSupply Italia | Warehouse Milano', warehouseName: 'MediSupply Italia | Warehouse Milano', stockAvailable: 150, estimatedDelivery: '2-3 days', productStatus: 'Executed' },
+    { id: 'P002', code: 'BIOD-002', name: 'BIODERMA ATODERM', quantity: 45, unitPrice: 15.80, totalPrice: 711.00, supplierId: 'SUP-002', supplierName: 'PharmaDistribution', warehouseId: 'PharmaDistribution | Warehouse Roma', warehouseName: 'PharmaDistribution | Warehouse Roma', stockAvailable: 89, estimatedDelivery: '1-2 days', productStatus: 'Executed' },
+    { id: 'P003', code: 'ZERO-003', name: 'ZERODOL GEL', quantity: 40, unitPrice: 12.40, totalPrice: 496.00, supplierId: 'SUP-004', supplierName: 'BioMed Express', warehouseId: 'BioMed Express | Warehouse Bologna', warehouseName: 'BioMed Express | Warehouse Bologna', stockAvailable: 250, estimatedDelivery: '1 day', productStatus: 'Rejected' },
+    { id: 'P004', code: 'ENTG-004', name: 'ENTEROGERMINA 2MLD', quantity: 35, unitPrice: 9.90, totalPrice: 346.50, supplierId: 'SUP-001', supplierName: 'MediSupply Italia', warehouseId: 'MediSupply Italia | Warehouse Milano', warehouseName: 'MediSupply Italia | Warehouse Milano', stockAvailable: 200, estimatedDelivery: '2-3 days', productStatus: 'Executed' },
+    { id: 'P005', code: 'OMEG-005', name: 'OMEGA 3 PLUS', quantity: 38, unitPrice: 18.70, totalPrice: 710.60, supplierId: 'SUP-002', supplierName: 'PharmaDistribution', warehouseId: 'PharmaDistribution | Warehouse Roma', warehouseName: 'PharmaDistribution | Warehouse Roma', stockAvailable: 150, estimatedDelivery: '1-2 days', productStatus: 'Executed' },
+    { id: 'P006', code: 'VITC-006', name: 'VITAMINA C 1000MG', quantity: 32, unitPrice: 11.25, totalPrice: 360.00, supplierId: 'SUP-004', supplierName: 'BioMed Express', warehouseId: 'BioMed Express | Warehouse Bologna', warehouseName: 'BioMed Express | Warehouse Bologna', stockAvailable: 200, estimatedDelivery: '1 day', productStatus: 'Rejected' },
+    { id: 'P007', code: 'PARA-007', name: 'PARACETAMOL 500MG', quantity: 30, unitPrice: 8.50, totalPrice: 255.00, supplierId: 'SUP-001', supplierName: 'MediSupply Italia', warehouseId: 'MediSupply Italia | Warehouse Milano', warehouseName: 'MediSupply Italia | Warehouse Milano', stockAvailable: 500, estimatedDelivery: '2-3 days', productStatus: 'Executed' },
+    { id: 'P008', code: 'IBUP-008', name: 'IBUPROFEN 400MG', quantity: 28, unitPrice: 14.20, totalPrice: 397.60, supplierId: 'SUP-002', supplierName: 'PharmaDistribution', warehouseId: 'PharmaDistribution | Warehouse Roma', warehouseName: 'PharmaDistribution | Warehouse Roma', stockAvailable: 300, estimatedDelivery: '1-2 days', productStatus: 'Executed' },
+    { id: 'P009', code: 'AMOX-009', name: 'AMOXICILLIN 875MG', quantity: 25, unitPrice: 25.80, totalPrice: 645.00, supplierId: 'SUP-004', supplierName: 'BioMed Express', warehouseId: 'BioMed Express | Warehouse Bologna', warehouseName: 'BioMed Express | Warehouse Bologna', stockAvailable: 120, estimatedDelivery: '1 day', productStatus: 'Rejected' },
+    { id: 'P010', code: 'ASPI-010', name: 'ASPIRIN 100MG', quantity: 22, unitPrice: 6.90, totalPrice: 151.80, supplierId: 'SUP-001', supplierName: 'MediSupply Italia', warehouseId: 'MediSupply Italia | Warehouse Milano', warehouseName: 'MediSupply Italia | Warehouse Milano', stockAvailable: 400, estimatedDelivery: '2-3 days', productStatus: 'Executed' },
+    { id: 'P001', code: 'ALVG-001', name: 'ALVITA GINOCCHIERA', quantity: 5, unitPrice: 22.50, totalPrice: 112.50, supplierId: 'SUP-004', supplierName: 'BioMed Express', warehouseId: 'BioMed Express | Warehouse Bologna', warehouseName: 'BioMed Express | Warehouse Bologna', stockAvailable: 100, estimatedDelivery: '1 day', productStatus: 'Rejected' },
+    { id: 'P002', code: 'BIOD-002', name: 'BIODERMA ATODERM', quantity: 3, unitPrice: 15.80, totalPrice: 47.40, supplierId: 'SUP-004', supplierName: 'BioMed Express', warehouseId: 'BioMed Express | Warehouse Bologna', warehouseName: 'BioMed Express | Warehouse Bologna', stockAvailable: 100, estimatedDelivery: '1 day', productStatus: 'Executed' },
+    { id: 'P003', code: 'ZERO-003', name: 'ZERODOL GEL', quantity: 2, unitPrice: 12.40, totalPrice: 24.80, supplierId: 'SUP-004', supplierName: 'BioMed Express', warehouseId: 'BioMed Express | Warehouse Bologna', warehouseName: 'BioMed Express | Warehouse Bologna', stockAvailable: 250, estimatedDelivery: '1 day', productStatus: 'Rejected' },
+    { id: 'P004', code: 'ENTG-004', name: 'ENTEROGERMINA 2MLD', quantity: 1, unitPrice: 9.90, totalPrice: 9.90, supplierId: 'SUP-004', supplierName: 'BioMed Express', warehouseId: 'BioMed Express | Warehouse Bologna', warehouseName: 'BioMed Express | Warehouse Bologna', stockAvailable: 250, estimatedDelivery: '1 day', productStatus: 'Executed' },
+    { id: 'P005', code: 'OMEG-005', name: 'OMEGA 3 PLUS', quantity: 1, unitPrice: 18.70, totalPrice: 18.70, supplierId: 'SUP-004', supplierName: 'BioMed Express', warehouseId: 'BioMed Express | Warehouse Bologna', warehouseName: 'BioMed Express | Warehouse Bologna', stockAvailable: 150, estimatedDelivery: '1 day', productStatus: 'Rejected' }
+  ],
+  'ODA-EXEC-002': [
+    { id: 'P001', code: 'ALVG-001', name: 'ALVITA GINOCCHIERA', quantity: 35, unitPrice: 22.50, totalPrice: 787.50, supplierId: 'SUP-002', supplierName: 'PharmaDistribution', warehouseId: 'PharmaDistribution | Warehouse Roma', warehouseName: 'PharmaDistribution | Warehouse Roma', stockAvailable: 89, estimatedDelivery: '1-2 days', productStatus: 'Executed' },
+    { id: 'P003', code: 'ZERO-003', name: 'ZERODOL GEL', quantity: 40, unitPrice: 12.40, totalPrice: 496.00, supplierId: 'SUP-003', supplierName: 'HealthCare Solutions', warehouseId: 'HealthCare Solutions | Warehouse Torino', warehouseName: 'HealthCare Solutions | Warehouse Torino', stockAvailable: 200, estimatedDelivery: '3-5 days', productStatus: 'Rejected' },
+    { id: 'P004', code: 'ENTG-004', name: 'ENTEROGERMINA 2MLD', quantity: 38, unitPrice: 9.90, totalPrice: 376.20, supplierId: 'SUP-002', supplierName: 'PharmaDistribution', warehouseId: 'PharmaDistribution | Warehouse Roma', warehouseName: 'PharmaDistribution | Warehouse Roma', stockAvailable: 200, estimatedDelivery: '1-2 days', productStatus: 'Executed' },
+    { id: 'P005', code: 'OMEG-005', name: 'OMEGA 3 PLUS', quantity: 32, unitPrice: 18.70, totalPrice: 598.40, supplierId: 'SUP-003', supplierName: 'HealthCare Solutions', warehouseId: 'HealthCare Solutions | Warehouse Torino', warehouseName: 'HealthCare Solutions | Warehouse Torino', stockAvailable: 150, estimatedDelivery: '3-5 days', productStatus: 'Executed' },
+    { id: 'P006', code: 'VITC-006', name: 'VITAMINA C 1000MG', quantity: 30, unitPrice: 11.25, totalPrice: 337.50, supplierId: 'SUP-002', supplierName: 'PharmaDistribution', warehouseId: 'PharmaDistribution | Warehouse Roma', warehouseName: 'PharmaDistribution | Warehouse Roma', stockAvailable: 200, estimatedDelivery: '1-2 days', productStatus: 'Rejected' },
+    { id: 'P007', code: 'PARA-007', name: 'PARACETAMOL 500MG', quantity: 28, unitPrice: 8.50, totalPrice: 238.00, supplierId: 'SUP-003', supplierName: 'HealthCare Solutions', warehouseId: 'HealthCare Solutions | Warehouse Torino', warehouseName: 'HealthCare Solutions | Warehouse Torino', stockAvailable: 500, estimatedDelivery: '3-5 days', productStatus: 'Executed' },
+    { id: 'P008', code: 'IBUP-008', name: 'IBUPROFEN 400MG', quantity: 25, unitPrice: 14.20, totalPrice: 355.00, supplierId: 'SUP-002', supplierName: 'PharmaDistribution', warehouseId: 'PharmaDistribution | Warehouse Roma', warehouseName: 'PharmaDistribution | Warehouse Roma', stockAvailable: 300, estimatedDelivery: '1-2 days', productStatus: 'Executed' },
+    { id: 'P009', code: 'AMOX-009', name: 'AMOXICILLIN 875MG', quantity: 20, unitPrice: 25.80, totalPrice: 516.00, supplierId: 'SUP-003', supplierName: 'HealthCare Solutions', warehouseId: 'HealthCare Solutions | Warehouse Torino', warehouseName: 'HealthCare Solutions | Warehouse Torino', stockAvailable: 120, estimatedDelivery: '3-5 days', productStatus: 'Rejected' },
+    { id: 'P010', code: 'ASPI-010', name: 'ASPIRIN 100MG', quantity: 18, unitPrice: 6.90, totalPrice: 124.20, supplierId: 'SUP-002', supplierName: 'PharmaDistribution', warehouseId: 'PharmaDistribution | Warehouse Roma', warehouseName: 'PharmaDistribution | Warehouse Roma', stockAvailable: 400, estimatedDelivery: '1-2 days', productStatus: 'Executed' },
+    { id: 'P001', code: 'ALVG-001', name: 'ALVITA GINOCCHIERA', quantity: 2, unitPrice: 22.50, totalPrice: 45.00, supplierId: 'SUP-003', supplierName: 'HealthCare Solutions', warehouseId: 'HealthCare Solutions | Warehouse Torino', warehouseName: 'HealthCare Solutions | Warehouse Torino', stockAvailable: 50, estimatedDelivery: '3-5 days', productStatus: 'Rejected' },
+    { id: 'P002', code: 'BIOD-002', name: 'BIODERMA ATODERM', quantity: 1, unitPrice: 15.80, totalPrice: 15.80, supplierId: 'SUP-003', supplierName: 'HealthCare Solutions', warehouseId: 'HealthCare Solutions | Warehouse Torino', warehouseName: 'HealthCare Solutions | Warehouse Torino', stockAvailable: 200, estimatedDelivery: '3-5 days', productStatus: 'Executed' }
   ]
 };
 
 // Additional information for each order
 export const ORDER_ADDITIONAL_INFO: Record<string, OrderAdditionalInfo> = {
-  'ODA-2587': {
-    deliveryAddress: 'Pharmacy Main Branch, Via Roma 123, Milano',
-    deliveryDate: 'May 15, 2025',
-    paymentMethod: 'Bank Transfer',
-    notes: 'Delivered successfully. All items received in good condition.'
-  },
-  'ODA-2590': {
-    deliveryAddress: 'Pharmacy Central Warehouse, Via Torino 456, Milano',
-    paymentMethod: 'Bank Transfer',
-    notes: 'Bulk order for Q2 inventory. Counter offer pending review.'
-  },
-  'ODA-2591': {
-    deliveryAddress: 'Pharmacy Express Hub, Via Napoli 789, Milano',
+  // DRAFT orders
+  'ODA-DRAFT-001': {
+    deliveryAddress: 'Farmacia Central, Via Roma 123, Milano',
     paymentMethod: 'Credit Card',
-    notes: 'Express delivery required. Multiple suppliers involved.'
+    notes: 'Draft order - 75% complete. Reviewing final product quantities.'
   },
-  'ODA-2586': {
-    deliveryAddress: 'Pharmacy Main Branch, Via Roma 123, Milano',
-    paymentMethod: 'Credit Card',
-    notes: 'Standard order awaiting approval from management.'
-  },
-  'ODA-2585': {
-    deliveryAddress: 'Pharmacy Main Branch, Via Roma 123, Milano',
-    deliveryDate: 'May 20, 2025',
+  'ODA-DRAFT-002': {
+    deliveryAddress: 'Farmacia San Marco, Via Venezia 321, Milano',
     paymentMethod: 'Bank Transfer',
-    notes: 'Deliver during business hours (9AM-6PM). Call before delivery. Multiple suppliers coordinated.'
+    notes: 'Draft order - 45% complete. Early stage order preparation.'
   },
-  'ODA-2584-DRAFT': {
-    deliveryAddress: 'Pharmacy Main Branch, Via Roma 123, Milano',
-    paymentMethod: 'Credit Card',
-    notes: 'Draft order - 60% complete. Missing some product specifications.'
-  },
-  'ODA-2583-DRAFT': {
-    deliveryAddress: 'Pharmacy Secondary Location, Via Venezia 321, Milano',
+  // PROCESSING orders
+  'ODA-PROC-001': {
+    deliveryAddress: 'Farmacia Central, Via Roma 123, Milano',
     paymentMethod: 'Bank Transfer',
-    notes: 'Draft order - early stage. Basic pain relief medications for secondary location.'
+    notes: 'Order confirmed and processing. Awaiting warehouse response.'
   },
-  'ODA-2592': {
-    deliveryAddress: 'Pharmacy Distribution Center, Via Firenze 555, Milano',
-    paymentMethod: 'Bank Transfer',
-    notes: 'Complex order with multiple suppliers for same products. Price comparison completed.'
-  },
-  'ODA-2593': {
-    deliveryAddress: 'Pharmacy Main Branch, Via Roma 123, Milano',
+  'ODA-PROC-002': {
+    deliveryAddress: 'Farmacia Nord, Via Torino 456, Milano',
     paymentMethod: 'Credit Card',
-    notes: 'Large comprehensive order involving all suppliers. Coordinated delivery required.'
+    notes: 'Express order in processing. Priority handling requested.'
+  },
+  // PENDING APPROVAL orders
+  'ODA-PEND-001': {
+    deliveryAddress: 'Farmacia Central, Via Roma 123, Milano',
+    paymentMethod: 'Bank Transfer',
+    notes: 'Bulk order awaiting approval. Counter offer pending review.'
+  },
+  'ODA-PEND-002': {
+    deliveryAddress: 'Farmacia San Marco, Via Venezia 321, Milano',
+    paymentMethod: 'Credit Card',
+    notes: 'Standard order awaiting approval. Picking notifications received.'
+  },
+  // PARTIALLY FILLED orders
+  'ODA-PART-001': {
+    deliveryAddress: 'Farmacia Central, Via Roma 123, Milano',
+    paymentMethod: 'Bank Transfer',
+    notes: 'Order partially filled. Some products confirmed, others pending warehouse response.'
+  },
+  'ODA-PART-002': {
+    deliveryAddress: 'Farmacia Nord, Via Torino 456, Milano',
+    paymentMethod: 'Credit Card',
+    notes: 'Partial delivery confirmed. Remaining items in process.'
+  },
+  // EXECUTED orders
+  'ODA-EXEC-001': {
+    deliveryAddress: 'Farmacia Central, Via Roma 123, Milano',
+    deliveryDate: 'May 14, 2025',
+    paymentMethod: 'Bank Transfer',
+    notes: 'Order executed successfully. All items delivered in good condition.'
+  },
+  'ODA-EXEC-002': {
+    deliveryAddress: 'Farmacia San Marco, Via Venezia 321, Milano',
+    deliveryDate: 'May 13, 2025',
+    paymentMethod: 'Credit Card',
+    notes: 'Express order executed. All products delivered on time.'
   }
 };
 
 // Mock orders data
+// Mock buyer preferences
+export const MOCK_BUYER_PREFERENCES: BuyerPickingPreferences = {
+  autoAcceptPartialDelivery: false, // Default to requiring manual approval
+  maxAcceptableReduction: 15, // Accept up to 15% reduction automatically
+  requireConfirmationForAlternatives: true,
+  notificationPreferences: {
+    email: true,
+    inApp: true,
+    sms: false
+  }
+};
+
+// Mock picking notifications
+export const MOCK_PICKING_NOTIFICATIONS: PickingNotification[] = [
+  {
+    id: 'PN-001',
+    orderId: 'ODA-PEND-002',
+    productId: 'P001',
+    type: 'partial_available',
+    message: 'Only 18 units available out of 20 requested for ALVITA GINOCCHIERA. Estimated restock: May 20, 2025',
+    createdAt: 'May 10, 2025 09:30',
+    acknowledged: false,
+    autoProcessed: false
+  },
+  {
+    id: 'PN-002',
+    orderId: 'ODA-PEND-002',
+    productId: 'P003',
+    type: 'out_of_stock',
+    message: 'ZERODOL GEL is currently out of stock. Alternative product VOLTAREN GEL available at similar price.',
+    createdAt: 'May 10, 2025 14:15',
+    acknowledged: false,
+    autoProcessed: false
+  }
+];
+
+// Mock orders data - 2 orders per status (10 total)
 export const MOCK_ORDERS: OrderWithDetails[] = [
+  // DRAFT - 2 orders
   {
-    id: 'ODA-2587',
-    createdOn: 'May 8, 2025',
-    totalProducts: 128,
-    items: 895,
-    amount: 124580.80,
-    status: 'Approved',
-    deliveryStatus: 'Delivered',
-    deliveryDate: 'May 15, 2025',
-    suppliers: [MOCK_SUPPLIERS[0], MOCK_SUPPLIERS[1]],
-    priority: 'Medium',
-    orderType: 'Standard'
-  },
-  {
-    id: 'ODA-2590',
-    createdOn: 'May 10, 2025',
-    totalProducts: 95,
-    items: 650,
-    amount: 95000.00,
-    status: 'Counter Offer',
-    estimatedDelivery: 'Pending response',
-    counterOffer: MOCK_COUNTER_OFFERS['ODA-2590'],
-    suppliers: [MOCK_SUPPLIERS[0]],
-    priority: 'High',
-    orderType: 'Bulk'
-  },
-  {
-    id: 'ODA-2591',
-    createdOn: 'May 9, 2025',
-    totalProducts: 156,
-    items: 1200,
-    amount: 156000.00,
-    status: 'Counter Offer',
-    estimatedDelivery: 'Pending response',
-    counterOffer: MOCK_COUNTER_OFFERS['ODA-2591'],
-    suppliers: [MOCK_SUPPLIERS[1], MOCK_SUPPLIERS[2]],
-    priority: 'High',
-    orderType: 'Express'
-  },
-  {
-    id: 'ODA-2586',
-    createdOn: 'May 7, 2025',
-    totalProducts: 215,
-    items: 1452,
-    amount: 184550.50,
-    status: 'Pending Approval',
-    estimatedDelivery: 'Awaiting approval',
-    suppliers: [MOCK_SUPPLIERS[1]],
-    priority: 'Medium',
-    orderType: 'Standard'
-  },
-  {
-    id: 'ODA-2585',
-    createdOn: 'May 6, 2025',
-    totalProducts: 142,
-    items: 1037,
-    amount: 189230.30,
-    status: 'Processing',
-    estimatedDelivery: 'May 20, 2025',
-    suppliers: [MOCK_SUPPLIERS[2], MOCK_SUPPLIERS[3]],
-    priority: 'Low',
-    orderType: 'Standard'
-  },
-  {
-    id: 'ODA-2584-DRAFT',
-    createdOn: 'May 5, 2025',
-    totalProducts: 108,
-    items: 722,
-    amount: 132075.75,
+    id: 'ODA-DRAFT-001',
+    createdOn: 'May 15, 2025',
+    totalProducts: 5,
+    items: 45,
+    amount: 1250.50,
     status: 'Draft',
-    completion: 60,
+    completion: 75,
     priority: 'Medium',
-    orderType: 'Standard'
+    orderType: 'Standard',
+    buyerId: 'BUY-001',
+    buyerName: 'Farmacia Central'
   },
   {
-    id: 'ODA-2583-DRAFT',
-    createdOn: 'May 3, 2025',
-    totalProducts: 90,
-    items: 490,
-    amount: 100000.00,
+    id: 'ODA-DRAFT-002',
+    createdOn: 'May 14, 2025',
+    totalProducts: 3,
+    items: 28,
+    amount: 890.30,
     status: 'Draft',
-    completion: 10,
+    completion: 45,
     priority: 'Low',
-    orderType: 'Standard'
+    orderType: 'Standard',
+    buyerId: 'BUY-002',
+    buyerName: 'Farmacia San Marco'
   },
+  // PROCESSING - 2 orders
   {
-    id: 'ODA-2592',
-    createdOn: 'May 11, 2025',
-    totalProducts: 325,
-    items: 425,
-    amount: 4776.50,
-    status: 'Pending Approval',
-    estimatedDelivery: 'Awaiting approval',
-    suppliers: [MOCK_SUPPLIERS[0], MOCK_SUPPLIERS[1], MOCK_SUPPLIERS[3]],
-    priority: 'High',
-    orderType: 'Bulk'
-  },
-  {
-    id: 'ODA-2593',
-    createdOn: 'May 12, 2025',
-    totalProducts: 395,
-    items: 395,
-    amount: 5142.75,
+    id: 'ODA-PROC-001',
+    createdOn: 'May 13, 2025',
+    totalProducts: 8,
+    items: 120,
+    amount: 3450.80,
     status: 'Processing',
     estimatedDelivery: 'May 25, 2025',
-    suppliers: [MOCK_SUPPLIERS[0], MOCK_SUPPLIERS[1], MOCK_SUPPLIERS[2], MOCK_SUPPLIERS[3]],
+    suppliers: [MOCK_SUPPLIERS[0], MOCK_SUPPLIERS[1]],
     priority: 'Medium',
-    orderType: 'Standard'
+    orderType: 'Standard',
+    buyerId: 'BUY-001',
+    buyerName: 'Farmacia Central'
+  },
+  {
+    id: 'ODA-PROC-002',
+    createdOn: 'May 12, 2025',
+    totalProducts: 6,
+    items: 95,
+    amount: 2780.40,
+    status: 'Processing',
+    estimatedDelivery: 'May 24, 2025',
+    suppliers: [MOCK_SUPPLIERS[2]],
+    priority: 'High',
+    orderType: 'Express',
+    buyerId: 'BUY-003',
+    buyerName: 'Farmacia Nord'
+  },
+  // PENDING APPROVAL - 2 orders
+  {
+    id: 'ODA-PEND-001',
+    createdOn: 'May 11, 2025',
+    totalProducts: 10,
+    items: 180,
+    amount: 5670.90,
+    status: 'Pending Approval',
+    estimatedDelivery: 'Awaiting approval',
+    suppliers: [MOCK_SUPPLIERS[0], MOCK_SUPPLIERS[3]],
+    priority: 'High',
+    orderType: 'Bulk',
+    buyerId: 'BUY-001',
+    buyerName: 'Farmacia Central',
+    counterOffer: MOCK_COUNTER_OFFERS['ODA-2590']
+  },
+  {
+    id: 'ODA-PEND-002',
+    createdOn: 'May 10, 2025',
+    totalProducts: 7,
+    items: 145,
+    amount: 4120.60,
+    status: 'Pending Approval',
+    estimatedDelivery: 'Awaiting approval',
+    suppliers: [MOCK_SUPPLIERS[1], MOCK_SUPPLIERS[2]],
+    priority: 'Medium',
+    orderType: 'Standard',
+    buyerId: 'BUY-002',
+    buyerName: 'Farmacia San Marco',
+    pickingRequired: true,
+    buyerPreferences: MOCK_BUYER_PREFERENCES,
+    pickingNotifications: [MOCK_PICKING_NOTIFICATIONS[0]],
+    hasPartialPickingApproval: false
+  },
+  // PARTIALLY FILLED - 2 orders
+  {
+    id: 'ODA-PART-001',
+    createdOn: 'May 9, 2025',
+    totalProducts: 12,
+    items: 250,
+    amount: 7890.20,
+    status: 'Partially Filled',
+    estimatedDelivery: 'May 22, 2025',
+    suppliers: [MOCK_SUPPLIERS[0], MOCK_SUPPLIERS[1], MOCK_SUPPLIERS[2]],
+    priority: 'High',
+    orderType: 'Bulk',
+    buyerId: 'BUY-001',
+    buyerName: 'Farmacia Central',
+    hasPartialPickingApproval: true
+  },
+  {
+    id: 'ODA-PART-002',
+    createdOn: 'May 8, 2025',
+    totalProducts: 9,
+    items: 195,
+    amount: 6230.70,
+    status: 'Partially Filled',
+    estimatedDelivery: 'May 21, 2025',
+    suppliers: [MOCK_SUPPLIERS[2], MOCK_SUPPLIERS[3]],
+    priority: 'Medium',
+    orderType: 'Standard',
+    buyerId: 'BUY-003',
+    buyerName: 'Farmacia Nord',
+    hasPartialPickingApproval: true
+  },
+  // EXECUTED - 2 orders
+  {
+    id: 'ODA-EXEC-001',
+    createdOn: 'May 7, 2025',
+    totalProducts: 15,
+    items: 320,
+    amount: 12450.80,
+    status: 'Executed',
+    deliveryStatus: 'Delivered',
+    deliveryDate: 'May 14, 2025',
+    suppliers: [MOCK_SUPPLIERS[0], MOCK_SUPPLIERS[1], MOCK_SUPPLIERS[3]],
+    priority: 'Medium',
+    orderType: 'Standard',
+    buyerId: 'BUY-001',
+    buyerName: 'Farmacia Central'
+  },
+  {
+    id: 'ODA-EXEC-002',
+    createdOn: 'May 6, 2025',
+    totalProducts: 11,
+    items: 275,
+    amount: 9870.40,
+    status: 'Executed',
+    deliveryStatus: 'Delivered',
+    deliveryDate: 'May 13, 2025',
+    suppliers: [MOCK_SUPPLIERS[1], MOCK_SUPPLIERS[2]],
+    priority: 'High',
+    orderType: 'Express',
+    buyerId: 'BUY-002',
+    buyerName: 'Farmacia San Marco'
   }
 ];
 
 // Function to get order details for display in modal
+// Helper function to enrich product with missing data
+const enrichProductData = (product: OrderProductDetail): OrderProductDetail => {
+  // If product already has all required fields, return as is
+  if (product.publicPrice && product.vat && product.bestPrices) {
+    return product;
+  }
+  
+  // Enrich with default/mock data based on product code or name
+  const defaultPublicPrice = product.publicPrice || product.unitPrice * 1.25; // ~25% markup
+  const defaultVat = product.vat || 22;
+  
+  // Create bestPrices if not present
+  const defaultBestPrices = product.bestPrices || [
+    {
+      price: product.unitPrice,
+      stock: product.stockAvailable || 100,
+      supplier: product.supplierName || 'Unknown Supplier',
+      warehouse: product.warehouseName?.split(' | ')[1] || 'Default Warehouse',
+      entityName: product.warehouseName?.split(' | ')[0] || product.supplierName || 'Unknown Entity'
+    }
+  ];
+  
+  // Calculate average price if not present
+  let defaultAveragePrice = product.averagePrice;
+  if (defaultAveragePrice === null || defaultAveragePrice === undefined) {
+    if (product.quantity > 0 && defaultBestPrices.length > 0) {
+      // Simple average calculation
+      const sortedPrices = [...defaultBestPrices].sort((a, b) => a.price - b.price);
+      let remainingQuantity = product.quantity;
+      let totalCost = 0;
+      
+      for (const pricePoint of sortedPrices) {
+        if (remainingQuantity <= 0) break;
+        const quantityFromThisSupplier = Math.min(remainingQuantity, pricePoint.stock);
+        totalCost += quantityFromThisSupplier * pricePoint.price;
+        remainingQuantity -= quantityFromThisSupplier;
+      }
+      
+      if (remainingQuantity > 0) {
+        totalCost += remainingQuantity * defaultPublicPrice;
+      }
+      
+      defaultAveragePrice = totalCost / product.quantity;
+    } else {
+      defaultAveragePrice = product.unitPrice;
+    }
+  }
+  
+  return {
+    ...product,
+    publicPrice: defaultPublicPrice,
+    vat: defaultVat,
+    bestPrices: defaultBestPrices,
+    averagePrice: defaultAveragePrice,
+    ean: product.ean || `800${product.code.replace(/\D/g, '').padStart(10, '0')}`,
+    minsan: product.minsan || product.code,
+    manufacturer: product.manufacturer || 'Unknown Manufacturer',
+    targetPrice: product.targetPrice !== undefined ? product.targetPrice : null
+  };
+};
+
 export const getOrderDetails = (orderId: string): OrderDetailData | null => {
   const order = MOCK_ORDERS.find(o => o.id === orderId);
   const products = ORDER_DETAILS[orderId] || [];
@@ -564,11 +835,14 @@ export const getOrderDetails = (orderId: string): OrderDetailData | null => {
     return null;
   }
   
+  // Enrich products with missing data
+  const enrichedProducts = products.map(enrichProductData);
+  
   return {
     id: order.id,
     createdOn: order.createdOn,
     status: order.status,
-    products,
+    products: enrichedProducts,
     deliveryAddress: additionalInfo.deliveryAddress || '',
     deliveryDate: additionalInfo.deliveryDate || order.deliveryDate || order.estimatedDelivery || '',
     paymentMethod: additionalInfo.paymentMethod || '',
@@ -593,7 +867,8 @@ export const getSupplierById = (supplierId: string): SupplierInfo | null => {
 export const acceptCounterOffer = (orderId: string): boolean => {
   const orderIndex = MOCK_ORDERS.findIndex(order => order.id === orderId);
   if (orderIndex !== -1 && MOCK_ORDERS[orderIndex].counterOffer) {
-    MOCK_ORDERS[orderIndex].status = 'Approved';
+    // Counter offers are handled internally, status remains as Pending Approval
+    // The backend will update status when warehouse responds
     MOCK_ORDERS[orderIndex].amount = MOCK_ORDERS[orderIndex].counterOffer!.proposedAmount;
     if (MOCK_ORDERS[orderIndex].counterOffer) {
       MOCK_ORDERS[orderIndex].counterOffer!.status = 'Accepted';
@@ -607,7 +882,8 @@ export const acceptCounterOffer = (orderId: string): boolean => {
 export const rejectCounterOffer = (orderId: string): boolean => {
   const orderIndex = MOCK_ORDERS.findIndex(order => order.id === orderId);
   if (orderIndex !== -1 && MOCK_ORDERS[orderIndex].counterOffer) {
-    MOCK_ORDERS[orderIndex].status = 'Rejected';
+    // Rejection doesn't change order status, it remains in current state
+    // The backend will handle status updates when warehouse responds
     if (MOCK_ORDERS[orderIndex].counterOffer) {
       MOCK_ORDERS[orderIndex].counterOffer!.status = 'Rejected';
     }
@@ -626,7 +902,7 @@ export const generateMockOrders = (count: number = 20): OrderWithDetails[] => {
   
   // Statuses for new orders
   const statuses: OrderStatus[] = [
-    'Approved', 'Pending Approval', 'Processing', 'Draft'
+    'Draft', 'Processing', 'Pending Approval', 'Partially Filled', 'Executed'
   ];
   
   // Generate additional orders
@@ -656,11 +932,19 @@ export const generateMockOrders = (count: number = 20): OrderWithDetails[] => {
     };
     
     // Add status-specific fields
-    if (status === 'Approved') {
+    if (status === 'Executed') {
       const deliveryDate = new Date(date);
       deliveryDate.setDate(date.getDate() + Math.floor(Math.random() * 14) + 1);
       newOrder.deliveryStatus = Math.random() > 0.5 ? 'Delivered' : 'In Transit';
       newOrder.deliveryDate = deliveryDate.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    } else if (status === 'Partially Filled') {
+      const estimatedDate = new Date(date);
+      estimatedDate.setDate(date.getDate() + Math.floor(Math.random() * 14) + 7);
+      newOrder.estimatedDelivery = estimatedDate.toLocaleDateString('en-US', { 
         year: 'numeric', 
         month: 'short', 
         day: 'numeric' 
@@ -685,48 +969,12 @@ export const generateMockOrders = (count: number = 20): OrderWithDetails[] => {
   return orders;
 };
 
-// Mock buyer preferences
-export const MOCK_BUYER_PREFERENCES: BuyerPickingPreferences = {
-  autoAcceptPartialDelivery: false, // Default to requiring manual approval
-  maxAcceptableReduction: 15, // Accept up to 15% reduction automatically
-  requireConfirmationForAlternatives: true,
-  notificationPreferences: {
-    email: true,
-    inApp: true,
-    sms: false
-  }
-};
-
-// Mock picking notifications
-export const MOCK_PICKING_NOTIFICATIONS: PickingNotification[] = [
-  {
-    id: 'PN-001',
-    orderId: 'ODA-2593',
-    productId: 'P001',
-    type: 'partial_available',
-    message: 'Only 35 units available out of 50 requested for ALVITA GINOCCHIERA. Estimated restock: May 20, 2025',
-    createdAt: 'May 12, 2025 09:30',
-    acknowledged: false,
-    autoProcessed: false
-  },
-  {
-    id: 'PN-002',
-    orderId: 'ODA-2594',
-    productId: 'P003',
-    type: 'out_of_stock',
-    message: 'ZERODOL GEL is currently out of stock. Alternative product VOLTAREN GEL available at similar price.',
-    createdAt: 'May 12, 2025 14:15',
-    acknowledged: false,
-    autoProcessed: false
-  }
-];
-
-// Enhanced mock orders with picking scenarios
+// Enhanced mock orders with picking scenarios (deprecated - using MOCK_ORDERS instead)
 const ENHANCED_PICKING_ORDERS: OrderWithDetails[] = [
   {
     id: 'ODA-2593',
     createdOn: 'May 12, 2025',
-    status: 'Picking Required',
+    status: 'Pending Approval',
     totalProducts: 3,
     items: 150,
     amount: 3875.00,
@@ -743,7 +991,7 @@ const ENHANCED_PICKING_ORDERS: OrderWithDetails[] = [
   {
     id: 'ODA-2594',
     createdOn: 'May 12, 2025',
-    status: 'Counter Offer',
+    status: 'Pending Approval',
     totalProducts: 4,
     items: 220,
     amount: 4250.00,
@@ -795,11 +1043,9 @@ const ENHANCED_PICKING_ORDERS: OrderWithDetails[] = [
 ];
 
 // Generate standard mock orders and combine with enhanced picking orders
-const generatedOrders = generateMockOrders(18); // Generate 18 regular orders
-export const mockOrders: OrderWithDetails[] = [
-  ...ENHANCED_PICKING_ORDERS, // Add 2 picking orders
-  ...generatedOrders // Add 18 regular orders
-];
+// Export only the fixed mock orders (10 orders - 2 per status)
+// No randomly generated orders
+export const mockOrders: OrderWithDetails[] = MOCK_ORDERS;
 
 // Functions for managing picking and preferences
 export const updateBuyerPreferences = (buyerId: string, preferences: BuyerPickingPreferences): boolean => {
@@ -812,10 +1058,11 @@ export const processPickingDecision = (orderId: string, decision: 'accept' | 're
   const orderIndex = mockOrders.findIndex(order => order.id === orderId);
   if (orderIndex !== -1) {
     if (decision === 'accept') {
-      mockOrders[orderIndex].status = 'Partial Approved';
+      mockOrders[orderIndex].status = 'Partially Filled';
       mockOrders[orderIndex].hasPartialPickingApproval = true;
     } else if (decision === 'reject') {
-      mockOrders[orderIndex].status = 'Rejected';
+      // Rejection doesn't change order status, order remains in current state
+      // Status will be updated by backend when warehouse responds
     }
     return true;
   }
